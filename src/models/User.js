@@ -1,0 +1,41 @@
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+const UserSchema = new mongoose.Schema(
+  {
+    fullName: { type: String, trim: true },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    password: { type: String, required: true, select: false },
+
+    // Onboarding: user profile
+    role: { type: String, enum: ['owner', 'founder', 'manager', 'other'], default: undefined },
+    builtPlanBefore: { type: Boolean, default: undefined },
+    planningGoal: { type: String, enum: ['start', 'improve', 'invest', 'learn'], default: undefined },
+    includePersonalPlanning: { type: Boolean, default: undefined },
+
+    // Additional profile fields (previously on Dashboard.profile)
+    jobTitle: { type: String, default: '' },
+    phone: { type: String, default: '' },
+
+    // Onboarding completion flag: set true once user reaches dashboard via flow
+    onboardingDone: { type: Boolean, default: false },
+  },
+  { timestamps: true }
+);
+
+UserSchema.methods.toSafeJSON = function toSafeJSON() {
+  const obj = this.toObject({ versionKey: false });
+  delete obj.password;
+  return obj;
+};
+
+UserSchema.statics.hashPassword = async function (plain) {
+  const salt = await bcrypt.genSalt(10);
+  return bcrypt.hash(plain, salt);
+};
+
+UserSchema.methods.comparePassword = async function (plain) {
+  return bcrypt.compare(plain, this.password);
+};
+
+module.exports = mongoose.model('User', UserSchema);
