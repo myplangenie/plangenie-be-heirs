@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/misc.controller');
 
-// Public endpoint for demo requests
+// Public endpoints
 router.post('/request-demo', ctrl.requestDemo);
+router.post('/contact/book-call', ctrl.bookCall);
 
 module.exports = router;
-

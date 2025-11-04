@@ -23,6 +23,9 @@ router.get('/financials', auth(true), ctrl.getFinancials);
 router.get('/plan', auth(true), ctrl.getPlan);
 router.post('/plan/sections', auth(true), ctrl.addPlanSection);
 router.delete('/plan/sections/:sid', auth(true), ctrl.deletePlanSection);
+// Compiled Plan (Customizable Plan Builder)
+router.post('/plan/compiled', auth(true), ctrl.saveCompiledPlan);
+router.get('/plan/compiled', auth(true), ctrl.getCompiledPlan);
 
 // Settings
 router.get('/settings', auth(true), ctrl.getSettings);

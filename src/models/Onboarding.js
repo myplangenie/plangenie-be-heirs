@@ -7,6 +7,7 @@ const UserProfileSchema = new mongoose.Schema(
     builtPlanBefore: { type: Boolean },
     planningGoal: { type: String, enum: ['start', 'improve', 'invest', 'learn'] },
     includePersonalPlanning: { type: Boolean },
+    planningFor: { type: String, enum: ['personal', 'business'] },
   },
   { _id: false }
 );
@@ -16,6 +17,7 @@ const BusinessProfileSchema = new mongoose.Schema(
     businessName: { type: String, trim: true },
     businessStage: { type: String, enum: ['pre-launch', 'startup', 'growth', 'established', 'other'] },
     industry: { type: String },
+    industryOther: { type: String },
     country: { type: String },
     city: { type: String },
     ventureType: { type: String, enum: ['for-profit', 'nonprofit', 'hybrid'] },
@@ -23,6 +25,7 @@ const BusinessProfileSchema = new mongoose.Schema(
     funding: { type: Boolean },
     tools: [{ type: String }],
     connectTools: { type: Boolean },
+    description: { type: String },
   },
   { _id: false }
 );

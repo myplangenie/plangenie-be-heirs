@@ -210,9 +210,18 @@ exports.getSummary = async (req, res, next) => {
     const assignments = a.actionAssignments || {};
     const activePlans = Object.values(assignments || {})
       .flat()
-      .map((u) => ({ title: (u && u.goal) || '' }))
+      .map((u) => ({
+        title: String(u?.goal || '').trim(),
+        owner: `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim(),
+        milestone: String(u?.milestone || '').trim(),
+        resources: String(u?.resources || '').trim(),
+        cost: String(u?.cost || '').trim(),
+        kpi: String(u?.kpi || '').trim(),
+        due: String(u?.dueWhen || '').trim(),
+        status: String(u?.status || 'In progress').trim(),
+      }))
       .filter((p) => p.title)
-      .slice(0, 6);
+      .slice(0, 12);
     // Basic finance chart from answers (first 6 months)
     function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
     const units0 = num(a.finSalesVolume);
@@ -314,6 +323,124 @@ exports.getStrategyCanvas = async (req, res, next) => {
       .map((u)=> String(u?.goal||'').trim())
       .filter(Boolean);
     return res.json({ canvas: { ubp, oneYear, threeYear, goals } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/plan/compiled
+exports.saveCompiledPlan = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const cp = req.body || {};
+    const ob = await Onboarding.findOne({ user: userId }) || await Onboarding.create({ user: userId });
+    ob.userProfile = {
+      ...(ob.userProfile || {}),
+      ...(cp.userProfile || {}),
+    };
+    if (cp.businessProfile) {
+      ob.businessProfile = {
+        ...(ob.businessProfile || {}),
+        businessName: cp.businessProfile.businessName || (ob.businessProfile && ob.businessProfile.businessName) || '',
+        ventureType: cp.businessProfile.ventureType || (ob.businessProfile && ob.businessProfile.ventureType) || '',
+      };
+    }
+    if (cp.vision) {
+      ob.vision = { ...(ob.vision || {}), ubp: cp.vision.ubp || (ob.vision && ob.vision.ubp) || '' };
+    }
+    const a = ob.answers || {};
+    // Vision & values
+    if (cp.vision) {
+      if (typeof cp.vision.oneYear !== 'undefined') a.vision1y = Array.isArray(cp.vision.oneYear) ? cp.vision.oneYear.join('\n') : String(cp.vision.oneYear || '');
+      if (typeof cp.vision.threeYear !== 'undefined') a.vision3y = Array.isArray(cp.vision.threeYear) ? cp.vision.threeYear.join('\n') : String(cp.vision.threeYear || '');
+      if (typeof cp.vision.ubp !== 'undefined') a.ubp = String(cp.vision.ubp || '');
+      if (typeof cp.vision.purpose !== 'undefined') a.purpose = String(cp.vision.purpose || '');
+    }
+    if (cp.values) {
+      if (typeof cp.values.core !== 'undefined') a.valuesCore = String(cp.values.core || '');
+      if (typeof cp.values.culture !== 'undefined') a.cultureFeeling = String(cp.values.culture || '');
+    }
+    // Market
+    if (cp.market) {
+      if (typeof cp.market.customer !== 'undefined') a.marketCustomer = String(cp.market.customer || '');
+      if (typeof cp.market.partners !== 'undefined') a.partnersDesc = String(cp.market.partners || '');
+      if (typeof cp.market.competitors !== 'undefined') a.compNotes = String(cp.market.competitors || '');
+      if (typeof cp.market.competitorNames !== 'undefined' && Array.isArray(cp.market.competitorNames)) a.competitorNames = cp.market.competitorNames.map(String);
+    }
+    // Products
+    if (Array.isArray(cp.products)) a.products = cp.products.map((p)=>({ product: String(p.product||''), description: String(p.description||''), pricing: String(p.pricing||'') }));
+    // Org (team members)
+    if (Array.isArray(cp.org)) {
+      a.orgPositions = cp.org.map((n)=>({ id: n.id || undefined, name: String(n.name||''), position: String(n.position||''), department: n.department || null, parentId: n.parentId || null, role: '' }));
+    }
+    // Financial
+    if (cp.financial) {
+      const f = cp.financial || {};
+      a.finSalesVolume = String(f.salesVolume || a.finSalesVolume || '');
+      a.finSalesGrowthPct = String(f.salesGrowthPct || a.finSalesGrowthPct || '');
+      a.finAvgUnitCost = String(f.avgUnitCost || a.finAvgUnitCost || '');
+      a.finFixedOperatingCosts = String(f.fixedOperatingCosts || a.finFixedOperatingCosts || '');
+      a.finMarketingSalesSpend = String(f.marketingSalesSpend || a.finMarketingSalesSpend || '');
+      a.finPayrollCost = String(f.payrollCost || a.finPayrollCost || '');
+      a.finStartingCash = String(f.startingCash || a.finStartingCash || '');
+      a.finAdditionalFundingAmount = String(f.additionalFundingAmount || a.finAdditionalFundingAmount || '');
+      a.finAdditionalFundingMonth = String(f.additionalFundingMonth || a.finAdditionalFundingMonth || '');
+      a.finPaymentCollectionDays = String(f.paymentCollectionDays || a.finPaymentCollectionDays || '');
+      a.finTargetProfitMarginPct = String(f.targetProfitMarginPct || a.finTargetProfitMarginPct || '');
+      a.finIsNonprofit = String(f.isNonprofit || a.finIsNonprofit || '');
+    }
+    // Action plans (departmental)
+    if (cp.actionPlans && typeof cp.actionPlans === 'object') {
+      a.actionAssignments = cp.actionPlans;
+    }
+    ob.answers = a;
+    await ob.save();
+    // Optionally sync user full name
+    if (cp.userProfile && cp.userProfile.fullName) {
+      try { await User.findByIdAndUpdate(userId, { fullName: cp.userProfile.fullName }); } catch {}
+    }
+    return res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/plan/compiled
+exports.getCompiledPlan = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    if (!ob) return res.json({ plan: null });
+    const a = ob.answers || {};
+    const plan = {
+      userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
+      businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '', ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '' },
+      vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
+      values: { core: a.valuesCore || '', culture: a.cultureFeeling || '' },
+      market: { customer: a.marketCustomer || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
+      products: Array.isArray(a.products) ? a.products : [],
+      org: Array.isArray(a.orgPositions) ? a.orgPositions.map((p)=>({ id: p.id, name: p.name, position: p.position, department: p.department || null, parentId: p.parentId || null })) : [],
+      financial: {
+        salesVolume: a.finSalesVolume || '',
+        salesGrowthPct: a.finSalesGrowthPct || '',
+        avgUnitCost: a.finAvgUnitCost || '',
+        fixedOperatingCosts: a.finFixedOperatingCosts || '',
+        marketingSalesSpend: a.finMarketingSalesSpend || '',
+        payrollCost: a.finPayrollCost || '',
+        startingCash: a.finStartingCash || '',
+        additionalFundingAmount: a.finAdditionalFundingAmount || '',
+        additionalFundingMonth: a.finAdditionalFundingMonth || '',
+        paymentCollectionDays: a.finPaymentCollectionDays || '',
+        targetProfitMarginPct: a.finTargetProfitMarginPct || '',
+        isNonprofit: a.finIsNonprofit || '',
+      },
+      actionPlans: a.actionAssignments || {},
+      generatedAt: new Date().toISOString(),
+      version: '1.0',
+    };
+    return res.json({ plan });
   } catch (err) {
     next(err);
   }

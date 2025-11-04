@@ -32,7 +32,7 @@ exports.saveUserProfile = async (req, res) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({ message: 'Invalid input', details: errors.array() });
   }
-  const { fullName, role, builtPlanBefore, planningGoal, includePersonalPlanning } = req.body;
+  const { fullName, role, builtPlanBefore, planningGoal, includePersonalPlanning, planningFor } = req.body;
 
   const userId = req.user?.id;
   if (!userId) {
@@ -45,6 +45,7 @@ exports.saveUserProfile = async (req, res) => {
           builtPlanBefore: ynToBool(builtPlanBefore),
           planningGoal,
           includePersonalPlanning: ynToBool(includePersonalPlanning),
+          planningFor,
         },
       },
     });
@@ -57,6 +58,7 @@ exports.saveUserProfile = async (req, res) => {
     builtPlanBefore: ynToBool(builtPlanBefore),
     planningGoal,
     includePersonalPlanning: ynToBool(includePersonalPlanning),
+    planningFor,
   };
   await ob.save();
 
@@ -77,6 +79,7 @@ exports.saveBusinessProfile = async (req, res) => {
     businessName,
     businessStage,
     industry,
+    industryOther,
     country,
     city,
     ventureType,
@@ -84,6 +87,7 @@ exports.saveBusinessProfile = async (req, res) => {
     funding,
     tools,
     connectTools,
+    description,
   } = req.body;
 
   const userId = req.user?.id;
@@ -94,6 +98,7 @@ exports.saveBusinessProfile = async (req, res) => {
           businessName,
           businessStage,
           industry,
+          industryOther,
           country,
           city,
           ventureType,
@@ -101,7 +106,8 @@ exports.saveBusinessProfile = async (req, res) => {
           funding: ynToBool(funding),
           tools: Array.isArray(tools) ? tools : [],
           connectTools: ynToBool(connectTools),
-        },
+          description,
+      },
       },
     });
   }
@@ -111,6 +117,7 @@ exports.saveBusinessProfile = async (req, res) => {
     businessName,
     businessStage,
     industry,
+    industryOther,
     country,
     city,
     ventureType,
@@ -118,6 +125,7 @@ exports.saveBusinessProfile = async (req, res) => {
     funding: ynToBool(funding),
     tools: Array.isArray(tools) ? tools : [],
     connectTools: ynToBool(connectTools),
+    description,
   };
   await ob.save();
   return res.json({ onboarding: ob });

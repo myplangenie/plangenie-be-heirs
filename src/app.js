@@ -36,6 +36,8 @@ app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/onboarding', require('./routes/onboarding.routes'));
 app.use('/api/misc', require('./routes/misc.routes'));
 app.use('/api/dashboard', require('./routes/dashboard.routes'));
+// Optional integrations
+app.use('/api/gamma', require('./routes/gamma.routes'));
 
 // Error handler
 app.use(errorHandler);
