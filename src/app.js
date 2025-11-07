@@ -38,6 +38,8 @@ app.use('/api/misc', require('./routes/misc.routes'));
 app.use('/api/dashboard', require('./routes/dashboard.routes'));
 // Optional integrations
 app.use('/api/gamma', require('./routes/gamma.routes'));
+// Chat
+app.use('/api/chat', require('./routes/chat.routes'));
 
 // Error handler
 app.use(errorHandler);

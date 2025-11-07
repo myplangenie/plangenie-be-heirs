@@ -41,6 +41,12 @@ const DashboardSchema = new mongoose.Schema(
         },
       ],
       insights: [String],
+      insightSections: [
+        {
+          title: String,
+          items: [String],
+        },
+      ],
       snapshot: {
         vision: String,
         ubp: String,

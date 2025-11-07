@@ -204,6 +204,7 @@ exports.getSummary = async (req, res, next) => {
     const ob = await Onboarding.findOne({ user: userId }).lean().exec();
     const a = ob?.answers || {};
     const ubp = (a.ubp || ob?.vision?.ubp || '').trim();
+    const purpose = String(a.purpose || '').trim();
     const oneYear = (a.vision1y || '').split('\n').map((s) => s.trim()).filter(Boolean);
     const threeYear = (a.vision3y || '').split('\n').map((s) => s.trim()).filter(Boolean);
     const vision = oneYear[0] || threeYear[0] || '';
@@ -224,15 +225,22 @@ exports.getSummary = async (req, res, next) => {
       .slice(0, 12);
     // Basic finance chart from answers (first 6 months)
     function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
-    const units0 = num(a.finSalesVolume);
     const growth = num(a.finSalesGrowthPct) / 100;
-    const avgCost = num(a.finAvgUnitCost);
     const fixed = num(a.finFixedOperatingCosts) + num(a.finMarketingSalesSpend) + num(a.finPayrollCost);
-    let avgPrice = 0;
+    // Derive from products when explicit inputs aren't provided
+    let totalVolFromProducts = 0, avgCostFromProducts = 0, avgPrice = 0;
     try {
-      const prices = (a.products || []).map((p) => num(p.pricing)).filter((n) => n > 0);
-      if (prices.length) avgPrice = prices.reduce((x,y)=>x+y,0)/prices.length;
+      const list = Array.isArray(a.products) ? a.products : [];
+      const nums = list.map((p)=>({ v: num(p.monthlyVolume), price: num(p.price ?? p.pricing), cost: num(p.unitCost) }));
+      totalVolFromProducts = nums.reduce((sum, r)=> sum + (r.v||0), 0);
+      const totalW = nums.reduce((sum, r)=> sum + (r.v||0), 0);
+      const sumPrice = nums.reduce((sum, r)=> sum + ((r.price||0)*(r.v||0)), 0);
+      const sumCost = nums.reduce((sum, r)=> sum + ((r.cost||0)*(r.v||0)), 0);
+      avgPrice = totalW ? (sumPrice/totalW) : 0;
+      avgCostFromProducts = totalW ? (sumCost/totalW) : 0;
     } catch {}
+    const units0 = num(a.finSalesVolume) || totalVolFromProducts;
+    const avgCost = num(a.finAvgUnitCost) || avgCostFromProducts;
     if (!avgPrice && avgCost) {
       const m = num(a.finTargetProfitMarginPct)/100; avgPrice = m < 0.99 ? (avgCost/(1-m||1)) : avgCost;
     }
@@ -251,17 +259,111 @@ exports.getSummary = async (req, res, next) => {
       const progress = Math.min(100, Math.round(((filled || 0)/Math.max(1,(arr||[]).length))*100));
       return { name: key, percent: progress };
     });
+    // Pull any previously generated insights saved for this user
+    const dash = await Dashboard.findOne({ user: userId }).lean().exec();
+    const savedInsights = (dash && dash.summary && Array.isArray(dash.summary.insights)) ? dash.summary.insights : [];
+    const savedSections = (dash && dash.summary && Array.isArray(dash.summary.insightSections)) ? dash.summary.insightSections : [];
+    // Build team with simple responsibility note
+    const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+    const domain = (p) => {
+      const d = String(p?.department || '').trim();
+      if (d) return d;
+      const role = String(p?.position || '').trim();
+      const m = role.match(/(marketing|sales|operations|service|finance|admin|people|human resources|hr|partnerships|alliances|technology|infrastructure|community|impact)/i);
+      if (m) return m[0].replace(/\bhr\b/i, 'Human Resources').replace(/\bservice\b/i, 'Service Delivery');
+      return role || 'their role';
+    };
+    const teamList = org.map((p) => {
+      const dom = domain(p);
+      const lower = String(dom).toLowerCase();
+      const note = `In charge of ${dom} and everything that has to do with ${lower}`;
+      return { name: p.name, role: p.position, note };
+    });
     const summary = {
       kpis: { overdueTasks: 0, activeTeamMembers: Array.isArray(a.orgPositions)?a.orgPositions.length:0 },
       milestones: [],
       departmentProgress,
       financeChart: chart,
       activePlans,
-      insights: [],
-      snapshot: { vision, ubp },
-      team: (a.orgPositions || []).map((p) => ({ name: p.name, role: p.position, note: '' })),
+      insights: savedInsights,
+      insightSections: savedSections,
+      snapshot: { vision, ubp, purpose },
+      team: teamList,
     };
     return res.json({ summary });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/insights
+exports.getInsights = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const dash = await Dashboard.findOne({ user: userId }).lean().exec();
+    const sections = (dash && dash.summary && Array.isArray(dash.summary.insightSections)) ? dash.summary.insightSections : [];
+    // Back-compat: if only flat insights exist, wrap into a single section
+    let out = sections;
+    if ((!out || out.length === 0) && dash && dash.summary && Array.isArray(dash.summary.insights) && dash.summary.insights.length) {
+      out = [{ title: 'Recommendations', items: dash.summary.insights.slice(0, 3) }];
+    }
+    return res.json({ sections: out });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/insights/generate
+// Generates insights from current action plans and saves them
+exports.generateInsights = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const sectionTitle = String(req.body?.sectionTitle || '').trim();
+    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const assignments = (ob && ob.answers && ob.answers.actionAssignments) ? ob.answers.actionAssignments : {};
+
+    const ai = require('./ai.controller');
+    const doc = await getOrCreate(userId);
+    doc.summary = doc.summary || {};
+    doc.summary.insightSections = Array.isArray(doc.summary.insightSections) ? doc.summary.insightSections : [];
+
+    if (sectionTitle) {
+      // Regenerate only one section
+      let section;
+      try {
+        section = await ai.generateSingleInsightSectionForUser(userId, assignments, sectionTitle);
+      } catch (err) {
+        if (err && err.code === 'NO_API_KEY') {
+          return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+        }
+        const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate insights';
+        return res.status(500).json({ message });
+      }
+      const idx = doc.summary.insightSections.findIndex((s) => String(s?.title || '').toLowerCase() === sectionTitle.toLowerCase());
+      if (idx === -1) doc.summary.insightSections.push(section); else doc.summary.insightSections[idx] = section;
+      // Maintain a flattened top-level insights (first items) for any legacy consumers
+      doc.summary.insights = (doc.summary.insightSections[0]?.items || []).slice(0, 3);
+      await doc.save();
+      return res.json({ sections: doc.summary.insightSections });
+    } else {
+      // Generate full set
+      let sections = [];
+      try {
+        sections = await ai.generateActionInsightSectionsForUser(userId, assignments, 2);
+      } catch (err) {
+        if (err && err.code === 'NO_API_KEY') {
+          return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+        }
+        const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate insights';
+        return res.status(500).json({ message });
+      }
+      doc.summary.insightSections = sections;
+      doc.summary.insights = (sections[0]?.items || []).slice(0, 3);
+      await doc.save();
+      return res.json({ sections });
+    }
   } catch (err) {
     next(err);
   }
@@ -318,11 +420,56 @@ exports.getStrategyCanvas = async (req, res, next) => {
     const ubp = (a.ubp || ob?.vision?.ubp || '').trim();
     const oneYear = (a.vision1y || '').split('\n').map((s)=>s.trim()).filter(Boolean);
     const threeYear = (a.vision3y || '').split('\n').map((s)=>s.trim()).filter(Boolean);
+    const purpose = String(a.purpose || '').trim();
+    const summary = String(a.identitySummary || '').trim();
     const goals = Object.values(a.actionAssignments || {})
       .flat()
       .map((u)=> String(u?.goal||'').trim())
       .filter(Boolean);
-    return res.json({ canvas: { ubp, oneYear, threeYear, goals } });
+    return res.json({ canvas: { ubp, purpose, oneYear, threeYear, summary, goals } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/dashboard/strategy-canvas
+// Allows direct editing of core canvas fields from the dashboard UI
+exports.updateStrategyCanvas = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const patch = req.body || {};
+    const ob = (await Onboarding.findOne({ user: userId })) || (await Onboarding.create({ user: userId }));
+    const a = ob.answers || {};
+    // Update UBPs and horizons
+    if (typeof patch.ubp !== 'undefined') {
+      const v = String(patch.ubp || '');
+      a.ubp = v;
+      ob.vision = { ...(ob.vision || {}), ubp: v };
+    }
+    if (typeof patch.purpose !== 'undefined') {
+      a.purpose = String(patch.purpose || '');
+    }
+    if (typeof patch.oneYear !== 'undefined') {
+      a.vision1y = Array.isArray(patch.oneYear) ? patch.oneYear.map(String).join('\n') : String(patch.oneYear || '');
+    }
+    if (typeof patch.threeYear !== 'undefined') {
+      a.vision3y = Array.isArray(patch.threeYear) ? patch.threeYear.map(String).join('\n') : String(patch.threeYear || '');
+    }
+    if (typeof patch.summary !== 'undefined') {
+      a.identitySummary = String(patch.summary || '');
+    }
+    // Optionally accept explicit goals list (flat) to update action assignments
+    if (Array.isArray(patch.goals)) {
+      const gg = patch.goals.map((g) => ({ goal: String(g || '') })).filter((g) => g.goal);
+      // Persist under a neutral bucket to avoid losing department context; keep existing if empty
+      const curr = a.actionAssignments || {};
+      curr._canvas = gg; // special bucket; UI may treat separately
+      a.actionAssignments = curr;
+    }
+    ob.answers = a;
+    await ob.save();
+    return res.json({ ok: true });
   } catch (err) {
     next(err);
   }
@@ -368,8 +515,15 @@ exports.saveCompiledPlan = async (req, res, next) => {
       if (typeof cp.market.competitors !== 'undefined') a.compNotes = String(cp.market.competitors || '');
       if (typeof cp.market.competitorNames !== 'undefined' && Array.isArray(cp.market.competitorNames)) a.competitorNames = cp.market.competitorNames.map(String);
     }
-    // Products
-    if (Array.isArray(cp.products)) a.products = cp.products.map((p)=>({ product: String(p.product||''), description: String(p.description||''), pricing: String(p.pricing||'') }));
+    // Products (preserve legacy pricing while accepting new structured fields)
+    if (Array.isArray(cp.products)) a.products = cp.products.map((p)=>({
+      product: String(p.product||''),
+      description: String(p.description||''),
+      pricing: typeof p.pricing !== 'undefined' ? String(p.pricing||'') : undefined,
+      unitCost: typeof p.unitCost !== 'undefined' ? String(p.unitCost||'') : undefined,
+      price: typeof p.price !== 'undefined' ? String(p.price||'') : undefined,
+      monthlyVolume: typeof p.monthlyVolume !== 'undefined' ? String(p.monthlyVolume||'') : undefined,
+    }));
     // Org (team members)
     if (Array.isArray(cp.org)) {
       a.orgPositions = cp.org.map((n)=>({ id: n.id || undefined, name: String(n.name||''), position: String(n.position||''), department: n.department || null, parentId: n.parentId || null, role: '' }));
@@ -411,8 +565,12 @@ exports.getCompiledPlan = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
-    if (!ob) return res.json({ plan: null });
+    let ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    if (!ob) {
+      // Initialize a minimal onboarding document to ensure downstream consumers have data
+      const created = await Onboarding.create({ user: userId, answers: {} });
+      ob = created.toObject();
+    }
     const a = ob.answers || {};
     const plan = {
       userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
@@ -543,29 +701,221 @@ exports.getDepartments = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const [ob, user] = await Promise.all([
+      Onboarding.findOne({ user: userId }).lean().exec(),
+      User.findById(userId).lean().exec(),
+    ]);
     const a = ob?.answers || {};
     const assignments = a.actionAssignments || {};
     const label = (k) => ({
       marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'Community & Impact'
     }[k] || k);
     const parseDate = (s) => { const m=String(s||'').match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:''; };
-    const now = new Date();
-    const departments = Object.keys(assignments || {}).map((k) => {
-      const arr = (assignments[k] || []);
-      const owner = (arr[0] ? `${arr[0].firstName||''} ${arr[0].lastName||''}`.trim() : '') || '-';
+    // Helper to derive status purely from progress thresholds
+    const statusFromProgress = (p) => {
+      if (p >= 80) return 'on-track';
+      if (p >= 50) return 'in-progress';
+      return 'at-risk';
+    };
+    const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+    const canon = (s) => String(s || '').trim().toLowerCase();
+    // Build a unified list of department names from assignments and org chart entries
+    const deptMap = new Map(); // key: canonical name -> { name, dueDate? }
+    // From assignments: prefer human label mapping
+    for (const k of Object.keys(assignments || {})) {
+      const name = label(k);
+      const arr = assignments[k] || [];
       const dates = arr.map((u)=>parseDate(u?.dueWhen)).filter(Boolean).sort();
       const dueDate = dates[0] || '-';
-      const filled = arr.filter((u)=> (u?.goal||'').trim()).length;
-      const progress = Math.min(100, Math.round(((filled||0)/Math.max(1,arr.length))*100));
-      let status = 'in-progress';
-      if (progress >= 60) status = 'on-track';
-      if (progress === 0) status = 'at-risk';
-      // If earliest due is past today and progress is low, mark at-risk
-      try { if (dueDate && progress < 50) { const d=new Date(dueDate); if (d < now) status = 'at-risk'; } } catch {}
-      return { name: label(k), owner, dueDate, progress, status };
+      const ck = canon(name);
+      if (!deptMap.has(ck)) deptMap.set(ck, { name, dueDate });
+      else {
+        const curr = deptMap.get(ck);
+        if (!curr.dueDate && dueDate) curr.dueDate = dueDate;
+      }
+    }
+    // From org chart: any typed department names
+    for (const p of org) {
+      const name = String(p.department || '').trim();
+      if (!name) continue;
+      const ck = canon(name);
+      if (!deptMap.has(ck)) deptMap.set(ck, { name, dueDate: '-' });
+    }
+
+    // Determine department heads from org chart
+    const headFor = (deptName) => {
+      const candidates = org.filter((p) => canon(p.department) === canon(deptName));
+      if (!candidates.length) return null;
+      // Prefer those whose parent is not in the same department (top of that dept)
+      const byId = new Map((org || []).map((p) => [String(p.id || ''), p]));
+      const isTopOfDept = (p) => {
+        const parentId = p.parentId == null ? null : String(p.parentId);
+        if (!parentId) return true;
+        const parent = byId.get(parentId);
+        if (!parent) return true;
+        return canon(parent.department) !== canon(deptName);
+      };
+      const top = candidates.filter(isTopOfDept);
+      const pool = top.length ? top : candidates;
+      // Rank by title keywords
+      const score = (title = '') => {
+        const t = String(title).toLowerCase();
+        if (/\bchief\b|\bvp\b|vice president/.test(t)) return 5;
+        if (/head of|\bhead\b/.test(t)) return 4;
+        if (/director/.test(t)) return 3;
+        if (/lead/.test(t)) return 2;
+        if (/manager/.test(t)) return 1;
+        return 0;
+      };
+      const sorted = pool.slice().sort((a,b)=> score(b.position)-score(a.position));
+      const pick = sorted[0] || pool[0];
+      const name = `${pick?.name || ''}`.trim();
+      return name || null;
+    };
+    // Fallback owner is the current logged-in user
+    const fallbackOwner = (user?.fullName || '').trim() || '-';
+
+    // Merge with stored Department overrides; progress is derived from action plan item statuses
+    const stored = await Department.find({ user: userId }).lean().exec();
+    const byName = new Map((stored || []).map((d) => [d.name, d]));
+    const departments = Array.from(deptMap.values()).map((r) => {
+      const s = byName.get(r.name);
+      // Derive progress from action assignment statuses for this department
+      const deptKey = Object.keys(assignments || {}).find((k) => canon(label(k)) === canon(r.name));
+      let progress = 0;
+      if (deptKey && Array.isArray(assignments[deptKey])) {
+        const arr = assignments[deptKey];
+        const total = arr.length || 0;
+        if (total > 0) {
+          const done = arr.reduce((acc, it) => acc + (/(done|complete|completed)/i.test(String(it?.status || '')) ? 1 : 0), 0);
+          progress = Math.round((done / total) * 100);
+        }
+      }
+      const owner = (s?.owner && String(s.owner).trim()) ? s.owner : (headFor(r.name) || fallbackOwner);
+      const dueDate = (s?.dueDate && String(s.dueDate).trim()) ? s.dueDate : (r.dueDate || '-');
+      const status = statusFromProgress(progress);
+      return { name: r.name, owner, dueDate, progress, status };
     });
     return res.json({ departments });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/dashboard/departments
+// Body: { name: string, owner?: string, dueDate?: string }
+exports.updateDepartment = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const { name, owner, dueDate } = req.body || {};
+    if (typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ message: 'Department name is required' });
+    }
+    const patch = {};
+    if (typeof owner === 'string') patch.owner = owner;
+    if (typeof dueDate === 'string') patch.dueDate = dueDate;
+    const doc = await Department.findOneAndUpdate(
+      { user: userId, name },
+      { $set: { name, user: userId, ...patch } },
+      { new: true, upsert: true }
+    ).lean().exec();
+    // Compute owner consistent with GET (department head or fallback to current user)
+    const [ob, user] = await Promise.all([
+      Onboarding.findOne({ user: userId }).lean().exec(),
+      User.findById(userId).lean().exec(),
+    ]);
+    const a = ob?.answers || {};
+    const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+    const canon = (s) => String(s || '').trim().toLowerCase();
+    const headFor = (deptName) => {
+      const candidates = org.filter((p) => canon(p.department) === canon(deptName));
+      if (!candidates.length) return null;
+      const byId = new Map((org || []).map((p) => [String(p.id || ''), p]));
+      const isTopOfDept = (p) => {
+        const parentId = p.parentId == null ? null : String(p.parentId);
+        if (!parentId) return true;
+        const parent = byId.get(parentId);
+        if (!parent) return true;
+        return canon(parent.department) !== canon(deptName);
+      };
+      const top = candidates.filter(isTopOfDept);
+      const pool = top.length ? top : candidates;
+      const score = (title = '') => {
+        const t = String(title).toLowerCase();
+        if (/\bchief\b|\bvp\b|vice president/.test(t)) return 5;
+        if (/head of|\bhead\b/.test(t)) return 4;
+        if (/director/.test(t)) return 3;
+        if (/lead/.test(t)) return 2;
+        if (/manager/.test(t)) return 1;
+        return 0;
+      };
+      const sorted = pool.slice().sort((a,b)=> score(b.position)-score(a.position));
+      const pick = sorted[0] || pool[0];
+      const n = `${pick?.name || ''}`.trim();
+      return n || null;
+    };
+    const fallbackOwner = (user?.fullName || '').trim() || '-';
+    const ownerName = (doc.owner && String(doc.owner).trim()) ? doc.owner : (headFor(name) || fallbackOwner);
+    // Derive progress from action assignments for this department
+    const ab = ob?.answers || {};
+    const assignments = ab.actionAssignments || {};
+    const deptKey = Object.keys(assignments || {}).find((k) => canon(({ marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'Community & Impact' }[k] || k)) === canon(name));
+    let progress = 0;
+    if (deptKey && Array.isArray(assignments[deptKey])) {
+      const arr = assignments[deptKey];
+      const total = arr.length || 0;
+      if (total > 0) {
+        const done = arr.reduce((acc, it) => acc + (/(done|complete|completed)/i.test(String(it?.status || '')) ? 1 : 0), 0);
+        progress = Math.round((done / total) * 100);
+      }
+    }
+    const status = progress >= 80 ? 'on-track' : (progress >= 50 ? 'in-progress' : 'at-risk');
+    // Shape response consistent with GET
+    return res.json({ department: { name: doc.name, owner: ownerName, dueDate: doc.dueDate || '', progress, status } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/dashboard/action-assignments/status
+// Body: { department?: string, key?: string, index: number, status: string }
+// Accepts either a human department label (department) or canonical key (key)
+exports.updateActionAssignmentStatus = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const deptLabel = String(req.body?.department || '').trim();
+    const deptKeyIn = String(req.body?.key || '').trim();
+    const index = Number(req.body?.index);
+    const status = String(req.body?.status || '').trim();
+    if (!isFinite(index) || index < 0) return res.status(400).json({ message: 'Valid index is required' });
+    if (!status) return res.status(400).json({ message: 'Status is required' });
+    const ob = await Onboarding.findOne({ user: userId });
+    if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
+    ob.answers = ob.answers || {};
+    const assignments = ob.answers.actionAssignments = ob.answers.actionAssignments || {};
+    const canon = (s) => String(s || '').trim().toLowerCase();
+    const labelFromKey = (k) => ({
+      marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'Community & Impact'
+    }[k] || k);
+    let deptKey = deptKeyIn;
+    if (!deptKey) {
+      // Try to map label to key
+      const found = Object.keys(assignments).find((k) => canon(labelFromKey(k)) === canon(deptLabel));
+      if (found) deptKey = found;
+    }
+    if (!deptKey || !assignments[deptKey]) {
+      return res.status(400).json({ message: 'Department not found in assignments' });
+    }
+    const arr = Array.isArray(assignments[deptKey]) ? assignments[deptKey] : [];
+    if (index >= arr.length) return res.status(400).json({ message: 'Index out of range' });
+    const item = arr[index] || {};
+    item.status = status;
+    arr[index] = item;
+    assignments[deptKey] = arr;
+    await ob.save();
+    return res.json({ ok: true, item: { ...item, status } });
   } catch (err) {
     next(err);
   }
@@ -579,20 +929,30 @@ exports.getFinancials = async (req, res, next) => {
     const ob = await Onboarding.findOne({ user: userId }).lean().exec();
     const a = ob?.answers || {};
     function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
-    const units0 = num(a.finSalesVolume);
     const growth = num(a.finSalesGrowthPct) / 100;
-    const avgCost = num(a.finAvgUnitCost);
-    const fixed = num(a.finFixedOperatingCosts) + num(a.finMarketingSalesSpend) + num(a.finPayrollCost);
+    // Derive from products when explicit inputs aren't provided
+    let totalVolFromProducts = 0, avgCostFromProducts = 0, avgPrice = 0;
+    try {
+      const list = Array.isArray(a.products) ? a.products : [];
+      const nums = list.map((p)=>({ v: num(p.monthlyVolume), price: num(p.price ?? p.pricing), cost: num(p.unitCost) }));
+      totalVolFromProducts = nums.reduce((sum, r)=> sum + (r.v||0), 0);
+      const totalW = nums.reduce((sum, r)=> sum + (r.v||0), 0);
+      const sumPrice = nums.reduce((sum, r)=> sum + ((r.price||0)*(r.v||0)), 0);
+      const sumCost = nums.reduce((sum, r)=> sum + ((r.cost||0)*(r.v||0)), 0);
+      avgPrice = totalW ? (sumPrice/totalW) : 0;
+      avgCostFromProducts = totalW ? (sumCost/totalW) : 0;
+    } catch {}
+    const units0 = num(a.finSalesVolume) || totalVolFromProducts;
+    const avgCost = num(a.finAvgUnitCost) || avgCostFromProducts;
+    const fixedOperating = num(a.finFixedOperatingCosts);
+    const marketingSpend = num(a.finMarketingSalesSpend);
+    const payrollCost = num(a.finPayrollCost);
+    const fixed = fixedOperating + marketingSpend + payrollCost;
     const startCash = num(a.finStartingCash);
     const fundAmt = num(a.finAdditionalFundingAmount);
     const fundMonth = (()=>{ try { const [y,m]=String(a.finAdditionalFundingMonth||'').split('-').map(Number); return (m&&m>=1&&m<=12)?(m-1):-1; } catch { return -1; } })();
     const collectionDays = num(a.finPaymentCollectionDays);
     const lag = collectionDays >= 30 ? 1 : 0;
-    let avgPrice = 0;
-    try {
-      const prices = (a.products || []).map((p) => num(p.pricing)).filter((n) => n > 0);
-      if (prices.length) avgPrice = prices.reduce((x,y)=>x+y,0)/prices.length;
-    } catch {}
     if (!avgPrice && avgCost) {
       const m = num(a.finTargetProfitMarginPct)/100; avgPrice = m < 0.99 ? (avgCost/(1-m||1)) : avgCost;
     }
@@ -619,19 +979,79 @@ exports.getFinancials = async (req, res, next) => {
       cash = cash + inflow - outflow + fund;
       return cash;
     });
-    const chart = ['Jan','Feb','Mar','Apr','May','Jun'].map((n, i)=> ({ name:n, Revenue: Math.round(series[i]?.revenue/1000)||0, Cost: Math.round((series[i]?.cogs+series[i]?.opex)/1000)||0, Profit: Math.round(Math.max(series[i]?.profit||0,0)/1000) }));
-    const monthlyRevenue = `$${Math.round(series[0]?.revenue||0).toLocaleString()}`;
-    const monthlyCosts = `$${Math.round((series[0]?.cogs||0)+(series[0]?.opex||0)).toLocaleString()}`;
-    const netProfit = `$${Math.round(series[0]?.profit||0).toLocaleString()}`;
+    const monthLabels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    // Revenue Performance: Projected (accrual) vs Actual (cash collected or explicit actuals)
+    const actualOverrides = Array.isArray(a.finActualRevenue) ? a.finActualRevenue.map(num) : null;
+    const projected = series.map((s)=> Math.round(s.revenue));
+    const actual = series.map((_, idx) => {
+      const fallback = Math.round((idx - lag >= 0 ? series[idx - lag].revenue : 0));
+      if (actualOverrides && typeof actualOverrides[idx] === 'number' && isFinite(actualOverrides[idx])) return Math.round(actualOverrides[idx]);
+      return fallback;
+    });
+    // Cost Structure Evolution (stacked): allow overrides via actual arrays
+    const actualCogs = Array.isArray(a.finActualCogs) ? a.finActualCogs.map(num) : null;
+    const actualMarketing = Array.isArray(a.finActualMarketing) ? a.finActualMarketing.map(num) : null;
+    const actualPayroll = Array.isArray(a.finActualPayroll) ? a.finActualPayroll.map(num) : null;
+    const actualFixed = Array.isArray(a.finActualFixed) ? a.finActualFixed.map(num) : null;
+    const costEvolution = {
+      months: monthLabels,
+      cogs: months.map((i)=> Math.round((actualCogs && isFinite(actualCogs[i])) ? actualCogs[i] : (series[i]?.cogs || 0))),
+      marketing: months.map((i)=> Math.round((actualMarketing && isFinite(actualMarketing[i])) ? actualMarketing[i] : (marketingSpend || 0))),
+      payroll: months.map((i)=> Math.round((actualPayroll && isFinite(actualPayroll[i])) ? actualPayroll[i] : (payrollCost || 0))),
+      fixed: months.map((i)=> Math.round((actualFixed && isFinite(actualFixed[i])) ? actualFixed[i] : (fixedOperating || 0))),
+    };
+    // Revenue vs Cost vs Profit chart: reflect actuals when present (first 6 months)
+    const chart = monthLabels.slice(0,6).map((n, i)=> {
+      const rev = isFinite(actual[i]) ? actual[i] : Math.round(series[i]?.revenue||0);
+      const cogsV = costEvolution.cogs[i] || 0;
+      const opexV = (costEvolution.marketing[i]||0) + (costEvolution.payroll[i]||0) + (costEvolution.fixed[i]||0);
+      const profitV = Math.max(0, rev - (cogsV + opexV));
+      return { name:n, Revenue: Math.round(rev/1000), Cost: Math.round((cogsV+opexV)/1000), Profit: Math.round(profitV/1000) };
+    });
+    const monthlyRevenue = `$${Math.round(actual[0] || series[0]?.revenue || 0).toLocaleString()}`;
+    const month0Costs = (costEvolution.cogs[0]||0) + (costEvolution.marketing[0]||0) + (costEvolution.payroll[0]||0) + (costEvolution.fixed[0]||0);
+    const monthlyCosts = `$${Math.round(month0Costs).toLocaleString()}`;
+    const month0Profit = (actual[0] || series[0]?.revenue || 0) - month0Costs;
+    const netProfit = `$${Math.round(month0Profit).toLocaleString()}`;
     const burn = series[0]?.profit < 0 ? Math.max(0, Math.floor((startCash||0)/Math.max(1, -series[0].profit))) : 12;
+    // KPIs
+    // Defaults/assumptions for KPI engine (can be adjusted later through assumptions table)
+    const assumeChurn = Math.max(0.001, Math.min(0.99, num(a.kpiChurnRate || '3')/100));
+    const assumeACV = num(a.kpiAvgContractValue || (avgPrice || 0));
+    const grossMargin = projected[0] > 0 ? Math.max(0, Math.min(0.99, (projected[0] - (series[0].cogs + payrollCost + marketingSpend + fixedOperating))/projected[0])) : 0.4;
+    const newCustomers = assumeACV > 0 ? Math.max(1, Math.round(projected[0] / assumeACV)) : Math.max(1, Math.round(units0));
+    const cacVal = newCustomers > 0 ? (marketingSpend / newCustomers) : 0;
+    const ltvVal = assumeACV * grossMargin * (1/assumeChurn);
+    const ltvCac = cacVal > 0 ? (ltvVal / cacVal) : 0;
+    const breakevenIdx = series.findIndex((m)=> m.profit >= 0);
+    const runwayIdx = cashSeries.findIndex((c)=> c <= 0);
+    const delta = (arr) => {
+      // quarter-over-quarter change between month 0 and month 3
+      const a0 = arr[0];
+      const a3 = arr[3] ?? arr[0];
+      if (!isFinite(a0) || !isFinite(a3) || a3 === 0) return 0;
+      return ((a0 - a3) / Math.abs(a3)) * 100;
+    };
     const financials = {
       metrics: { monthlyRevenue, monthlyCosts, netProfit, burnRate: `${burn} months` },
       chart,
       revenueBars: series.slice(0,12).map((s)=>Math.round(s.revenue/1000)),
       cashflowBars: cashSeries.slice(0,12).map((c)=>Math.round(c/1000)),
+      revPerf: { months: monthLabels, projected, actual },
+      costEvolution,
+      kpis: {
+        cac: { value: cacVal, deltaPct: delta(series.map(()=>marketingSpend)) },
+        ltv: { value: ltvVal, deltaPct: 0 },
+        ltvCacRatio: { value: ltvCac },
+        breakeven: { month: breakevenIdx >= 0 ? (breakevenIdx+1) : null },
+        runway: { months: runwayIdx >= 0 ? runwayIdx : burn },
+      },
       assumptions: [
         { key: 'growth', assumption: 'Monthly Growth Rate', control: 'input', placeholder: 'e.g. 10%', ai: `${(growth*100||0).toFixed(1)}%`, aiClass: 'text-primary font-semibold', rationale: 'From your onboarding inputs' },
         { key: 'margin', assumption: 'Target Profit Margin', control: 'input', placeholder: 'e.g. 15%', ai: `${(num(a.finTargetProfitMarginPct)||0).toFixed(1)}%`, aiClass: 'text-primary font-semibold', rationale: 'From your onboarding inputs' },
+        { key: 'churn', assumption: 'Customer Churn Rate', control: 'input', placeholder: 'e.g. 3%', ai: `${(assumeChurn*100).toFixed(1)}%`, aiClass: 'text-primary font-semibold', rationale: 'From your assumptions' },
+        { key: 'acv', assumption: 'Average Contract Value', control: 'input', placeholder: 'e.g. $500', ai: `$${Math.round(assumeACV).toLocaleString()}`, aiClass: 'text-primary font-semibold', rationale: 'From your assumptions or products' },
+        { key: 'revenueRecog', assumption: 'Revenue Recognition', control: 'select', placeholder: 'Monthly', ai: 'Monthly', aiClass: 'text-primary font-semibold', rationale: 'Standard monthly recognition' },
       ],
     };
     return res.json({ financials });
@@ -652,6 +1072,192 @@ exports.getPlan = async (req, res, next) => {
     ]);
     const sections = sectionsRaw.map((s) => ({ sid: s.sid, name: s.name, complete: s.complete }));
     return res.json({ plan: { sections, companyLogoUrl: (p && p.companyLogoUrl) || '' } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/products
+exports.getProducts = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const items = Array.isArray(ob?.answers?.products) ? ob.answers.products : [];
+    return res.json({ items });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PUT /api/dashboard/products
+exports.saveProducts = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const inItems = Array.isArray(req.body?.items) ? req.body.items : [];
+    const items = inItems.map((p) => ({
+      product: String(p?.product || ''),
+      description: String(p?.description || ''),
+      pricing: typeof p?.pricing !== 'undefined' ? String(p?.pricing || '') : undefined,
+      unitCost: typeof p?.unitCost !== 'undefined' ? String(p?.unitCost || '') : undefined,
+      price: typeof p?.price !== 'undefined' ? String(p?.price || '') : undefined,
+      monthlyVolume: typeof p?.monthlyVolume !== 'undefined' ? String(p?.monthlyVolume || '') : undefined,
+    }));
+    const ob = await Onboarding.findOne({ user: userId });
+    if (!ob) return res.status(400).json({ message: 'Onboarding not initialized' });
+    ob.answers = ob.answers || {};
+    ob.answers.products = items;
+    // answers is a Mixed type; mark it modified so Mongoose persists nested changes
+    try { ob.markModified && ob.markModified('answers'); } catch {}
+    // Auto-populate financial inputs
+    function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
+    const nums = items.map((p)=>({ v: num(p.monthlyVolume), price: num(p.price ?? p.pricing), cost: num(p.unitCost) }));
+    const totalVol = nums.reduce((sum, r)=> sum + (r.v||0), 0);
+    const totalW = nums.reduce((sum, r)=> sum + (r.v||0), 0);
+    const sumPrice = nums.reduce((sum, r)=> sum + ((r.price||0)*(r.v||0)), 0);
+    const sumCost = nums.reduce((sum, r)=> sum + ((r.cost||0)*(r.v||0)), 0);
+    const avgCost = totalW ? (sumCost/totalW) : 0;
+    const avgPrice = totalW ? (sumPrice/totalW) : 0;
+    const marginPct = (avgPrice > 0) ? Math.max(0, Math.round(((avgPrice - avgCost)/avgPrice)*100)) : 0;
+    if (totalVol > 0) ob.answers.finSalesVolume = String(totalVol);
+    if (avgCost > 0) ob.answers.finAvgUnitCost = String(Math.round(avgCost));
+    if (marginPct > 0) ob.answers.finTargetProfitMarginPct = String(marginPct);
+    await ob.save();
+    return res.json({ ok: true, items });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/financials/recalculate
+exports.recalculateFinancials = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    // No heavy compute is needed here as GET /financials derives on the fly. This exists for future background tasks.
+    return res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/financials/actuals
+// Accepts arrays for monthly actuals to override projections in charts
+// Body: { revenue?: number[], cogs?: number[], marketing?: number[], payroll?: number[], fixed?: number[] }
+exports.saveFinancialActuals = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const { revenue, cogs, marketing, payroll, fixed, month } = req.body || {};
+    const ob = await Onboarding.findOne({ user: userId }) || await Onboarding.create({ user: userId });
+    ob.answers = ob.answers || {};
+    function normArr(arr) {
+      if (!Array.isArray(arr)) return undefined;
+      return arr.map((v)=>{
+        const n = Number(v);
+        return isFinite(n) ? n : 0;
+      }).slice(0, 12);
+    }
+    // If a single month patch is provided, update only that index
+    const mIdx = (typeof month === 'number' && isFinite(month)) ? (month >= 1 && month <= 12 ? month - 1 : month) : null;
+    if (mIdx !== null && mIdx >= 0 && mIdx <= 11) {
+      const ensure = (key) => { ob.answers[key] = Array.isArray(ob.answers[key]) ? ob.answers[key] : Array.from({length:12}, ()=>undefined); return ob.answers[key]; };
+      const setIf = (key, val) => { if (val !== undefined && val !== null && val !== '') { const arr = ensure(key); const n = Number(val); arr[mIdx] = isFinite(n) ? n : 0; } };
+      setIf('finActualRevenue', revenue);
+      setIf('finActualCogs', cogs);
+      setIf('finActualMarketing', marketing);
+      setIf('finActualPayroll', payroll);
+      setIf('finActualFixed', fixed);
+    } else {
+      // Bulk arrays mode
+      const revArr = normArr(revenue);
+      const cogsArr = normArr(cogs);
+      const mktArr = normArr(marketing);
+      const payArr = normArr(payroll);
+      const fixArr = normArr(fixed);
+      if (revArr) ob.answers.finActualRevenue = revArr;
+      if (cogsArr) ob.answers.finActualCogs = cogsArr;
+      if (mktArr) ob.answers.finActualMarketing = mktArr;
+      if (payArr) ob.answers.finActualPayroll = payArr;
+      if (fixArr) ob.answers.finActualFixed = fixArr;
+    }
+    await ob.save();
+    return res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/financials/import
+// Body: { csv: string } with columns: Month, Revenue, CashCollected, DirectCost, FixedCost, MarketingCost, PayrollCost, FundingIn, NewCustomers
+exports.importFinancialsCSV = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const csv = String(req.body?.csv || '').trim();
+    if (!csv) return res.status(400).json({ message: 'CSV text is required' });
+    const lines = csv.split(/\r?\n/).filter((l)=> l.trim().length > 0);
+    if (lines.length < 2) return res.status(400).json({ message: 'CSV requires a header and at least one row' });
+    const header = lines[0].split(',').map((h)=>h.trim());
+    const idx = (name) => header.findIndex((h)=> h.toLowerCase() === name.toLowerCase());
+    const idxMonth = idx('Month');
+    const idxRevenue = idx('Revenue');
+    const idxCash = idx('CashCollected');
+    const idxDirect = idx('DirectCost');
+    const idxFixed = idx('FixedCost');
+    const idxMkt = idx('MarketingCost');
+    const idxPayroll = idx('PayrollCost');
+    const idxFunding = idx('FundingIn');
+    const idxNewCust = idx('NewCustomers');
+    function parseMonth(s) {
+      const t = String(s||'').trim();
+      const mnames = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+      const lower = t.toLowerCase();
+      const nameIdx = mnames.findIndex((n)=> lower.startsWith(n));
+      if (nameIdx >= 0) return nameIdx;
+      const num = parseInt(t, 10);
+      if (isFinite(num) && num >= 1 && num <= 12) return num - 1;
+      return null;
+    }
+    const arr = (len=12)=> Array.from({length:len}, ()=>undefined);
+    const actualRevenue = arr();
+    const actualCogs = arr();
+    const actualMkt = arr();
+    const actualPayroll = arr();
+    const actualFixed = arr();
+    const funding = arr();
+    const newCust = arr();
+    let updates = 0;
+    for (let i=1;i<lines.length;i++){
+      const cols = lines[i].split(',');
+      const midx = parseMonth(cols[idxMonth] || '');
+      if (midx === null) continue;
+      const num = (v)=>{ const n = parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isFinite(n) ? n : undefined; };
+      const cashVal = idxCash >= 0 ? num(cols[idxCash]) : undefined;
+      const revVal = idxRevenue >= 0 ? num(cols[idxRevenue]) : undefined;
+      actualRevenue[midx] = (cashVal !== undefined ? cashVal : (revVal !== undefined ? revVal : actualRevenue[midx]));
+      if (idxDirect >= 0) actualCogs[midx] = num(cols[idxDirect]);
+      if (idxMkt >= 0) actualMkt[midx] = num(cols[idxMkt]);
+      if (idxPayroll >= 0) actualPayroll[midx] = num(cols[idxPayroll]);
+      if (idxFixed >= 0) actualFixed[midx] = num(cols[idxFixed]);
+      if (idxFunding >= 0) funding[midx] = num(cols[idxFunding]);
+      if (idxNewCust >= 0) newCust[midx] = num(cols[idxNewCust]);
+      updates++;
+    }
+    const ob = await Onboarding.findOne({ user: userId }) || await Onboarding.create({ user: userId });
+    ob.answers = ob.answers || {};
+    const setIfAny = (key, arr) => { if (arr.some((v)=> typeof v === 'number')) ob.answers[key] = arr; };
+    setIfAny('finActualRevenue', actualRevenue);
+    setIfAny('finActualCogs', actualCogs);
+    setIfAny('finActualMarketing', actualMkt);
+    setIfAny('finActualPayroll', actualPayroll);
+    setIfAny('finActualFixed', actualFixed);
+    // Store for future if needed
+    setIfAny('finActualFunding', funding);
+    setIfAny('finActualNewCustomers', newCust);
+    await ob.save();
+    return res.json({ ok: true, rows: updates });
   } catch (err) {
     next(err);
   }

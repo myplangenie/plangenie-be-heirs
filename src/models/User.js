@@ -7,10 +7,10 @@ const UserSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, select: false },
 
-    // Onboarding: user profile
-    role: { type: String, enum: ['owner', 'founder', 'manager', 'other'], default: undefined },
+    // Onboarding: user profile (relaxed to allow broader options)
+    role: { type: String, trim: true, default: undefined },
     builtPlanBefore: { type: Boolean, default: undefined },
-    planningGoal: { type: String, enum: ['start', 'improve', 'invest', 'learn'], default: undefined },
+    planningGoal: { type: String, trim: true, default: undefined },
     includePersonalPlanning: { type: Boolean, default: undefined },
 
     // Additional profile fields (previously on Dashboard.profile)

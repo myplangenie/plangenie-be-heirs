@@ -32,7 +32,7 @@ exports.saveUserProfile = async (req, res) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({ message: 'Invalid input', details: errors.array() });
   }
-  const { fullName, role, builtPlanBefore, planningGoal, includePersonalPlanning, planningFor } = req.body;
+  const { fullName, role, roleOther, builtPlanBefore, planningGoal, planningGoalOther, includePersonalPlanning, planningFor } = req.body;
 
   const userId = req.user?.id;
   if (!userId) {
@@ -42,8 +42,10 @@ exports.saveUserProfile = async (req, res) => {
         userProfile: {
           fullName,
           role,
+          roleOther,
           builtPlanBefore: ynToBool(builtPlanBefore),
           planningGoal,
+          planningGoalOther,
           includePersonalPlanning: ynToBool(includePersonalPlanning),
           planningFor,
         },
@@ -55,8 +57,10 @@ exports.saveUserProfile = async (req, res) => {
   ob.userProfile = {
     fullName,
     role,
+    roleOther,
     builtPlanBefore: ynToBool(builtPlanBefore),
     planningGoal,
+    planningGoalOther,
     includePersonalPlanning: ynToBool(includePersonalPlanning),
     planningFor,
   };
@@ -113,6 +117,10 @@ exports.saveBusinessProfile = async (req, res) => {
   }
 
   const ob = await getOrCreate(userId);
+  // Progression enforcement: require user profile to be completed first
+  if (!ob.userProfile || (!ob.userProfile.role && !ob.userProfile.planningGoal && !ob.userProfile.fullName)) {
+    return res.status(409).json({ message: 'Complete the user profile step before business profile.' });
+  }
   ob.businessProfile = {
     businessName,
     businessStage,
@@ -142,6 +150,10 @@ exports.saveVision = async (req, res) => {
     return res.json({ onboarding: { vision: { ubp } } });
   }
   const ob = await getOrCreate(userId);
+  // Progression enforcement: require business profile to be completed first
+  if (!ob.businessProfile || (!ob.businessProfile.businessName && !ob.businessProfile.ventureType && !ob.businessProfile.industry)) {
+    return res.status(409).json({ message: 'Complete the business profile step before vision & purpose.' });
+  }
   ob.vision = { ubp };
   await ob.save();
   return res.json({ onboarding: ob });

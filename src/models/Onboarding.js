@@ -3,9 +3,13 @@ const mongoose = require('mongoose');
 const UserProfileSchema = new mongoose.Schema(
   {
     fullName: { type: String, trim: true },
-    role: { type: String, enum: ['owner', 'founder', 'manager', 'other'] },
+    // Relax validation to allow a broader set of roles
+    role: { type: String, trim: true },
+    roleOther: { type: String, trim: true },
     builtPlanBefore: { type: Boolean },
-    planningGoal: { type: String, enum: ['start', 'improve', 'invest', 'learn'] },
+    // Relax planningGoal to allow expanded options
+    planningGoal: { type: String, trim: true },
+    planningGoalOther: { type: String, trim: true },
     includePersonalPlanning: { type: Boolean },
     planningFor: { type: String, enum: ['personal', 'business'] },
   },
@@ -15,12 +19,12 @@ const UserProfileSchema = new mongoose.Schema(
 const BusinessProfileSchema = new mongoose.Schema(
   {
     businessName: { type: String, trim: true },
-    businessStage: { type: String, enum: ['pre-launch', 'startup', 'growth', 'established', 'other'] },
+    businessStage: { type: String, trim: true },
     industry: { type: String },
     industryOther: { type: String },
     country: { type: String },
     city: { type: String },
-    ventureType: { type: String, enum: ['for-profit', 'nonprofit', 'hybrid'] },
+    ventureType: { type: String, trim: true },
     teamSize: { type: String }, // categorical
     funding: { type: Boolean },
     tools: [{ type: String }],

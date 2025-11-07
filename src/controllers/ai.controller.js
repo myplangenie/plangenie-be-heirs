@@ -167,6 +167,236 @@ async function callOpenAIList({ type, input, contextText, n = 3 }) {
   return unique.slice(0, n);
 }
 
+// Generate actionable next steps from a set of action plan assignments
+// assignments: { [dept: string]: Array<{ goal, milestone, resources, cost, kpi, dueWhen, firstName, lastName }> }
+// Returns up to n concise suggestions
+exports.generateActionInsightsForUser = async function generateActionInsightsForUser(userId, assignments = {}, n = 6) {
+  const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+  const baseCtx = buildContextText(ob);
+  const lines = [];
+  try {
+    Object.entries(assignments || {}).forEach(([dept, arr]) => {
+      (arr || []).forEach((u) => {
+        const goal = String(u?.goal || '').trim();
+        if (!goal) return;
+        const owner = `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim();
+        const m = String(u?.milestone || '').trim();
+        const k = String(u?.kpi || '').trim();
+        const r = String(u?.resources || '').trim();
+        const d = String(u?.dueWhen || '').trim();
+        const parts = [
+          `Goal: ${goal}`,
+          owner && `Owner: ${owner}`,
+          dept && `Department: ${dept}`,
+          m && `Milestone: ${m}`,
+          k && `KPI: ${k}`,
+          r && `Resources: ${r}`,
+          d && `Due: ${d}`,
+        ].filter(Boolean);
+        if (parts.length) lines.push('- ' + parts.join(' | '));
+      });
+    });
+  } catch (_) {}
+
+  const contextText = [
+    baseCtx,
+    lines.length ? `Current action plans:\n${lines.join('\n')}` : 'No detailed fields provided for action plans.',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  const input = [
+    'Generate concise, actionable next steps the user can take THIS WEEK to make progress on the above action plans.',
+    'Guidelines:',
+    '- Keep each step 1–2 sentences, concrete, and non-generic.',
+    '- Favor alignment, milestone breakdowns, KPI cadence, resourcing, sequencing, and risk mitigation.',
+    '- Do not invent new goals; tie steps back to what is listed.',
+  ].join('\n');
+
+  const suggestions = await callOpenAIList({ type: 'actionable next steps for current action plans', input, contextText, n });
+  return suggestions.filter((s) => typeof s === 'string' && s.trim()).map((s) => String(s).trim());
+};
+
+// Structured sections generator: returns [{ title, items: string[] }]
+exports.generateActionInsightSectionsForUser = async function generateActionInsightSectionsForUser(userId, assignments = {}, maxSections = 2) {
+  const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+  const baseCtx = buildContextText(ob);
+  const lines = [];
+  try {
+    Object.entries(assignments || {}).forEach(([dept, arr]) => {
+      (arr || []).forEach((u) => {
+        const goal = String(u?.goal || '').trim();
+        if (!goal) return;
+        const owner = `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim();
+        const m = String(u?.milestone || '').trim();
+        const k = String(u?.kpi || '').trim();
+        const r = String(u?.resources || '').trim();
+        const d = String(u?.dueWhen || '').trim();
+        const parts = [
+          `Goal: ${goal}`,
+          owner && `Owner: ${owner}`,
+          dept && `Department: ${dept}`,
+          m && `Milestone: ${m}`,
+          k && `KPI: ${k}`,
+          r && `Resources: ${r}`,
+          d && `Due: ${d}`,
+        ].filter(Boolean);
+        if (parts.length) lines.push('- ' + parts.join(' | '));
+      });
+    });
+  } catch (_) {}
+
+  const contextText = [
+    baseCtx,
+    lines.length ? `Current action plans:\n${lines.join('\n')}` : 'No detailed fields provided for action plans.',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  const client = getOpenAI();
+  const system =
+    'You are a helpful business planning assistant. ' +
+    'Group actionable next steps into short, meaningful sections. ' +
+    'Each section should be focused (e.g., "Pre-launch", "Execution", "KPI & Review"). ' +
+    'Each item is 1–2 sentences, concrete, and ties back to the provided plans.';
+
+  const userPrompt = [
+    contextText,
+    'Task: Create exactly 2 sections of insights summarizing immediate next steps for the action plans.',
+    'Guidance:',
+    '- The first section title must reflect the CURRENT operational phase based on the plans (e.g., "Pre-launch" if planning scaffolding dominates; "Execution" if tasks are underway; "KPI & Review" if focus is on measurement).',
+    '- The second section title should reflect the NEXT logical phase.',
+    'Output format (strict JSON): { "sections": [ { "title": string, "items": string[] }, { "title": string, "items": string[] } ] }',
+    'Rules:',
+    '- Each section must have 2 or 3 items.',
+    '- Titles must be short (1–3 words), examples: "Pre-launch", "Execution", "KPI & Review", "Scale-Up".',
+    '- Items must be specific and not generic. Tie to goals, milestones, KPIs, and due dates.',
+    '- Do NOT include any text before or after the JSON.',
+  ].join('\n');
+
+  const resp = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.8,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: userPrompt },
+    ],
+    max_tokens: 800,
+  });
+  let text = (resp.choices?.[0]?.message?.content || '').trim();
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch) text = fenceMatch[1].trim();
+  let data = null;
+  try { data = JSON.parse(text); } catch (_) {}
+  let sections = Array.isArray(data?.sections) ? data.sections : [];
+  // Normalize
+  sections = sections
+    .map((s) => ({ title: String(s?.title || '').trim() || 'Recommendations', items: (Array.isArray(s?.items) ? s.items : []).map((x) => String(x).trim()).filter(Boolean).slice(0, 3) }))
+    .filter((s) => s.items.length > 0)
+    .slice(0, Math.max(2, maxSections));
+
+  if (sections.length < 2) {
+    // Fallback: ensure we have 2 sections using simple phase heuristics
+    const fallback = await exports.generateActionInsightsForUser(userId, assignments, 6);
+    const now = new Date();
+    let hasDuePast = false, hasDueSoon = false, filled = 0, total = 0;
+    try {
+      Object.values(assignments || {}).forEach((arr) => {
+        (arr || []).forEach((u) => {
+          const goal = String(u?.goal || '').trim();
+          const due = String(u?.dueWhen || '').trim();
+          const milestone = String(u?.milestone || '').trim();
+          if (goal) filled++;
+          total++;
+          if (due) {
+            const d = new Date(due);
+            if (!isNaN(d.getTime())) {
+              const diff = Math.round((d.getTime() - now.getTime()) / (24*60*60*1000));
+              if (diff < 0) hasDuePast = true; else if (diff <= 7) hasDueSoon = true;
+            }
+          }
+        });
+      });
+    } catch {}
+    const progress = total ? (filled / total) : 0;
+    const current = (hasDuePast || hasDueSoon || progress >= 0.5) ? 'Execution' : 'Pre-launch';
+    const next = current === 'Pre-launch' ? 'Execution' : 'KPI & Review';
+    const firstItems = fallback.slice(0, 3);
+    const secondItems = fallback.slice(3, 6);
+    const ensureTwo = [];
+    if (firstItems.length) ensureTwo.push({ title: current, items: firstItems });
+    if (secondItems.length) ensureTwo.push({ title: next, items: secondItems });
+    while (ensureTwo.length < 2) ensureTwo.push({ title: next, items: firstItems.slice(0, 2) });
+    sections = ensureTwo;
+  }
+
+  return sections;
+};
+
+// Generate or regenerate a single section by title
+exports.generateSingleInsightSectionForUser = async function generateSingleInsightSectionForUser(userId, assignments = {}, title = 'Recommendations') {
+  const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+  const baseCtx = buildContextText(ob);
+  const lines = [];
+  try {
+    Object.entries(assignments || {}).forEach(([dept, arr]) => {
+      (arr || []).forEach((u) => {
+        const goal = String(u?.goal || '').trim();
+        if (!goal) return;
+        const owner = `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim();
+        const m = String(u?.milestone || '').trim();
+        const k = String(u?.kpi || '').trim();
+        const r = String(u?.resources || '').trim();
+        const d = String(u?.dueWhen || '').trim();
+        const parts = [
+          `Goal: ${goal}`,
+          owner && `Owner: ${owner}`,
+          dept && `Department: ${dept}`,
+          m && `Milestone: ${m}`,
+          k && `KPI: ${k}`,
+          r && `Resources: ${r}`,
+          d && `Due: ${d}`,
+        ].filter(Boolean);
+        if (parts.length) lines.push('- ' + parts.join(' | '));
+      });
+    });
+  } catch (_) {}
+  const contextText = [baseCtx, lines.length ? `Current action plans:\n${lines.join('\n')}` : ''].filter(Boolean).join('\n\n');
+
+  const client = getOpenAI();
+  const system = 'You are a helpful business planning assistant. Write crisp, concrete steps under a single section.';
+  const userPrompt = [
+    contextText,
+    `Task: Regenerate a single section titled "${title}" with 2–3 highly specific items (1–2 sentences each).`,
+    'Output format (strict JSON): { "title": string, "items": string[] }',
+    'Rules:',
+    '- Items must tie back to the provided plans and due dates/KPIs where possible.',
+    '- Do NOT include any text before or after the JSON.',
+  ].join('\n');
+
+  const resp = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.8,
+    messages: [ { role: 'system', content: system }, { role: 'user', content: userPrompt } ],
+    max_tokens: 500,
+  });
+  let text = (resp.choices?.[0]?.message?.content || '').trim();
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch) text = fenceMatch[1].trim();
+  let data = null;
+  try { data = JSON.parse(text); } catch (_) {}
+  const normalized = {
+    title: String(data?.title || title || 'Recommendations').trim(),
+    items: Array.isArray(data?.items) ? data.items.map((x) => String(x).trim()).filter(Boolean).slice(0, 3) : [],
+  };
+  if (!normalized.items.length) {
+    // Fallback: call flat generator and slice
+    const fallback = await exports.generateActionInsightsForUser(userId, assignments, 3);
+    normalized.items = fallback.slice(0, 3);
+  }
+  return normalized;
+};
+
 // Rewrite a given text preserving meaning, improving clarity and concision
 async function callOpenAIRewrite({ type, text, contextText }) {
   const client = getOpenAI();

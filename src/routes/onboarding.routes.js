@@ -15,9 +15,11 @@ router.post(
   auth(false),
   [
     body('fullName').optional().isString().trim(),
-    body('role').optional().isIn(['owner', 'founder', 'manager', 'other']),
+    body('role').optional().isString().trim(),
+    body('roleOther').optional().isString().trim(),
     body('builtPlanBefore').optional(),
-    body('planningGoal').optional().isIn(['start', 'improve', 'invest', 'learn']),
+    body('planningGoal').optional().isString().trim(),
+    body('planningGoalOther').optional().isString().trim(),
     body('includePersonalPlanning').optional(),
   ],
   ctrl.saveUserProfile
@@ -29,11 +31,11 @@ router.post(
   auth(false),
   [
     body('businessName').optional().isString().trim(),
-    body('businessStage').optional().isIn(['pre-launch', 'startup', 'growth', 'established', 'other']),
+    body('businessStage').optional().isString().trim(),
     body('industry').optional().isString().trim(),
     body('country').optional().isString().trim(),
     body('city').optional().isString().trim(),
-    body('ventureType').optional().isIn(['for-profit', 'nonprofit', 'hybrid']),
+    body('ventureType').optional().isString().trim(),
     body('teamSize').optional().isString().trim(),
     body('funding').optional(),
     body('tools').optional().isArray(),
