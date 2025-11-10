@@ -21,6 +21,8 @@ exports.register = async (req, res) => {
     return res.status(409).json({ message: 'Email already in use' });
   }
 
+  
+
   const hashed = await User.hashPassword(password);
   // Generate email verification OTP code
   const otp = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
