@@ -1137,14 +1137,15 @@ exports.suggestActionAll = async (req, res) => {
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob);
 
-    const [goal, milestone, resources, cost, kpi] = await Promise.all([
+    const [goal, milestone, resources, cost, kpi, title] = await Promise.all([
       callOpenAI({ type: 'action plan goal (1-2 sentences)', input, contextText }),
       callOpenAI({ type: 'concise deliverable/milestone phrase', input, contextText }),
       callOpenAI({ type: 'resources/tools/budget summary (short phrase)', input, contextText }),
       callOpenAI({ type: 'estimated cost/budget (short phrase, e.g., "$2,000 for design and ads")', input, contextText }),
       callOpenAI({ type: 'KPI metric specification (short phrase)', input, contextText }),
+      callOpenAI({ type: 'short, specific project title (3–6 words)', input, contextText }),
     ]);
-    return res.json({ goal, milestone, resources, cost, kpi });
+    return res.json({ goal, milestone, resources, cost, kpi, title });
   } catch (err) {
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestions';
     return res.status(500).json({ message });
