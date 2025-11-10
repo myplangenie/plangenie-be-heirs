@@ -6,7 +6,8 @@ const errorHandler = require('./middleware/errorHandler');
 const app = express();
 
 // Middleware
-app.use(express.json({ limit: '1mb' }));
+// Increase JSON limit to allow base64 image payloads for avatar upload
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan('dev'));
 
@@ -36,6 +37,7 @@ app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/onboarding', require('./routes/onboarding.routes'));
 app.use('/api/misc', require('./routes/misc.routes'));
 app.use('/api/dashboard', require('./routes/dashboard.routes'));
+app.use('/api/user', require('./routes/user.routes'));
 // Optional integrations
 app.use('/api/gamma', require('./routes/gamma.routes'));
 // Chat

@@ -8,11 +8,23 @@ const router = express.Router();
 router.post(
   '/signup',
   [
-    body('fullName').optional().isString().trim().isLength({ min: 1 }).withMessage('Full name required'),
+    body('firstName').optional().isString().trim().isLength({ min: 1 }).withMessage('First name required'),
+    body('lastName').optional().isString().trim().isLength({ min: 1 }).withMessage('Last name required'),
+    body('fullName').optional().isString().trim().isLength({ min: 1 }).withMessage('Full name required'), // backwards compat
+    body('companyName').optional().isString().trim(),
     body('email').isEmail().normalizeEmail(),
     body('password').isString().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   ],
   ctrl.register
+);
+
+router.post(
+  '/verify-otp',
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('code').isString().trim().isLength({ min: 4, max: 8 }).withMessage('Invalid code'),
+  ],
+  ctrl.verifyOtp
 );
 
 router.post(

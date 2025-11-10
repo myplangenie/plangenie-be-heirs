@@ -3,11 +3,16 @@ const bcrypt = require('bcryptjs');
 
 const UserSchema = new mongoose.Schema(
   {
+    // Prefer first/last name going forward; keep fullName for compatibility
+    firstName: { type: String, trim: true, default: '' },
+    lastName: { type: String, trim: true, default: '' },
     fullName: { type: String, trim: true },
+    companyName: { type: String, trim: true, default: '' },
+
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, select: false },
     isVerified: { type: Boolean, default: false },
-    verificationToken: { type: String, select: false },
+    verificationCode: { type: String, select: false },
     verificationExpires: { type: Date, select: false },
 
     // Onboarding: user profile (relaxed to allow broader options)
@@ -19,6 +24,7 @@ const UserSchema = new mongoose.Schema(
     // Additional profile fields (previously on Dashboard.profile)
     jobTitle: { type: String, default: '' },
     phone: { type: String, default: '' },
+    avatarUrl: { type: String, default: '' },
 
     // Onboarding completion flag: set true once user reaches dashboard via flow
     onboardingDone: { type: Boolean, default: false },
