@@ -26,6 +26,7 @@ router.patch('/action-assignments/status', auth(true), ctrl.updateActionAssignme
 // Financials
 router.get('/financials', auth(true), ctrl.getFinancials);
 router.post('/financials/recalculate', auth(true), ctrl.recalculateFinancials);
+router.post('/financials/insights', auth(true), ctrl.generateFinancialInsights);
 // Update/blend actuals for financials (monthly)
 router.post('/financials/actuals', auth(true), ctrl.saveFinancialActuals);
 // Import monthly actuals via CSV text

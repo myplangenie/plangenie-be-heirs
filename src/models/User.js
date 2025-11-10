@@ -6,6 +6,9 @@ const UserSchema = new mongoose.Schema(
     fullName: { type: String, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, select: false },
+    isVerified: { type: Boolean, default: false },
+    verificationToken: { type: String, select: false },
+    verificationExpires: { type: Date, select: false },
 
     // Onboarding: user profile (relaxed to allow broader options)
     role: { type: String, trim: true, default: undefined },

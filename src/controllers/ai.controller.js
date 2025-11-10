@@ -26,6 +26,7 @@ function buildContextText(ob) {
     bp.ventureType && `Venture Type: ${bp.ventureType}`,
     bp.teamSize && `Team Size: ${bp.teamSize}`,
     bp.businessStage && `Stage: ${bp.businessStage}`,
+    bp.description && `Business Profile Description: ${bp.description}`,
     up.role && `User Role: ${up.role}`,
   ].filter(Boolean);
   return fields.length ? `Context about the business:\n- ${fields.join('\n- ')}` : '';
@@ -1253,4 +1254,15 @@ exports.rewriteIdentitySummary = async (req, res) => {
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to rewrite';
     return res.status(500).json({ message });
   }
+};
+// Generate financial insights from provided context text (JSON array of strings)
+exports.generateFinancialInsightsFromContext = async function generateFinancialInsightsFromContext(contextText, n = 3) {
+  const suggestions = await callOpenAIList({
+    type: 'financial insights to improve runway, margin, and cashflow',
+    input:
+      'Provide concise, actionable recommendations based on the numbers and context. Focus on optimizing costs, pricing, margins, growth versus burn, and cash runway. Keep each item 1–2 sentences.',
+    contextText,
+    n,
+  });
+  return suggestions.filter((s) => typeof s === 'string' && s.trim()).map((s) => String(s).trim());
 };

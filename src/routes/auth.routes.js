@@ -26,5 +26,7 @@ router.post(
 
 router.get('/me', auth(), ctrl.me);
 router.post('/onboarding/done', auth(true), ctrl.markOnboarded);
+// Email verification
+router.get('/verify', ctrl.verifyEmail);
 
 module.exports = router;

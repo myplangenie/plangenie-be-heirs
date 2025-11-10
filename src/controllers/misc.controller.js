@@ -42,7 +42,7 @@ exports.requestDemo = async (req, res, next) => {
 
 exports.bookCall = async (req, res, next) => {
   try {
-    const { name, email, time, note } = req.body || {};
+  const { name, email, time, note, reason } = req.body || {};
     const to = process.env.TO_EMAIL || 'chike@plangenie.com';
     const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
     const resend = new Resend(process.env.RESEND_API_KEY);
@@ -51,11 +51,12 @@ exports.bookCall = async (req, res, next) => {
       <h2>Call Booking</h2>
       <p><strong>Name:</strong> ${name || ''}</p>
       <p><strong>Email:</strong> ${email || ''}</p>
+      <p><strong>Reason:</strong> ${reason || ''}</p>
       <p><strong>Preferred time:</strong> ${time || ''}</p>
       <p><strong>Notes:</strong></p>
       <p style="white-space:pre-line">${note || ''}</p>
     `;
-    const text = `Call Booking\n\nName: ${name || ''}\nEmail: ${email || ''}\nPreferred time: ${time || ''}\n\nNotes:\n${note || ''}`;
+    const text = `Call Booking\n\nName: ${name || ''}\nEmail: ${email || ''}\nReason: ${reason || ''}\nPreferred time: ${time || ''}\n\nNotes:\n${note || ''}`;
     const result = await resend.emails.send({ from, to, subject, html, text, reply_to: email || undefined });
     if (result && result.error) {
       return res.status(500).json({ ok: false, error: result.error.message || 'Resend error' });

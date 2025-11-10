@@ -216,7 +216,7 @@ exports.getSummary = async (req, res, next) => {
         owner: `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim(),
         milestone: String(u?.milestone || '').trim(),
         resources: String(u?.resources || '').trim(),
-        cost: String(u?.cost || '').trim(),
+        cost: (() => { const raw = String(u?.cost || '').trim(); const m = raw.match(/([$£€]?\s?\d[\d,]*(?:\.\d+)?)/); return m ? m[1].replace(/\s/g,'') : raw.replace(/[^0-9.]/g,''); })(),
         kpi: String(u?.kpi || '').trim(),
         due: String(u?.dueWhen || '').trim(),
         status: String(u?.status || 'In progress').trim(),
@@ -291,6 +291,69 @@ exports.getSummary = async (req, res, next) => {
       team: teamList,
     };
     return res.json({ summary });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/financials/insights
+exports.generateFinancialInsights = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const a = ob?.answers || {};
+    // Derive context similar to getFinancials()
+    function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
+    const growth = num(a.finSalesGrowthPct) / 100;
+    let totalVolFromProducts = 0, avgCostFromProducts = 0, avgPrice = 0;
+    try {
+      const list = Array.isArray(a.products) ? a.products : [];
+      const nums = list.map((p)=>({ v: num(p.monthlyVolume), price: num(p.price ?? p.pricing), cost: num(p.unitCost) }));
+      totalVolFromProducts = nums.reduce((sum, r)=> sum + (r.v||0), 0);
+      const totalW = nums.reduce((sum, r)=> sum + (r.v||0), 0);
+      const sumPrice = nums.reduce((sum, r)=> sum + ((r.price||0)*(r.v||0)), 0);
+      const sumCost = nums.reduce((sum, r)=> sum + ((r.cost||0)*(r.v||0)), 0);
+      avgPrice = totalW ? (sumPrice/totalW) : 0;
+      avgCostFromProducts = totalW ? (sumCost/totalW) : 0;
+    } catch {}
+    const units0 = num(a.finSalesVolume) || totalVolFromProducts;
+    const avgCost = num(a.finAvgUnitCost) || avgCostFromProducts;
+    const fixedOperating = num(a.finFixedOperatingCosts);
+    const marketingSpend = num(a.finMarketingSalesSpend);
+    const payrollCost = num(a.finPayrollCost);
+    const fixed = fixedOperating + marketingSpend + payrollCost;
+    if (!avgPrice && avgCost) {
+      const m = num(a.finTargetProfitMarginPct)/100; avgPrice = m < 0.99 ? (avgCost/(1-m||1)) : avgCost;
+    }
+    // Month 1 estimates
+    const revenueM1 = units0 * (avgPrice||0);
+    const cogsM1 = units0 * (avgCost||0);
+    const costM1 = cogsM1 + fixed;
+    const profitM1 = revenueM1 - costM1;
+    const startCash = num(a.finStartingCash);
+    const fundAmt = num(a.finAdditionalFundingAmount);
+    const monthlyBurn = Math.max(costM1 - revenueM1, 0);
+    const runway = monthlyBurn > 0 ? Math.round((startCash + fundAmt) / monthlyBurn) : null;
+    const contextText = [
+      'Financial Context:',
+      `Monthly units (initial): ${Math.round(units0)}`,
+      `Avg price: ${Math.round(avgPrice)}`,
+      `Avg unit cost: ${Math.round(avgCost)}`,
+      `Fixed operating: ${Math.round(fixedOperating)}`,
+      `Marketing spend: ${Math.round(marketingSpend)}`,
+      `Payroll cost: ${Math.round(payrollCost)}`,
+      `Projected Monthly Revenue (M1): ${Math.round(revenueM1)}`,
+      `Projected Monthly Costs (M1): ${Math.round(costM1)}`,
+      `Projected Net Profit (M1): ${Math.round(profitM1)}`,
+      `Starting Cash: ${Math.round(startCash)}`,
+      `Additional Funding: ${Math.round(fundAmt)}`,
+      `Estimated Runway (months): ${runway ?? 'N/A'}`,
+      `Growth rate (monthly): ${Math.round(growth*100)}%`,
+    ].join('\n');
+    const ai = require('./ai.controller');
+    const items = await ai.generateFinancialInsightsFromContext(contextText, 3);
+    return res.json({ items });
   } catch (err) {
     next(err);
   }
@@ -708,7 +771,7 @@ exports.getDepartments = async (req, res, next) => {
     const a = ob?.answers || {};
     const assignments = a.actionAssignments || {};
     const label = (k) => ({
-      marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'Community & Impact'
+      marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'ESG & Sustainability'
     }[k] || k);
     const parseDate = (s) => { const m=String(s||'').match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:''; };
     // Helper to derive status purely from progress thresholds
@@ -860,7 +923,7 @@ exports.updateDepartment = async (req, res, next) => {
     // Derive progress from action assignments for this department
     const ab = ob?.answers || {};
     const assignments = ab.actionAssignments || {};
-    const deptKey = Object.keys(assignments || {}).find((k) => canon(({ marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'Community & Impact' }[k] || k)) === canon(name));
+    const deptKey = Object.keys(assignments || {}).find((k) => canon(({ marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'ESG & Sustainability' }[k] || k)) === canon(name));
     let progress = 0;
     if (deptKey && Array.isArray(assignments[deptKey])) {
       const arr = assignments[deptKey];
@@ -897,7 +960,7 @@ exports.updateActionAssignmentStatus = async (req, res, next) => {
     const assignments = ob.answers.actionAssignments = ob.answers.actionAssignments || {};
     const canon = (s) => String(s || '').trim().toLowerCase();
     const labelFromKey = (k) => ({
-      marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'Community & Impact'
+      marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'ESG & Sustainability'
     }[k] || k);
     let deptKey = deptKeyIn;
     if (!deptKey) {
@@ -1304,7 +1367,7 @@ exports.getSettings = async (req, res, next) => {
     const profile = {
       fullName: user?.fullName || '',
       email: user?.email || '',
-      jobTitle: user?.jobTitle || '',
+      jobTitle: (user?.jobTitle && user.jobTitle.trim()) || (ob?.userProfile?.role || ''),
       phone: user?.phone || '',
     };
     const a = ob?.answers || {};
