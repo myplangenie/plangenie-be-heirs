@@ -1079,7 +1079,7 @@ exports.updateActionAssignmentStatus = async (req, res, next) => {
 };
 
 // PATCH /api/dashboard/action-assignments/item
-// Body: { key?: string; department?: string; index: number; patch: { firstName?, lastName?, goal?, milestone?, resources?, kpi?, dueWhen? } }
+// Body: { key?: string; department?: string; index: number; patch: { firstName?, lastName?, goal?, milestone?, resources?, cost?, kpi?, dueWhen?, progress? } }
 exports.updateActionAssignmentItem = async (req, res, next) => {
   try {
     const userId = req.user?.id;
@@ -1157,6 +1157,7 @@ exports.updateActionAssignmentItem = async (req, res, next) => {
       ...(p.goal !== undefined ? { goal: String(p.goal || '') } : {}),
       ...(p.milestone !== undefined ? { milestone: String(p.milestone || '') } : {}),
       ...(p.resources !== undefined ? { resources: String(p.resources || '') } : {}),
+      ...(p.cost !== undefined ? { cost: String(p.cost || '') } : {}),
       ...(p.kpi !== undefined ? { kpi: String(p.kpi || '') } : {}),
       ...(p.dueWhen !== undefined ? { dueWhen: String(p.dueWhen || '') } : {}),
       ...(p.progress !== undefined ? (()=>{ const v = clampPct(p.progress); return v === undefined ? {} : { progress: v }; })() : {}),
