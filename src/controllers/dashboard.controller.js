@@ -612,6 +612,7 @@ exports.saveCompiledPlan = async (req, res, next) => {
       a.actionAssignments = cp.actionPlans;
     }
     ob.answers = a;
+    try { ob.markModified && ob.markModified('answers'); } catch {}
     await ob.save();
     // Optionally sync user full name
     if (cp.userProfile && cp.userProfile.fullName) {
@@ -699,12 +700,24 @@ exports.getNotifications = async (req, res, next) => {
       } catch { return 'info'; }
     }
     const items = [];
+    // Helper: compute completion percent for an assignment item
+    const pctForItem = (it) => {
+      const v = Number(it?.progress);
+      if (isFinite(v)) return Math.max(0, Math.min(100, Math.round(v)));
+      const st = String(it?.status || '').toLowerCase();
+      if (/done|complete|completed/.test(st)) return 100;
+      if (/in[ _-]*progress/.test(st)) return 50;
+      if (/not[ _-]*started/.test(st)) return 0;
+      return 0;
+    };
     Object.entries(assignments || {}).forEach(([dept, arr]) => {
       (arr || []).forEach((u) => {
         const goal = String(u?.goal || '').trim();
         const due = String(u?.dueWhen || '').trim();
         if (!goal) return;
-        const s = sev(due);
+        // Overdue should only show if the plan is not at 100%
+        const base = sev(due);
+        const s = (pctForItem(u) >= 100) ? 'info' : base;
         items.push({
           nid: `${dept}-${goal}-${due}`.slice(0, 80),
           title: (s === 'danger' ? 'Overdue: ' : s === 'warning' ? 'Upcoming: ' : 'Task: ') + goal,
@@ -774,6 +787,16 @@ exports.getDepartments = async (req, res, next) => {
       marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'ESG & Sustainability'
     }[k] || k);
     const parseDate = (s) => { const m=String(s||'').match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:''; };
+    // Helper: compute completion percent for an assignment item
+    const pctForItem = (it) => {
+      const v = Number(it?.progress);
+      if (isFinite(v)) return Math.max(0, Math.min(100, Math.round(v)));
+      const st = String(it?.status || '').toLowerCase();
+      if (/done|complete|completed/.test(st)) return 100;
+      if (/in[ _-]*progress/.test(st)) return 50;
+      if (/not[ _-]*started/.test(st)) return 0;
+      return 0;
+    };
     // Helper to derive status purely from progress thresholds
     const statusFromProgress = (p) => {
       if (p >= 80) return 'on-track';
@@ -788,7 +811,12 @@ exports.getDepartments = async (req, res, next) => {
     for (const k of Object.keys(assignments || {})) {
       const name = label(k);
       const arr = assignments[k] || [];
-      const dates = arr.map((u)=>parseDate(u?.dueWhen)).filter(Boolean).sort();
+      // Use the nearest due date among INCOMPLETE items (skip 100% complete)
+      const dates = (arr || [])
+        .filter((u) => pctForItem(u) < 100)
+        .map((u)=>parseDate(u?.dueWhen))
+        .filter(Boolean)
+        .sort();
       const dueDate = dates[0] || '-';
       const ck = canon(name);
       if (!deptMap.has(ck)) deptMap.set(ck, { name, dueDate });
@@ -838,24 +866,25 @@ exports.getDepartments = async (req, res, next) => {
     // Fallback owner is the current logged-in user
     const fallbackOwner = (user?.fullName || '').trim() || '-';
 
-    // Merge with stored Department overrides; progress is derived from action plan item statuses
+    // Merge with stored Department overrides; progress is derived from action plan item progress/ statuses
     const stored = await Department.find({ user: userId }).lean().exec();
     const byName = new Map((stored || []).map((d) => [d.name, d]));
     const departments = Array.from(deptMap.values()).map((r) => {
       const s = byName.get(r.name);
-      // Derive progress from action assignment statuses for this department
+      // Derive progress from action assignment item progress (or fallback to status mapping)
       const deptKey = Object.keys(assignments || {}).find((k) => canon(label(k)) === canon(r.name));
       let progress = 0;
       if (deptKey && Array.isArray(assignments[deptKey])) {
         const arr = assignments[deptKey];
         const total = arr.length || 0;
         if (total > 0) {
-          const done = arr.reduce((acc, it) => acc + (/(done|complete|completed)/i.test(String(it?.status || '')) ? 1 : 0), 0);
-          progress = Math.round((done / total) * 100);
+          const sum = arr.reduce((acc, it) => acc + pctForItem(it), 0);
+          progress = Math.round(sum / total);
         }
       }
       const owner = (s?.owner && String(s.owner).trim()) ? s.owner : (headFor(r.name) || fallbackOwner);
-      const dueDate = (s?.dueDate && String(s.dueDate).trim()) ? s.dueDate : (r.dueDate || '-');
+      // Due date is derived from action plan items (not editable)
+      const dueDate = r.dueDate || '-';
       const status = statusFromProgress(progress);
       return { name: r.name, owner, dueDate, progress, status };
     });
@@ -866,18 +895,18 @@ exports.getDepartments = async (req, res, next) => {
 };
 
 // PATCH /api/dashboard/departments
-// Body: { name: string, owner?: string, dueDate?: string }
+// Body: { name: string, owner?: string }
 exports.updateDepartment = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const { name, owner, dueDate } = req.body || {};
+    const { name, owner } = req.body || {};
     if (typeof name !== 'string' || !name.trim()) {
       return res.status(400).json({ message: 'Department name is required' });
     }
+    // Only owner is editable; ignore due date and progress edits
     const patch = {};
     if (typeof owner === 'string') patch.owner = owner;
-    if (typeof dueDate === 'string') patch.dueDate = dueDate;
     const doc = await Department.findOneAndUpdate(
       { user: userId, name },
       { $set: { name, user: userId, ...patch } },
@@ -929,13 +958,39 @@ exports.updateDepartment = async (req, res, next) => {
       const arr = assignments[deptKey];
       const total = arr.length || 0;
       if (total > 0) {
-        const done = arr.reduce((acc, it) => acc + (/(done|complete|completed)/i.test(String(it?.status || '')) ? 1 : 0), 0);
-        progress = Math.round((done / total) * 100);
+        const toPct = (it) => {
+          const v = Number(it?.progress);
+          if (isFinite(v)) return Math.max(0, Math.min(100, Math.round(v)));
+          const st = String(it?.status || '').toLowerCase();
+          if (/done|complete|completed/.test(st)) return 100;
+          if (/in[ _-]*progress/.test(st)) return 50;
+          if (/not[ _-]*started/.test(st)) return 0;
+          return 0;
+        };
+        const sum = arr.reduce((acc, it) => acc + toPct(it), 0);
+        progress = Math.round(sum / total);
       }
     }
     const status = progress >= 80 ? 'on-track' : (progress >= 50 ? 'in-progress' : 'at-risk');
+    // Derive due date from earliest incomplete item, consistent with GET
+    const parseDate = (s) => { const m=String(s||'').match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:''; };
+    const pctForItem = (it) => {
+      const v = Number(it?.progress);
+      if (isFinite(v)) return Math.max(0, Math.min(100, Math.round(v)));
+      const st = String(it?.status || '').toLowerCase();
+      if (/done|complete|completed/.test(st)) return 100;
+      if (/in[ _-]*progress/.test(st)) return 50;
+      if (/not[ _-]*started/.test(st)) return 0;
+      return 0;
+    };
+    let dueDate = '-';
+    if (deptKey && Array.isArray(assignments[deptKey])) {
+      const arr = assignments[deptKey];
+      const dates = arr.filter((u)=> pctForItem(u) < 100).map((u)=> parseDate(u?.dueWhen)).filter(Boolean).sort();
+      dueDate = dates[0] || '-';
+    }
     // Shape response consistent with GET
-    return res.json({ department: { name: doc.name, owner: ownerName, dueDate: doc.dueDate || '', progress, status } });
+    return res.json({ department: { name: doc.name, owner: ownerName, dueDate, progress, status } });
   } catch (err) {
     next(err);
   }
@@ -960,25 +1015,159 @@ exports.updateActionAssignmentStatus = async (req, res, next) => {
     const assignments = ob.answers.actionAssignments = ob.answers.actionAssignments || {};
     const canon = (s) => String(s || '').trim().toLowerCase();
     const labelFromKey = (k) => ({
-      marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'ESG & Sustainability'
+      marketing: 'Marketing',
+      sales: 'Sales',
+      operations: 'Operations & Service Delivery',
+      financeAdmin: 'Finance & Admin',
+      peopleHR: 'People & Human Resources',
+      partnerships: 'Partnerships & Alliances',
+      technology: 'Technology & Infrastructure',
+      communityImpact: 'ESG & Sustainability',
     }[k] || k);
-    let deptKey = deptKeyIn;
-    if (!deptKey) {
-      // Try to map label to key
-      const found = Object.keys(assignments).find((k) => canon(labelFromKey(k)) === canon(deptLabel));
-      if (found) deptKey = found;
-    }
-    if (!deptKey || !assignments[deptKey]) {
-      return res.status(400).json({ message: 'Department not found in assignments' });
-    }
+    const keyFromLabel = (lab) => ({
+      Marketing: 'marketing',
+      Sales: 'sales',
+      'Operations & Service Delivery': 'operations',
+      'Finance & Admin': 'financeAdmin',
+      'People & Human Resources': 'peopleHR',
+      'Partnerships & Alliances': 'partnerships',
+      'Technology & Infrastructure': 'technology',
+      'ESG & Sustainability': 'communityImpact',
+    }[lab] || null);
+    // Resolve the correct key robustly (accept canonical key, label-as-key, or department label)
+    const resolveDeptKey = () => {
+      // 1) Exact key match
+      if (deptKeyIn && assignments[deptKeyIn]) return deptKeyIn;
+      // 2) If key is actually a label, map it
+      if (deptKeyIn) {
+        const k2 = keyFromLabel(deptKeyIn);
+        if (k2 && assignments[k2]) return k2;
+        // Case-insensitive key match
+        const k3 = Object.keys(assignments).find((k) => canon(k) === canon(deptKeyIn));
+        if (k3 && assignments[k3]) return k3;
+      }
+      // 3) Department label provided
+      if (deptLabel) {
+        if (assignments[deptLabel]) return deptLabel; // stored under label
+        const k4 = keyFromLabel(deptLabel);
+        if (k4 && assignments[k4]) return k4;
+        // 4) Match by label-from-key comparison
+        const found = Object.keys(assignments).find((k) => canon(labelFromKey(k)) === canon(deptLabel));
+        if (found && assignments[found]) return found;
+      }
+      return null;
+    };
+    const deptKey = resolveDeptKey();
+    if (!deptKey) return res.status(400).json({ message: 'Department not found in assignments' });
     const arr = Array.isArray(assignments[deptKey]) ? assignments[deptKey] : [];
     if (index >= arr.length) return res.status(400).json({ message: 'Index out of range' });
     const item = arr[index] || {};
     item.status = status;
+    // Optionally sync numeric progress from status for consistency
+    const s = String(status || '').toLowerCase();
+    if (/done|complete|completed/.test(s)) item.progress = 100;
+    else if (/in[ _-]*progress/.test(s)) item.progress = 50;
+    else if (/not[ _-]*started/.test(s)) item.progress = 0;
     arr[index] = item;
     assignments[deptKey] = arr;
+    try { ob.markModified && ob.markModified('answers'); } catch {}
     await ob.save();
     return res.json({ ok: true, item: { ...item, status } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/dashboard/action-assignments/item
+// Body: { key?: string; department?: string; index: number; patch: { firstName?, lastName?, goal?, milestone?, resources?, kpi?, dueWhen? } }
+exports.updateActionAssignmentItem = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const { key, department, index, patch } = req.body || {};
+    const idx = Number(index);
+    if (!isFinite(idx) || idx < 0) {
+      return res.status(400).json({ message: 'Invalid index' });
+    }
+    // Resolve to the actual key present in assignments
+    const keyFromLabel = {
+      Marketing: 'marketing',
+      Sales: 'sales',
+      'Operations & Service Delivery': 'operations',
+      'Finance & Admin': 'financeAdmin',
+      'People & Human Resources': 'peopleHR',
+      'Partnerships & Alliances': 'partnerships',
+      'Technology & Infrastructure': 'technology',
+      'ESG & Sustainability': 'communityImpact',
+    };
+
+    const ob = await Onboarding.findOne({ user: userId });
+    if (!ob) return res.status(404).json({ message: 'Not found' });
+    const a = ob.answers || {};
+    const curr = a.actionAssignments || {};
+    const canon = (s) => String(s || '').trim().toLowerCase();
+    const labelFromKey = (k) => ({
+      marketing: 'Marketing',
+      sales: 'Sales',
+      operations: 'Operations & Service Delivery',
+      financeAdmin: 'Finance & Admin',
+      peopleHR: 'People & Human Resources',
+      partnerships: 'Partnerships & Alliances',
+      technology: 'Technology & Infrastructure',
+      communityImpact: 'ESG & Sustainability',
+    }[k] || k);
+    const resolveKey = () => {
+      // 1) Direct key match
+      if (key && curr[key]) return key;
+      // 2) If key is a label
+      if (key && keyFromLabel[key]) {
+        const k2 = keyFromLabel[key];
+        if (curr[k2]) return k2;
+      }
+      // Case-insensitive direct match
+      if (key) {
+        const k3 = Object.keys(curr).find((kk) => canon(kk) === canon(key));
+        if (k3 && curr[k3]) return k3;
+      }
+      // 3) Department label field provided
+      if (department) {
+        if (curr[department]) return department; // stored under label
+        const k4 = keyFromLabel[department];
+        if (k4 && curr[k4]) return k4;
+        const found = Object.keys(curr).find((kk) => canon(labelFromKey(kk)) === canon(department));
+        if (found && curr[found]) return found;
+      }
+      return null;
+    };
+    const k = resolveKey();
+    if (!k) return res.status(400).json({ message: 'Missing or unknown key/department' });
+    const list = Array.isArray(curr[k]) ? curr[k] : [];
+    if (!list[idx]) return res.status(404).json({ message: 'Item not found' });
+    const item = list[idx];
+    const p = patch || {};
+    const clampPct = (x) => {
+      const n = Number(x);
+      if (!isFinite(n)) return undefined;
+      return Math.max(0, Math.min(100, Math.round(n)));
+    };
+    const nextItem = {
+      ...item,
+      ...(p.firstName !== undefined ? { firstName: String(p.firstName || '') } : {}),
+      ...(p.lastName !== undefined ? { lastName: String(p.lastName || '') } : {}),
+      ...(p.goal !== undefined ? { goal: String(p.goal || '') } : {}),
+      ...(p.milestone !== undefined ? { milestone: String(p.milestone || '') } : {}),
+      ...(p.resources !== undefined ? { resources: String(p.resources || '') } : {}),
+      ...(p.kpi !== undefined ? { kpi: String(p.kpi || '') } : {}),
+      ...(p.dueWhen !== undefined ? { dueWhen: String(p.dueWhen || '') } : {}),
+      ...(p.progress !== undefined ? (()=>{ const v = clampPct(p.progress); return v === undefined ? {} : { progress: v }; })() : {}),
+    };
+    list[idx] = nextItem;
+    curr[k] = list;
+    a.actionAssignments = curr;
+    ob.answers = a;
+    try { ob.markModified && ob.markModified('answers'); } catch {}
+    await ob.save();
+    return res.json({ ok: true, item: nextItem, key: k, index: idx });
   } catch (err) {
     next(err);
   }

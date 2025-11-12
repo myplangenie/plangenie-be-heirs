@@ -22,6 +22,8 @@ router.get('/departments', auth(true), ctrl.getDepartments);
 router.patch('/departments', auth(true), ctrl.updateDepartment);
 // Action plans: update the status of a single assignment item
 router.patch('/action-assignments/status', auth(true), ctrl.updateActionAssignmentStatus);
+// Action plans: update fields of a single assignment item
+router.patch('/action-assignments/item', auth(true), ctrl.updateActionAssignmentItem);
 
 // Financials
 router.get('/financials', auth(true), ctrl.getFinancials);

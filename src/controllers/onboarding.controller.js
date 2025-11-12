@@ -68,16 +68,17 @@ exports.saveUserProfile = async (req, res) => {
   }
 
   const ob = await getOrCreate(userId);
-  ob.userProfile = {
-    fullName,
-    role,
-    roleOther,
-    builtPlanBefore: ynToBool(builtPlanBefore),
-    planningGoal,
-    planningGoalOther,
-    includePersonalPlanning: ynToBool(includePersonalPlanning),
-    planningFor,
-  };
+  // Patch only provided fields; do not clear others
+  const up = ob.userProfile || {};
+  if (Object.prototype.hasOwnProperty.call(req.body, 'fullName')) up.fullName = fullName;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'role')) up.role = role;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'roleOther')) up.roleOther = roleOther;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'builtPlanBefore')) up.builtPlanBefore = ynToBool(builtPlanBefore);
+  if (Object.prototype.hasOwnProperty.call(req.body, 'planningGoal')) up.planningGoal = planningGoal;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'planningGoalOther')) up.planningGoalOther = planningGoalOther;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'includePersonalPlanning')) up.includePersonalPlanning = ynToBool(includePersonalPlanning);
+  if (Object.prototype.hasOwnProperty.call(req.body, 'planningFor')) up.planningFor = planningFor;
+  ob.userProfile = up;
   await ob.save();
 
   // Optionally sync fullName onto User
@@ -135,20 +136,21 @@ exports.saveBusinessProfile = async (req, res) => {
   if (!ob.userProfile || (!ob.userProfile.role && !ob.userProfile.planningGoal && !ob.userProfile.fullName)) {
     return res.status(409).json({ message: 'Complete the user profile step before business profile.' });
   }
-  ob.businessProfile = {
-    businessName,
-    businessStage,
-    industry,
-    industryOther,
-    country,
-    city,
-    ventureType,
-    teamSize,
-    funding: ynToBool(funding),
-    tools: Array.isArray(tools) ? tools : [],
-    connectTools: ynToBool(connectTools),
-    description,
-  };
+  // Patch only provided business fields; do not clear others
+  const bp = ob.businessProfile || {};
+  if (Object.prototype.hasOwnProperty.call(req.body, 'businessName')) bp.businessName = businessName;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'businessStage')) bp.businessStage = businessStage;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'industry')) bp.industry = industry;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'industryOther')) bp.industryOther = industryOther;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'country')) bp.country = country;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'city')) bp.city = city;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'ventureType')) bp.ventureType = ventureType;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'teamSize')) bp.teamSize = teamSize;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'funding')) bp.funding = ynToBool(funding);
+  if (Object.prototype.hasOwnProperty.call(req.body, 'tools')) bp.tools = Array.isArray(tools) ? tools : [];
+  if (Object.prototype.hasOwnProperty.call(req.body, 'connectTools')) bp.connectTools = ynToBool(connectTools);
+  if (Object.prototype.hasOwnProperty.call(req.body, 'description')) bp.description = description;
+  ob.businessProfile = bp;
   await ob.save();
   return res.json({ onboarding: ob });
 };
@@ -168,7 +170,10 @@ exports.saveVision = async (req, res) => {
   if (!ob.businessProfile || (!ob.businessProfile.businessName && !ob.businessProfile.ventureType && !ob.businessProfile.industry)) {
     return res.status(409).json({ message: 'Complete the business profile step before vision & purpose.' });
   }
-  ob.vision = { ubp };
+  // Patch only provided vision fields
+  const vv = ob.vision || {};
+  if (Object.prototype.hasOwnProperty.call(req.body, 'ubp')) vv.ubp = ubp;
+  ob.vision = vv;
   await ob.save();
   return res.json({ onboarding: ob });
 };

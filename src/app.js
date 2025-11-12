@@ -18,15 +18,14 @@ const originsFromEnv = (process.env.CORS_ORIGINS || '')
   .filter(Boolean);
 app.use(
   cors({
-    origin: '*'
-    // origin: function (origin, cb) {
-    //   if (!origin) return cb(null, true); // allow REST tools/curl
-    //   if (originsFromEnv.length === 0 || originsFromEnv.includes(origin)) {
-    //     return cb(null, true);
-    //   }
-    //   return cb(new Error('Not allowed by CORS'));
-    // },
-    // credentials: true,
+    origin: function (origin, cb) {
+      if (!origin) return cb(null, true); // allow REST tools/curl
+      if (originsFromEnv.length === 0 || originsFromEnv.includes(origin)) {
+        return cb(null, true);
+      }
+      return cb(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
   })
 );
 
