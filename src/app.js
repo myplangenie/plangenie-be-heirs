@@ -12,22 +12,46 @@ app.use(express.urlencoded({ extended: false }));
 app.use(morgan('dev'));
 
 // CORS
-const originsFromEnv = (process.env.CORS_ORIGINS || '')
+function normalizeOrigin(o) {
+  try {
+    return new URL(o).origin; // strips trailing slash, normalizes host/port
+  } catch (_e) {
+    return (o || '').trim().replace(/\/$/, '');
+  }
+}
+
+const envOrigins = (process.env.CORS_ORIGINS || '')
   .split(',')
   .map((s) => s.trim())
-  .filter(Boolean);
-app.use(
-  cors({
-    origin: function (origin, cb) {
-      if (!origin) return cb(null, true); // allow REST tools/curl
-      if (originsFromEnv.length === 0 || originsFromEnv.includes(origin)) {
-        return cb(null, true);
-      }
-      return cb(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-  })
+  .filter(Boolean)
+  .map(normalizeOrigin);
+
+// In production, default to the known public domains if not explicitly set
+const defaultProdOrigins = ['https://plangenie.com', 'https://www.plangenie.com'];
+const allowedOrigins = new Set(
+  envOrigins.length > 0
+    ? envOrigins
+    : (process.env.NODE_ENV === 'production' ? defaultProdOrigins : [])
 );
+
+const corsOptions = {
+  origin: function (origin, cb) {
+    if (!origin) return cb(null, true); // allow REST tools/curl
+    const normalized = normalizeOrigin(origin);
+    if (allowedOrigins.size === 0 || allowedOrigins.has(normalized)) {
+      return cb(null, true);
+    }
+    return cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400, // cache preflight for 24h
+};
+
+app.use(cors(corsOptions));
+// Explicitly enable preflight for all routes
+app.options('*', cors(corsOptions));
 
 // Health check
 app.get('/health', (req, res) => res.json({ ok: true }));
