@@ -11,7 +11,8 @@ const UserProfileSchema = new mongoose.Schema(
     planningGoal: { type: String, trim: true },
     planningGoalOther: { type: String, trim: true },
     includePersonalPlanning: { type: Boolean },
-    planningFor: { type: String, enum: ['personal', 'business'] },
+    // Accept legacy 'personal' but migrate to 'organization' on save
+    planningFor: { type: String, enum: ['organization', 'business', 'personal'] },
   },
   { _id: false }
 );
@@ -52,5 +53,15 @@ const OnboardingSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Migrate legacy value 'personal' -> 'organization' transparently on save
+OnboardingSchema.pre('save', function(next) {
+  try {
+    if (this.userProfile && this.userProfile.planningFor === 'personal') {
+      this.userProfile.planningFor = 'organization';
+    }
+  } catch {}
+  next();
+});
 
 module.exports = mongoose.model('Onboarding', OnboardingSchema);

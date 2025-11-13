@@ -21,6 +21,8 @@ router.post(
     body('planningGoal').optional().isString().trim(),
     body('planningGoalOther').optional().isString().trim(),
     body('includePersonalPlanning').optional(),
+    // Accept legacy 'personal' during rollout; controller maps to 'organization'
+    body('planningFor').optional().isString().isIn(['organization','business','personal']),
   ],
   ctrl.saveUserProfile
 );

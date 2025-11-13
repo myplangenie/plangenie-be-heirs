@@ -38,6 +38,10 @@ exports.get = async (req, res) => {
   if (!out.businessProfile.businessName && user && user.companyName) {
     out.businessProfile.businessName = user.companyName;
   }
+  // Backward-compat: map legacy 'personal' to 'organization' in responses
+  if (out.userProfile && out.userProfile.planningFor === 'personal') {
+    out.userProfile.planningFor = 'organization';
+  }
   return res.json({ onboarding: out });
 };
 
@@ -46,7 +50,10 @@ exports.saveUserProfile = async (req, res) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({ message: 'Invalid input', details: errors.array() });
   }
-  const { fullName, role, roleOther, builtPlanBefore, planningGoal, planningGoalOther, includePersonalPlanning, planningFor } = req.body;
+  const { fullName, role, roleOther, builtPlanBefore, planningGoal, planningGoalOther, includePersonalPlanning } = req.body;
+  // Normalize legacy client values
+  const planningForRaw = req.body.planningFor;
+  const planningFor = planningForRaw === 'personal' ? 'organization' : planningForRaw;
 
   const userId = req.user?.id;
   if (!userId) {
