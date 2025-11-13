@@ -211,16 +211,23 @@ exports.getSummary = async (req, res, next) => {
     const assignments = a.actionAssignments || {};
     const activePlans = Object.values(assignments || {})
       .flat()
-      .map((u) => ({
-        title: String(u?.goal || '').trim(),
-        owner: `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim(),
-        milestone: String(u?.milestone || '').trim(),
-        resources: String(u?.resources || '').trim(),
-        cost: (() => { const raw = String(u?.cost || '').trim(); const m = raw.match(/([$£€]?\s?\d[\d,]*(?:\.\d+)?)/); return m ? m[1].replace(/\s/g,'') : raw.replace(/[^0-9.]/g,''); })(),
-        kpi: String(u?.kpi || '').trim(),
-        due: String(u?.dueWhen || '').trim(),
-        status: String(u?.status || 'In progress').trim(),
-      }))
+      .map((u) => {
+        const prog = Number(u?.progress);
+        const derived = isFinite(prog)
+          ? (prog >= 100 ? 'Completed' : (prog > 0 ? 'In progress' : 'Not started'))
+          : 'Not started';
+        const st = String(u?.status || derived).trim();
+        return ({
+          title: String(u?.title || '').trim(),
+          owner: `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim(),
+          milestone: String(u?.milestone || '').trim(),
+          resources: String(u?.resources || '').trim(),
+          cost: (() => { const raw = String(u?.cost || '').trim(); const m = raw.match(/([$£€]?\s?\d[\d,]*(?:\.\d+)?)/); return m ? m[1].replace(/\s/g,'') : raw.replace(/[^0-9.]/g,''); })(),
+          kpi: String(u?.kpi || '').trim(),
+          due: String(u?.dueWhen || '').trim(),
+          status: st,
+        });
+      })
       .filter((p) => p.title)
       .slice(0, 12);
     // Basic finance chart from answers (first 6 months)
@@ -609,7 +616,25 @@ exports.saveCompiledPlan = async (req, res, next) => {
     }
     // Action plans (departmental)
     if (cp.actionPlans && typeof cp.actionPlans === 'object') {
-      a.actionAssignments = cp.actionPlans;
+      const norm = {};
+      const deriveStatus = (prog) => {
+        const n = Number(prog);
+        if (isFinite(n)) {
+          if (n >= 100) return 'Completed';
+          if (n > 0) return 'In progress';
+          return 'Not started';
+        }
+        return 'Not started';
+      };
+      Object.keys(cp.actionPlans).forEach((k) => {
+        const arr = Array.isArray(cp.actionPlans[k]) ? cp.actionPlans[k] : [];
+        norm[k] = arr.map((u) => ({
+          ...u,
+          status: u && u.status ? u.status : deriveStatus(u && (u.progress)),
+          progress: (u && typeof u.progress === 'number') ? Math.max(0, Math.min(100, Math.round(u.progress))) : 0,
+        }));
+      });
+      a.actionAssignments = norm;
     }
     ob.answers = a;
     try { ob.markModified && ob.markModified('answers'); } catch {}
@@ -1162,6 +1187,15 @@ exports.updateActionAssignmentItem = async (req, res, next) => {
       ...(p.dueWhen !== undefined ? { dueWhen: String(p.dueWhen || '') } : {}),
       ...(p.progress !== undefined ? (()=>{ const v = clampPct(p.progress); return v === undefined ? {} : { progress: v }; })() : {}),
     };
+    // Derive status from progress if provided
+    if (Object.prototype.hasOwnProperty.call(p, 'progress')) {
+      const v = clampPct(p.progress);
+      if (v !== undefined) {
+        if (v >= 100) nextItem.status = 'Completed';
+        else if (v > 0) nextItem.status = 'In progress';
+        else nextItem.status = 'Not started';
+      }
+    }
     list[idx] = nextItem;
     curr[k] = list;
     a.actionAssignments = curr;
@@ -1253,18 +1287,37 @@ exports.getFinancials = async (req, res, next) => {
       payroll: months.map((i)=> Math.round((actualPayroll && isFinite(actualPayroll[i])) ? actualPayroll[i] : (payrollCost || 0))),
       fixed: months.map((i)=> Math.round((actualFixed && isFinite(actualFixed[i])) ? actualFixed[i] : (fixedOperating || 0))),
     };
-    // Revenue vs Cost vs Profit chart: reflect actuals when present (first 6 months)
-    const chart = monthLabels.slice(0,6).map((n, i)=> {
-      const rev = isFinite(actual[i]) ? actual[i] : Math.round(series[i]?.revenue||0);
-      const cogsV = costEvolution.cogs[i] || 0;
-      const opexV = (costEvolution.marketing[i]||0) + (costEvolution.payroll[i]||0) + (costEvolution.fixed[i]||0);
+    // Rotate month-based series so current month is first
+    const curMonth = new Date().getMonth(); // 0-11
+    const rotateBy = (arr, start) => {
+      if (!Array.isArray(arr) || arr.length === 0) return arr;
+      const n = arr.length;
+      const k = ((start % n) + n) % n;
+      return arr.slice(k).concat(arr.slice(0, k));
+    };
+    const monthLabelsRot = rotateBy(monthLabels, curMonth);
+    const projectedRot = rotateBy(projected, curMonth);
+    const actualRot = rotateBy(actual, curMonth);
+    const costEvolutionRot = {
+      months: monthLabelsRot,
+      cogs: rotateBy(costEvolution.cogs, curMonth),
+      marketing: rotateBy(costEvolution.marketing, curMonth),
+      payroll: rotateBy(costEvolution.payroll, curMonth),
+      fixed: rotateBy(costEvolution.fixed, curMonth),
+    };
+    // Revenue vs Cost vs Profit chart: reflect actuals when present (first 6 months) starting at current month
+    const chart = monthLabelsRot.slice(0,6).map((n, i)=> {
+      const rev = isFinite(actualRot[i]) ? actualRot[i] : Math.round(series[i]?.revenue||0);
+      const cogsV = costEvolutionRot.cogs[i] || 0;
+      const opexV = (costEvolutionRot.marketing[i]||0) + (costEvolutionRot.payroll[i]||0) + (costEvolutionRot.fixed[i]||0);
       const profitV = Math.max(0, rev - (cogsV + opexV));
       return { name:n, Revenue: Math.round(rev/1000), Cost: Math.round((cogsV+opexV)/1000), Profit: Math.round(profitV/1000) };
     });
-    const monthlyRevenue = `$${Math.round(actual[0] || series[0]?.revenue || 0).toLocaleString()}`;
-    const month0Costs = (costEvolution.cogs[0]||0) + (costEvolution.marketing[0]||0) + (costEvolution.payroll[0]||0) + (costEvolution.fixed[0]||0);
+    // Monthly snapshot numbers reflect the current month (post-rotation index 0)
+    const monthlyRevenue = `$${Math.round(actualRot[0] || series[0]?.revenue || 0).toLocaleString()}`;
+    const month0Costs = (costEvolutionRot.cogs[0]||0) + (costEvolutionRot.marketing[0]||0) + (costEvolutionRot.payroll[0]||0) + (costEvolutionRot.fixed[0]||0);
     const monthlyCosts = `$${Math.round(month0Costs).toLocaleString()}`;
-    const month0Profit = (actual[0] || series[0]?.revenue || 0) - month0Costs;
+    const month0Profit = (actualRot[0] || series[0]?.revenue || 0) - month0Costs;
     const netProfit = `$${Math.round(month0Profit).toLocaleString()}`;
     const burn = series[0]?.profit < 0 ? Math.max(0, Math.floor((startCash||0)/Math.max(1, -series[0].profit))) : 12;
     // KPIs
@@ -1288,10 +1341,10 @@ exports.getFinancials = async (req, res, next) => {
     const financials = {
       metrics: { monthlyRevenue, monthlyCosts, netProfit, burnRate: `${burn} months` },
       chart,
-      revenueBars: series.slice(0,12).map((s)=>Math.round(s.revenue/1000)),
-      cashflowBars: cashSeries.slice(0,12).map((c)=>Math.round(c/1000)),
-      revPerf: { months: monthLabels, projected, actual },
-      costEvolution,
+      revenueBars: rotateBy(series.slice(0,12).map((s)=>Math.round(s.revenue/1000)), curMonth),
+      cashflowBars: rotateBy(cashSeries.slice(0,12).map((c)=>Math.round(c/1000)), curMonth),
+      revPerf: { months: monthLabelsRot, projected: projectedRot, actual: actualRot },
+      costEvolution: costEvolutionRot,
       kpis: {
         cac: { value: cacVal, deltaPct: delta(series.map(()=>marketingSpend)) },
         ltv: { value: ltvVal, deltaPct: 0 },
@@ -1308,6 +1361,129 @@ exports.getFinancials = async (req, res, next) => {
       ],
     };
     return res.json({ financials });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/plan/prose
+exports.getPlanProse = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const prose = (ob && ob.answers && ob.answers.planProse) || {};
+    return res.json({ prose: { marketStatement: prose.marketStatement || '', financialStatement: prose.financialStatement || '', generatedAt: prose.generatedAt || null } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/plan/prose/generate
+// Body: { sections?: ['market','financial'] }
+exports.generatePlanProse = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const ob = await Onboarding.findOne({ user: userId }) || await Onboarding.create({ user: userId });
+    const a = ob.answers || {};
+    const { sections } = req.body || {};
+    const wantMarket = !Array.isArray(sections) || sections.includes('market');
+    const wantFinancial = !Array.isArray(sections) || sections.includes('financial');
+
+    const ai = require('./ai.controller');
+    const contextBase = (() => {
+      const bp = ob.businessProfile || {};
+      const parts = [
+        bp.businessName && `Business Name: ${bp.businessName}`,
+        bp.industry && `Industry: ${bp.industry}`,
+        bp.ventureType && `Venture Type: ${bp.ventureType}`,
+        bp.city && bp.country && `Location: ${bp.city}, ${bp.country}`,
+        a.ubp && `UBP: ${a.ubp}`,
+        a.purpose && `Purpose: ${a.purpose}`,
+      ].filter(Boolean);
+      return parts.length ? parts.join('\n') : '';
+    })();
+
+    // Market statement context from onboarding Market & Opportunity answers
+    let marketStatement = undefined;
+    if (wantMarket) {
+      const marketCtx = [
+        contextBase,
+        'Market & Opportunity Inputs:',
+        a.marketCustomer && `Ideal Customer: ${a.marketCustomer}`,
+        a.partnersDesc && `Partners/Ecosystem: ${a.partnersDesc}`,
+        a.compNotes && `Competitors/Positioning: ${a.compNotes}`,
+        Array.isArray(a.competitorNames) && a.competitorNames.length ? `Competitor Names: ${a.competitorNames.join(', ')}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+      marketStatement = await ai.callOpenAIProse({ type: 'Market & Opportunity section of a business plan', contextText: marketCtx, maxTokens: 700 });
+    }
+
+    // Financial statement from forecasting inputs and derived values
+    let financialStatement = undefined;
+    if (wantFinancial) {
+      // Reuse parts of financial computation (mirror getFinancials)
+      function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
+      const growth = num(a.finSalesGrowthPct) / 100;
+      let totalVolFromProducts = 0, avgCostFromProducts = 0, avgPrice = 0;
+      try {
+        const list = Array.isArray(a.products) ? a.products : [];
+        const nums = list.map((p)=>({ v: num(p.monthlyVolume), price: num(p.price ?? p.pricing), cost: num(p.unitCost) }));
+        totalVolFromProducts = nums.reduce((sum, r)=> sum + (r.v||0), 0);
+        const totalW = nums.reduce((sum, r)=> sum + (r.v||0), 0);
+        const sumPrice = nums.reduce((sum, r)=> sum + ((r.price||0)*(r.v||0)), 0);
+        const sumCost = nums.reduce((sum, r)=> sum + ((r.cost||0)*(r.v||0)), 0);
+        avgPrice = totalW ? (sumPrice/totalW) : 0;
+        avgCostFromProducts = totalW ? (sumCost/totalW) : 0;
+      } catch {}
+      const units0 = num(a.finSalesVolume) || totalVolFromProducts;
+      const avgCost = num(a.finAvgUnitCost) || avgCostFromProducts;
+      const fixedOperating = num(a.finFixedOperatingCosts);
+      const marketingSpend = num(a.finMarketingSalesSpend);
+      const payrollCost = num(a.finPayrollCost);
+      const fixed = fixedOperating + marketingSpend + payrollCost;
+      const startCash = num(a.finStartingCash);
+      const fundAmt = num(a.finAdditionalFundingAmount);
+      if (!avgPrice && avgCost) {
+        const m = num(a.finTargetProfitMarginPct)/100; avgPrice = m < 0.99 ? (avgCost/(1-m||1)) : avgCost;
+      }
+      // Month 1 approximations
+      const revenueM1 = units0 * (avgPrice||0);
+      const cogsM1 = units0 * (avgCost||0);
+      const opexM1 = fixed;
+      const profitM1 = revenueM1 - (cogsM1 + opexM1);
+      const monthlyBurn = Math.max(cogsM1 + opexM1 - revenueM1, 0);
+      const runway = monthlyBurn > 0 ? Math.round((startCash + fundAmt) / monthlyBurn) : null;
+      const finCtx = [
+        contextBase,
+        'Financial Forecasting Inputs:',
+        `Sales Volume (Month 1): ${Math.round(units0)}`,
+        `Avg Unit Price: ${Math.round(avgPrice)}`,
+        `Avg Unit Cost: ${Math.round(avgCost)}`,
+        `Fixed Costs (operating + marketing + payroll): ${Math.round(fixed)}`,
+        `Growth (monthly): ${Math.round(growth*100)}%`,
+        `Starting Cash: ${Math.round(startCash)}`,
+        `Additional Funding: ${Math.round(fundAmt)}`,
+        `Projected Revenue (M1): ${Math.round(revenueM1)}`,
+        `Projected Costs (M1): ${Math.round(cogsM1 + opexM1)}`,
+        `Projected Net Profit (M1): ${Math.round(profitM1)}`,
+        (runway !== null) ? `Estimated Cash Runway (months): ${runway}` : '',
+      ].filter(Boolean).join('\n');
+      financialStatement = await ai.callOpenAIProse({ type: 'Financial Summary & Forecast section of a business plan', contextText: finCtx, maxTokens: 900 });
+    }
+
+    ob.answers = a;
+    ob.answers.planProse = {
+      ...(a.planProse || {}),
+      ...(typeof marketStatement === 'string' ? { marketStatement } : {}),
+      ...(typeof financialStatement === 'string' ? { financialStatement } : {}),
+      generatedAt: new Date().toISOString(),
+    };
+    try { ob.markModified && ob.markModified('answers'); } catch {}
+    await ob.save();
+    return res.json({ prose: ob.answers.planProse });
   } catch (err) {
     next(err);
   }

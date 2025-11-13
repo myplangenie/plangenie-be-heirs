@@ -41,9 +41,9 @@ exports.register = async (req, res) => {
   });
   // Send verification email (best-effort)
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
-    const from = process.env.RESEND_FROM || 'Plan Genie <onboarding@resend.dev>';
-    await resend.emails.send({
+  const resend = new Resend(process.env.RESEND_API_KEY);
+    const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
+    const result = await resend.emails.send({
       from,
       to: user.email,
       subject: 'Your PlanGenie verification code',
@@ -54,7 +54,15 @@ exports.register = async (req, res) => {
              <p>This code expires in 24 hours.</p>`,
       text: `Your PlanGenie verification code is ${otp}. It expires in 24 hours.`,
     });
-  } catch (_) {}
+    if (result && result.error) {
+      console.error('[email] Resend send error:', result.error?.message || result.error);
+    }
+    if ((from || '').includes('onboarding@resend.dev') && process.env.NODE_ENV === 'production') {
+      console.warn('[email] Using onboarding@resend.dev in production only delivers to your Resend account email. Configure RESEND_FROM with a verified domain sender.');
+    }
+  } catch (err) {
+    console.error('[email] Failed to send verification email:', err?.message || err);
+  }
   // Do not auto-login on signup; require verification
   return res.status(201).json({ ok: true });
 };

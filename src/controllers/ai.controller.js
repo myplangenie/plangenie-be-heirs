@@ -168,6 +168,50 @@ async function callOpenAIList({ type, input, contextText, n = 3 }) {
   return unique.slice(0, n);
 }
 
+// Write multi-paragraph professional prose for business plan sections
+async function callOpenAIProse({ type, input, contextText, maxTokens = 800 }) {
+  const client = getOpenAI();
+  const system =
+    'You are a helpful business planning assistant. ' +
+    'Write polished, professional narrative sections for business plans. ' +
+    'Use clear, concise language and avoid fluff. ' +
+    'Stay faithful to the provided context — do not fabricate specific numbers that were not supplied.';
+
+  const userPrompt = [
+    contextText || '',
+    `Task: Write a cohesive, professional narrative for the ${type}.`,
+    'Guidelines:',
+    '- 2–4 short paragraphs (roughly 150–300 words).',
+    '- Be specific and practical; avoid buzzwords.',
+    '- If numeric context is provided (e.g., revenue, costs), reference it qualitatively; do not invent data.',
+    '- Output ONLY the final prose as plain text. No bullets, no JSON, no code fences.',
+    '',
+    input ? `User input: ${input}` : 'User input: (none provided)',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const resp = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.7,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: userPrompt },
+    ],
+    max_tokens: maxTokens,
+  });
+
+  let text = resp.choices?.[0]?.message?.content || '';
+  text = String(text).trim();
+
+  // Strip code fences if present
+  const fenceMatch = text.match(/```(?:[a-z]+)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch) text = fenceMatch[1].trim();
+  return text;
+}
+
+exports.callOpenAIProse = callOpenAIProse;
+
 // Generate actionable next steps from a set of action plan assignments
 // assignments: { [dept: string]: Array<{ goal, milestone, resources, cost, kpi, dueWhen, firstName, lastName }> }
 // Returns up to n concise suggestions
