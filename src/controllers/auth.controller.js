@@ -42,13 +42,13 @@ exports.register = async (req, res) => {
   // Send verification email (best-effort)
   try {
   const resend = new Resend(process.env.RESEND_API_KEY);
-    const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
+    const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@kariiya.com>';
     const result = await resend.emails.send({
       from,
       to: user.email,
-      subject: 'Your PlanGenie verification code',
+      subject: 'Your Plan Genie verification code',
       html: `<p>Hello${(user.firstName || user.fullName) ? ' ' + (user.firstName || user.fullName) : ''},</p>
-             <p>Thanks for signing up for PlanGenie.</p>
+             <p>Thanks for signing up for Plan Genie.</p>
              <p>Your verification code is:</p>
              <p style="font-size:24px; font-weight:bold; letter-spacing:3px">${otp}</p>
              <p>This code expires in 24 hours.</p>`,
