@@ -78,6 +78,8 @@ exports.login = async (req, res) => {
   const match = await user.comparePassword(password);
   if (!match) return res.status(401).json({ message: 'Invalid credentials' });
   if (!user.isVerified) return res.status(403).json({ message: 'Please verify your email before signing in.' });
+  // Update lastActiveAt on login (non-blocking)
+  try { await User.findByIdAndUpdate(user._id, { lastActiveAt: new Date() }); } catch {}
   const token = signToken(user._id);
   return res.json({ token, user: user.toSafeJSON() });
 };

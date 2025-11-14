@@ -66,6 +66,8 @@ app.use('/api/user', require('./routes/user.routes'));
 app.use('/api/gamma', require('./routes/gamma.routes'));
 // Chat
 app.use('/api/chat', require('./routes/chat.routes'));
+// Admin
+app.use('/api/admin', require('./routes/admin.routes'));
 
 // Error handler
 app.use(errorHandler);

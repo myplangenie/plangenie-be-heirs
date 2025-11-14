@@ -28,6 +28,11 @@ const UserSchema = new mongoose.Schema(
 
     // Onboarding completion flag: set true once user reaches dashboard via flow
     onboardingDone: { type: Boolean, default: false },
+
+    // Admin controls and activity tracking
+    isAdmin: { type: Boolean, default: false },
+    status: { type: String, enum: ['active', 'suspended'], default: 'active' },
+    lastActiveAt: { type: Date },
   },
   { timestamps: true }
 );
