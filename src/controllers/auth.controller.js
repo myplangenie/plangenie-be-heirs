@@ -77,23 +77,90 @@ exports.login = async (req, res) => {
   if (!user) return res.status(401).json({ message: 'Invalid credentials' });
   const match = await user.comparePassword(password);
   if (!match) return res.status(401).json({ message: 'Invalid credentials' });
-  if (!user.isVerified) return res.status(403).json({ message: 'Please verify your email before signing in.' });
+  if (!user.isVerified) {
+    try {
+      const otp = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+      const otpHash = await bcrypt.hash(otp, 10);
+      const vexp = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
+      await User.findByIdAndUpdate(user._id, { verificationCode: otpHash, verificationExpires: vexp });
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@kariiya.com>';
+        const result = await resend.emails.send({
+          from,
+          to: user.email,
+          subject: 'Your Plan Genie verification code',
+          html: `<p>Hello${(user.firstName || user.fullName) ? ' ' + (user.firstName || user.fullName) : ''},</p>
+                 <p>We noticed you tried to sign in, but your email is not verified yet.</p>
+                 <p>Your verification code is:</p>
+                 <p style="font-size:24px; font-weight:bold; letter-spacing:3px">${otp}</p>
+                 <p>This code expires in 24 hours.</p>`,
+          text: `Your PlanGenie verification code is ${otp}. It expires in 24 hours.`,
+        });
+        if (result && result.error) {
+          console.error('[email] Resend send error:', result.error?.message || result.error);
+        }
+      } catch (err) {
+        console.error('[email] Failed to send verification email (login resend):', err?.message || err);
+      }
+    } catch (err) {
+      console.error('[auth] Failed to generate resend OTP on login:', err?.message || err);
+    }
+    return res.status(403).json({
+      message: 'Please verify your email before signing in.',
+      details: { reason: 'unverified', resent: true, email: user.email },
+    });
+  }
   // Update lastActiveAt on login (non-blocking)
   try { await User.findByIdAndUpdate(user._id, { lastActiveAt: new Date() }); } catch {}
   const token = signToken(user._id);
-  return res.json({ token, user: user.toSafeJSON() });
+  const safe = user.toSafeJSON();
+  // Backward compatibility: map legacy flag if new fields are undefined
+  if (typeof safe.onboardingCompleted === 'undefined') safe.onboardingCompleted = !!safe.onboardingDone;
+  if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
+  const nextRoute = !safe.onboardingCompleted
+    ? '/onboarding'
+    : (!safe.onboardingDetailCompleted ? '/onboarding-detail' : '/dashboard');
+  return res.json({ token, user: safe, nextRoute });
 };
 
 exports.me = async (req, res) => {
   const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ message: 'User not found' });
-  return res.json({ user: user.toSafeJSON() });
+  const safe = user.toSafeJSON();
+  if (typeof safe.onboardingCompleted === 'undefined') safe.onboardingCompleted = !!safe.onboardingDone;
+  if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
+  const nextRoute = !safe.onboardingCompleted
+    ? '/onboarding'
+    : (!safe.onboardingDetailCompleted ? '/onboarding-detail' : '/dashboard');
+  return res.json({ user: safe, nextRoute });
 };
 
 exports.markOnboarded = async (req, res) => {
-  const user = await User.findByIdAndUpdate(req.user.id, { onboardingDone: true }, { new: true });
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { onboardingDone: true, onboardingCompleted: true },
+    { new: true }
+  );
   if (!user) return res.status(404).json({ message: 'User not found' });
-  return res.json({ user: user.toSafeJSON(), ok: true });
+  const safe = user.toSafeJSON();
+  if (typeof safe.onboardingCompleted === 'undefined') safe.onboardingCompleted = !!safe.onboardingDone;
+  if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
+  return res.json({ user: safe, ok: true });
+};
+
+// POST /api/auth/onboarding/detail-done
+exports.markOnboardingDetailDone = async (req, res) => {
+  const user = await User.findByIdAndUpdate(
+    req.user.id,
+    { onboardingDetailCompleted: true },
+    { new: true }
+  );
+  if (!user) return res.status(404).json({ message: 'User not found' });
+  const safe = user.toSafeJSON();
+  if (typeof safe.onboardingCompleted === 'undefined') safe.onboardingCompleted = !!safe.onboardingDone;
+  if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
+  return res.json({ user: safe, ok: true });
 };
 
 // POST /api/auth/verify-otp  { email, code }
@@ -129,4 +196,41 @@ exports.verifyEmail = async (_req, res) => {
   return res
     .status(410)
     .send('<html><body style="font-family:Arial; padding:24px"><h2>Verification method updated</h2><p>We now use one-time codes. Please enter the verification code sent to your email in the app.</p></body></html>');
+};
+
+// POST /api/auth/resend-otp  { email }
+exports.resendOtp = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    if (!email) return res.status(400).json({ message: 'Email required' });
+    const user = await User.findOne({ email }).select('_id email isVerified firstName fullName');
+    if (!user) return res.status(200).json({ ok: true }); // do not reveal existence
+    if (user.isVerified) return res.status(200).json({ ok: true });
+    const otp = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+    const otpHash = await bcrypt.hash(otp, 10);
+    const vexp = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
+    await User.findByIdAndUpdate(user._id, { verificationCode: otpHash, verificationExpires: vexp });
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@kariiya.com>';
+      const result = await resend.emails.send({
+        from,
+        to: user.email,
+        subject: 'Your Plan Genie verification code',
+        html: `<p>Hello${(user.firstName || user.fullName) ? ' ' + (user.firstName || user.fullName) : ''},</p>
+               <p>Your verification code is:</p>
+               <p style="font-size:24px; font-weight:bold; letter-spacing:3px">${otp}</p>
+               <p>This code expires in 24 hours.</p>`,
+        text: `Your PlanGenie verification code is ${otp}. It expires in 24 hours.`,
+      });
+      if (result && result.error) {
+        console.error('[email] Resend send error:', result.error?.message || result.error);
+      }
+    } catch (err) {
+      console.error('[email] Failed to send verification email (resend):', err?.message || err);
+    }
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error' });
+  }
 };

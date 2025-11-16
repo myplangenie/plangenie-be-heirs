@@ -38,6 +38,8 @@ router.post(
 
 router.get('/me', auth(), ctrl.me);
 router.post('/onboarding/done', auth(true), ctrl.markOnboarded);
+router.post('/onboarding/detail-done', auth(true), ctrl.markOnboardingDetailDone);
+router.post('/resend-otp', ctrl.resendOtp);
 // Email verification
 router.get('/verify', ctrl.verifyEmail);
 
