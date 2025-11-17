@@ -44,11 +44,12 @@ router.get('/plan', auth(true), ensureOnboarded, ctrl.getPlan);
 router.post('/plan/sections', auth(true), ensureOnboarded, ctrl.addPlanSection);
 router.delete('/plan/sections/:sid', auth(true), ensureOnboarded, ctrl.deletePlanSection);
 // Compiled Plan (Customizable Plan Builder)
-router.post('/plan/compiled', auth(true), ensureOnboarded, ctrl.saveCompiledPlan);
-router.get('/plan/compiled', auth(true), ensureOnboarded, ctrl.getCompiledPlan);
+// Allow access during onboarding-detail builder before final completion
+router.post('/plan/compiled', auth(true), ctrl.saveCompiledPlan);
+router.get('/plan/compiled', auth(true), ctrl.getCompiledPlan);
 // Plan Prose (AI-generated narrative sections)
-router.get('/plan/prose', auth(true), ensureOnboarded, ctrl.getPlanProse);
-router.post('/plan/prose/generate', auth(true), ensureOnboarded, ctrl.generatePlanProse);
+router.get('/plan/prose', auth(true), ctrl.getPlanProse);
+router.post('/plan/prose/generate', auth(true), ctrl.generatePlanProse);
 
 // Settings
 router.get('/settings', auth(true), ensureOnboarded, ctrl.getSettings);
