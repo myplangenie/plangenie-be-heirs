@@ -1201,12 +1201,12 @@ exports.suggestActionAll = async (req, res) => {
   }
 };
 
-// New: Bulk suggest 1-2 high-level goals for multiple sections at once
-// Body: { sections: [{ key, label }], context?: string }
+// New: Bulk suggest high-level goals for multiple sections at once
+// Body: { sections: [{ key, label }], context?: string, n?: number }
 // Returns: { goals: { [key]: string[] } }
 exports.suggestDeptGoalsBulk = async (req, res) => {
   try {
-    const { sections = [], context = '' } = req.body || {};
+    const { sections = [], context = '', n } = req.body || {};
     if (!Array.isArray(sections) || sections.length === 0) {
       return res.json({ goals: {} });
     }
@@ -1218,9 +1218,11 @@ exports.suggestDeptGoalsBulk = async (req, res) => {
     for (const sec of sections) {
       const label = (sec && sec.label) ? String(sec.label) : '';
       const key = (sec && sec.key) ? String(sec.key) : label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      const input = `${contextText}\nSection: ${label}\nTask: Provide 2 concise high-level departmental goals.`;
-      const suggestions = await callOpenAIList({ type: 'high-level departmental goals', input, contextText, n: 2 });
-      out[key] = (suggestions || []).filter(Boolean);
+      // Default desired count: Core Strategic Projects => 6, otherwise 5 (unless overridden by 'n')
+      const desired = (typeof n === 'number' && n > 0) ? n : (/core\s+strategic\s+projects/i.test(label) ? 6 : 5);
+      const input = `${contextText}\nSection: ${label}\nTask: Provide ${desired} concise, distinct high-level options. Avoid overlap.`;
+      const suggestions = await callOpenAIList({ type: 'high-level departmental goals', input, contextText, n: desired });
+      out[key] = (suggestions || []).filter(Boolean).slice(0, desired);
     }
     return res.json({ goals: out });
   } catch (err) {
