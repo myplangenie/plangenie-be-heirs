@@ -40,6 +40,7 @@ exports.register = async (req, res) => {
     verificationExpires: vexp,
   });
   // Send verification email (best-effort)
+  
   try {
   const resend = new Resend(process.env.RESEND_API_KEY);
     const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@kariiya.com>';
