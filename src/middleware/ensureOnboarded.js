@@ -7,7 +7,7 @@ module.exports = async function ensureOnboarded(req, res, next) {
     if (!id) return res.status(401).json({ message: 'Unauthorized' });
     const user = await User.findById(id).lean().exec();
     if (!user) return res.status(401).json({ message: 'Unauthorized' });
-    const completed = Boolean(user.onboardingCompleted || user.onboardingDone);
+    const completed = Boolean(user.onboardingDone);
     const detailCompleted = Boolean(user.onboardingDetailCompleted);
     if (!completed || !detailCompleted) {
       return res.status(403).json({ message: 'Complete onboarding before accessing the dashboard.' });
@@ -17,4 +17,3 @@ module.exports = async function ensureOnboarded(req, res, next) {
     return res.status(500).json({ message: 'Server error' });
   }
 }
-

@@ -95,7 +95,6 @@ exports.listUsers = async (req, res) => {
     lastActiveAt: u.lastActiveAt,
     status: u.status,
     onboardingDone: !!u.onboardingDone,
-    onboardingCompleted: typeof u.onboardingCompleted === 'boolean' ? u.onboardingCompleted : !!u.onboardingDone,
     onboardingDetailCompleted: !!u.onboardingDetailCompleted,
     planType: subMap.get(String(u._id))?.planType || 'Free',
   }));

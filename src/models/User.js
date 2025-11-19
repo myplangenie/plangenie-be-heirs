@@ -28,8 +28,7 @@ const UserSchema = new mongoose.Schema(
 
     // Onboarding completion flag: set true once user reaches dashboard via flow
     onboardingDone: { type: Boolean, default: false },
-    // New flags for explicit onboarding phases
-    onboardingCompleted: { type: Boolean, default: false },
+    // New flags for explicit onboarding phases (use onboardingDone only for first phase)
     onboardingDetailCompleted: { type: Boolean, default: false },
 
     // Admin controls and activity tracking

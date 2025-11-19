@@ -770,6 +770,7 @@ exports.suggestCompetitorNames = async (req, res) => {
       .trim() || 'top competitors';
 
     let suggestions = await providerSearch(q);
+    let source = (suggestions && suggestions.length > 0) ? 'search' : 'ai';
     if (!suggestions || suggestions.length === 0) {
       // Fallback to AI list if provider not configured or no results
       suggestions = await callOpenAIList({
@@ -780,7 +781,7 @@ exports.suggestCompetitorNames = async (req, res) => {
       });
     }
     suggestions = suggestions.slice(0, 3);
-    return res.json({ suggestion: suggestions[0] || '', suggestions });
+    return res.json({ suggestion: suggestions[0] || '', suggestions, source });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
       return res.status(500).json({ message: 'OpenAI API key not configured on server' });
@@ -1019,7 +1020,11 @@ exports.suggestVision3y = async (req, res) => {
     const { input } = req.body || {};
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
-    const contextText = buildContextText(ob);
+    const now = new Date();
+    const currentIso = now.toISOString().slice(0, 10);
+    const targetYear = now.getUTCFullYear() + 3;
+    const anchor = `Current date: ${currentIso}. When referring to "3 years", anchor outcomes to the year ${targetYear} (not earlier years).`;
+    const contextText = [buildContextText(ob), anchor].filter(Boolean).join('\n');
     const suggestions = await callOpenAIList({ type: '3-year thriving vision', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -1260,7 +1265,11 @@ exports.rewriteVision3y = async (req, res) => {
     const { text } = req.body || {};
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
-    const contextText = buildContextText(ob);
+    const now = new Date();
+    const currentIso = now.toISOString().slice(0, 10);
+    const targetYear = now.getUTCFullYear() + 3;
+    const anchor = `Current date: ${currentIso}. When referring to "3 years", anchor outcomes to the year ${targetYear} (not earlier years).`;
+    const contextText = [buildContextText(ob), anchor].filter(Boolean).join('\n');
     const rewrite = await callOpenAIRewrite({ type: '3-year thriving vision', text, contextText });
     return res.json({ rewrite });
   } catch (err) {

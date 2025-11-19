@@ -115,10 +115,8 @@ exports.login = async (req, res) => {
   try { await User.findByIdAndUpdate(user._id, { lastActiveAt: new Date() }); } catch {}
   const token = signToken(user._id);
   const safe = user.toSafeJSON();
-  // Backward compatibility: map legacy flag if new fields are undefined
-  if (typeof safe.onboardingCompleted === 'undefined') safe.onboardingCompleted = !!safe.onboardingDone;
   if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
-  const nextRoute = !safe.onboardingCompleted
+  const nextRoute = !safe.onboardingDone
     ? '/onboarding'
     : (!safe.onboardingDetailCompleted ? '/onboarding-detail' : '/dashboard');
   return res.json({ token, user: safe, nextRoute });
@@ -128,9 +126,8 @@ exports.me = async (req, res) => {
   const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ message: 'User not found' });
   const safe = user.toSafeJSON();
-  if (typeof safe.onboardingCompleted === 'undefined') safe.onboardingCompleted = !!safe.onboardingDone;
   if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
-  const nextRoute = !safe.onboardingCompleted
+  const nextRoute = !safe.onboardingDone
     ? '/onboarding'
     : (!safe.onboardingDetailCompleted ? '/onboarding-detail' : '/dashboard');
   return res.json({ user: safe, nextRoute });
@@ -139,12 +136,11 @@ exports.me = async (req, res) => {
 exports.markOnboarded = async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.user.id,
-    { onboardingDone: true, onboardingCompleted: true },
+    { onboardingDone: true },
     { new: true }
   );
   if (!user) return res.status(404).json({ message: 'User not found' });
   const safe = user.toSafeJSON();
-  if (typeof safe.onboardingCompleted === 'undefined') safe.onboardingCompleted = !!safe.onboardingDone;
   if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
   return res.json({ user: safe, ok: true });
 };
@@ -158,7 +154,6 @@ exports.markOnboardingDetailDone = async (req, res) => {
   );
   if (!user) return res.status(404).json({ message: 'User not found' });
   const safe = user.toSafeJSON();
-  if (typeof safe.onboardingCompleted === 'undefined') safe.onboardingCompleted = !!safe.onboardingDone;
   if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
   return res.json({ user: safe, ok: true });
 };

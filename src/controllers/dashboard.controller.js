@@ -465,6 +465,7 @@ exports.createMember = async (req, res, next) => {
     };
     list.push(entry);
     ob.answers = { ...a, orgPositions: list };
+    try { ob.markModified('answers'); } catch {}
     await ob.save();
     const member = {
       mid: id,
@@ -614,6 +615,10 @@ exports.saveCompiledPlan = async (req, res, next) => {
       a.finTargetProfitMarginPct = String(f.targetProfitMarginPct || a.finTargetProfitMarginPct || '');
       a.finIsNonprofit = String(f.isNonprofit || a.finIsNonprofit || '');
     }
+    // Core Strategic Projects
+    if (Array.isArray(cp.coreProjects)) {
+      a.coreProjects = cp.coreProjects.map((s) => String(s || '')).filter((s) => s && s.trim());
+    }
     // Action plans (departmental)
     if (cp.actionPlans && typeof cp.actionPlans === 'object') {
       const norm = {};
@@ -684,6 +689,7 @@ exports.getCompiledPlan = async (req, res, next) => {
         isNonprofit: a.finIsNonprofit || '',
       },
       actionPlans: a.actionAssignments || {},
+      coreProjects: Array.isArray(a.coreProjects) ? a.coreProjects : [],
       generatedAt: new Date().toISOString(),
       version: '1.0',
     };
@@ -1728,7 +1734,7 @@ exports.getSettings = async (req, res, next) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const [user, ob] = await Promise.all([
       User.findById(userId).lean().exec(),
-      Onboarding.findOne({ user: userId }).lean().exec(),
+      Onboarding.findOne({ user: userId }).exec(),
     ]);
     const profile = {
       fullName: user?.fullName || '',
@@ -1740,6 +1746,12 @@ exports.getSettings = async (req, res, next) => {
     let members = [];
     try {
       const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+      // Normalize: ensure each org position has a stable id
+      let changed = false;
+      for (const p of org) {
+        if (!p.id) { p.id = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`); changed = true; }
+      }
+      if (changed) { ob.answers = { ...a, orgPositions: org }; try { ob.markModified('answers'); } catch {} await ob.save().catch(()=>{}); }
       members = org.map((p) => ({
         mid: String(p.id || `${(p.position||'').slice(0,8)}-${(p.name||'').slice(0,8)}`),
         name: p.name || '',
@@ -1753,12 +1765,12 @@ exports.getSettings = async (req, res, next) => {
     if (!members.length) {
       await ensureSeedTeamMembers(userId);
       const membersRaw = await TeamMember.find({ user: userId }).lean().exec();
-      members = membersRaw.map((m) => ({ mid: m.mid, name: m.name, email: m.email, role: m.role, department: m.department, status: m.status }));
+      members = membersRaw.map((m) => ({ mid: m.mid, name: m.name, email: m.email, position: m.role, department: m.department, status: m.status }));
     }
-    // Split name for convenience for clients
+    // Prefer stored first/last name; fallback to split from fullName
     const parts = (profile.fullName || '').trim().split(/\s+/);
-    const firstName = parts[0] || '';
-    const lastName = parts.slice(1).join(' ');
+    const firstName = (user?.firstName || '').trim() || parts[0] || '';
+    const lastName = (user?.lastName || '').trim() || parts.slice(1).join(' ');
     return res.json({ profile: { ...profile, firstName, lastName }, members });
   } catch (err) {
     next(err);
@@ -1774,13 +1786,25 @@ exports.updateProfile = async (req, res, next) => {
     const update = {};
     const fn = typeof firstName === 'string' ? firstName.trim() : '';
     const ln = typeof lastName === 'string' ? lastName.trim() : '';
-    if (fn || ln) update.fullName = [fn, ln].filter(Boolean).join(' ');
-    if (!update.fullName && typeof fullName === 'string') update.fullName = fullName;
+    // Update explicit fields
+    if (typeof firstName === 'string') update.firstName = fn;
+    if (typeof lastName === 'string') update.lastName = ln;
+    // Compute fullName consistently from first/last if provided; otherwise allow fullName override
+    if (typeof firstName === 'string' || typeof lastName === 'string') {
+      update.fullName = [fn, ln].filter(Boolean).join(' ').trim();
+    } else if (typeof fullName === 'string') {
+      const f = String(fullName || '').trim();
+      update.fullName = f;
+      // Also backfill first/last when only fullName is provided
+      const parts = f.split(/\s+/);
+      update.firstName = parts[0] || '';
+      update.lastName = parts.slice(1).join(' ');
+    }
     if (typeof email === 'string') update.email = email; // optional, may be disabled in UI
     if (typeof jobTitle === 'string') update.jobTitle = jobTitle;
     if (typeof phone === 'string') update.phone = phone;
     const user = await User.findByIdAndUpdate(userId, update, { new: true }).lean();
-    return res.json({ profile: { fullName: user.fullName, email: user.email, jobTitle: user.jobTitle || '', phone: user.phone || '' } });
+    return res.json({ profile: { fullName: user.fullName, firstName: user.firstName || '', lastName: user.lastName || '', email: user.email, jobTitle: user.jobTitle || '', phone: user.phone || '' } });
   } catch (err) {
     next(err);
   }
@@ -1799,10 +1823,21 @@ exports.updateMember = async (req, res, next) => {
     if (!ob) return res.json({ member: null });
     const a = ob.answers || {};
     let list = Array.isArray(a.orgPositions) ? a.orgPositions : [];
-    const idx = list.findIndex((p) => String(p.id || '') === String(mid));
+    const idx = list.findIndex((p) => {
+      const id = String(p.id || '');
+      if (id && id === String(mid)) return true;
+      const fallback = `${String(p.position || '').slice(0, 8)}-${String(p.name || '').slice(0, 8)}`;
+      return String(fallback) === String(mid);
+    });
     if (idx === -1) {
       // Fallback: update seeded TeamMember if org member not found
-      const m = await TeamMember.findOneAndUpdate({ user: userId, mid }, { $set: patch }, { new: true }).lean();
+      const patchDB = {};
+      if (typeof patch.name === 'string') patchDB.name = patch.name;
+      if (typeof patch.email === 'string') patchDB.email = patch.email;
+      if (typeof patch.position === 'string') patchDB.role = patch.position;
+      if (typeof patch.department === 'string') patchDB.department = patch.department;
+      if (typeof patch.status === 'string') patchDB.status = patch.status;
+      const m = await TeamMember.findOneAndUpdate({ user: userId, mid }, { $set: patchDB }, { new: true }).lean();
       const member = m ? { mid: m.mid, name: m.name, email: m.email, position: m.role, department: m.department, status: m.status } : null;
       return res.json({ member });
     }
@@ -1815,8 +1850,10 @@ exports.updateMember = async (req, res, next) => {
     if (typeof patch.role === 'string') next.position = patch.role;
     if (typeof patch.department === 'string') next.department = patch.department;
     if (typeof patch.status === 'string') next.status = patch.status;
+    if (!next.id) { next.id = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`); }
     list[idx] = next;
     ob.answers = { ...a, orgPositions: list };
+    try { ob.markModified('answers'); } catch {}
     await ob.save();
     const member = {
       mid: String(next.id || mid),
@@ -1842,7 +1879,14 @@ exports.deleteMember = async (req, res, next) => {
     const ob = await Onboarding.findOne({ user: userId });
     if (ob && ob.answers && Array.isArray(ob.answers.orgPositions)) {
       const before = ob.answers.orgPositions.length;
-      ob.answers.orgPositions = ob.answers.orgPositions.filter((p) => String(p.id || '') !== String(mid));
+      ob.answers.orgPositions = ob.answers.orgPositions.filter((p) => {
+        const id = String(p.id || '');
+        if (id && id === String(mid)) return false;
+        const fallback = `${String(p.position || '').slice(0, 8)}-${String(p.name || '').slice(0, 8)}`;
+        if (String(fallback) === String(mid)) return false;
+        return true;
+      });
+      try { ob.markModified('answers'); } catch {}
       await ob.save();
       return res.json({ ok: true, removed: before !== ob.answers.orgPositions.length });
     }
