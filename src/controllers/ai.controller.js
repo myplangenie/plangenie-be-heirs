@@ -1060,7 +1060,7 @@ exports.suggestCompetitorNames = async (req, res) => {
     const { input } = req.body || {};
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
-    const contextText = buildContextText(ob);
+    const baseCtx = buildContextText(ob);
 
     const bp = ob?.businessProfile || {};
     const q = [
@@ -1073,19 +1073,35 @@ exports.suggestCompetitorNames = async (req, res) => {
       .trim() || 'top competitors';
 
     const results = await webSearch(q, 6);
-    let suggestions = results.map((r) => (r.title || '').replace(/\s*[|\-].*$/, '').trim()).filter(Boolean);
-    suggestions = Array.from(new Set(suggestions));
-    let source = (suggestions && suggestions.length > 0) ? 'search' : 'ai';
-    if (!suggestions || suggestions.length === 0) {
-      // Fallback to AI list if provider not configured or no results
-      suggestions = await callOpenAIList({
+    const titles = (results || []).map((r) => String(r?.title || ''));
+    // Try to naively extract likely company names from titles (avoid list/directory pages)
+    const isListy = (t) => /\b(list|directory|companies|top|best|guide|nitda|licensed|pdf)\b/i.test(t);
+    const cleaned = titles
+      .map((t) => t.replace(/\s*[|\-–].*$/, '').trim())
+      .filter((t) => t && !isListy(t));
+    let suggestions = Array.from(new Set(cleaned)).slice(0, 3);
+    let source = 'search';
+
+    // If we don't have 2–3 solid candidates from search titles, use AI to infer names from context + search results
+    if (suggestions.length < 2) {
+      const contextText = [
+        baseCtx,
+        (results && results.length)
+          ? ('Recent search results (titles):\n' + results.map((r) => `- ${r.title} (${r.url})`).join('\n'))
+          : '',
+      ]
+        .filter(Boolean)
+        .join('\n\n');
+      const aiList = await callOpenAIList({
         type: 'top 2–3 competitor company names (no URLs, no descriptors)',
         input,
         contextText,
         n: 3,
       });
+      suggestions = (aiList || []).filter(Boolean).slice(0, 3);
+      source = (results && results.length) ? 'search+ai' : 'ai';
     }
-    suggestions = suggestions.slice(0, 3);
+
     const links = (results || []).slice(0, 3);
     return res.json({ suggestion: suggestions[0] || '', suggestions, source, links });
   } catch (err) {
