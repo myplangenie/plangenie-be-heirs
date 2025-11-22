@@ -493,11 +493,18 @@ exports.getStrategyCanvas = async (req, res, next) => {
     const threeYear = (a.vision3y || '').split('\n').map((s)=>s.trim()).filter(Boolean);
     const purpose = String(a.purpose || '').trim();
     const summary = String(a.identitySummary || '').trim();
+    const values = { core: String(a.valuesCore || '').trim(), culture: String(a.cultureFeeling || '').trim() };
+    const swot = {
+      strengths: String(a.swotStrengths || '').split('\n').map((s)=>s.trim()).filter(Boolean),
+      weaknesses: String(a.swotWeaknesses || '').split('\n').map((s)=>s.trim()).filter(Boolean),
+      opportunities: String(a.swotOpportunities || '').split('\n').map((s)=>s.trim()).filter(Boolean),
+      threats: String(a.swotThreats || '').split('\n').map((s)=>s.trim()).filter(Boolean),
+    };
     const goals = Object.values(a.actionAssignments || {})
       .flat()
       .map((u)=> String(u?.goal||'').trim())
       .filter(Boolean);
-    return res.json({ canvas: { ubp, purpose, oneYear, threeYear, summary, goals } });
+    return res.json({ canvas: { ubp, purpose, oneYear, threeYear, summary, goals, values, swot } });
   } catch (err) {
     next(err);
   }
@@ -619,6 +626,23 @@ exports.saveCompiledPlan = async (req, res, next) => {
     if (Array.isArray(cp.coreProjects)) {
       a.coreProjects = cp.coreProjects.map((s) => String(s || '')).filter((s) => s && s.trim());
     }
+    // Core Strategic Projects (detailed: deliverables with completion)
+    if (Array.isArray(cp.coreProjectDetails)) {
+      try {
+        const normalized = (cp.coreProjectDetails || []).map((p) => ({
+          title: String((p && p.title) || '').trim(),
+          deliverables: Array.isArray(p && p.deliverables)
+            ? (p.deliverables || []).map((d) => ({
+                text: String((d && d.text) || '').trim(),
+                done: Boolean(d && d.done),
+              }))
+            : [],
+        })).filter((p) => p.title || (p.deliverables && p.deliverables.length));
+        a.coreProjectDetails = normalized;
+      } catch (_) {
+        // ignore malformed payloads
+      }
+    }
     // Action plans (departmental)
     if (cp.actionPlans && typeof cp.actionPlans === 'object') {
       const norm = {};
@@ -690,6 +714,7 @@ exports.getCompiledPlan = async (req, res, next) => {
       },
       actionPlans: a.actionAssignments || {},
       coreProjects: Array.isArray(a.coreProjects) ? a.coreProjects : [],
+      coreProjectDetails: Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [],
       generatedAt: new Date().toISOString(),
       version: '1.0',
     };

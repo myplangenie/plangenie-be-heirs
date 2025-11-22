@@ -1,4 +1,10 @@
 const Onboarding = require('../models/Onboarding');
+let rag;
+try {
+  rag = require('../rag/index.js');
+} catch (e) {
+  rag = { initRag: async () => ({ ready: false, error: e }), retrieve: async () => [] };
+}
 
 // Lazy-load OpenAI to avoid crashing if not installed during dev
 let openaiClient = null;
@@ -32,6 +38,69 @@ function buildContextText(ob) {
   return fields.length ? `Context about the business:\n- ${fields.join('\n- ')}` : '';
 }
 
+function buildAnswersContext(ob) {
+  try {
+    const a = (ob && ob.answers) || {};
+    const lines = [];
+    if (a.ubp) lines.push(`UBP: ${String(a.ubp).trim()}`);
+    if (a.purpose) lines.push(`Purpose: ${String(a.purpose).trim()}`);
+    if (a.visionBhag) lines.push(`Long-term Vision (BHAG): ${String(a.visionBhag).trim()}`);
+    if (a.vision1y) lines.push(`1-Year Goals: ${(String(a.vision1y).trim().split('\n').filter(Boolean).join('; '))}`);
+    if (a.vision3y) lines.push(`3-Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
+    if (a.valuesCore) lines.push(`Core Values: ${String(a.valuesCore).trim()}`);
+    if (a.cultureFeeling) lines.push(`Culture & Behaviors: ${String(a.cultureFeeling).trim()}`);
+    return lines.length ? `\n\nUser-provided answers:\n- ${lines.join('\n- ')}` : '';
+  } catch (_) {
+    return '';
+  }
+}
+
+// Simple web search helper (SERPAPI or Bing). Returns [{ title, url }]
+async function webSearch(query, num = 5) {
+  const out = [];
+  try {
+    if (process.env.SERPAPI_API_KEY) {
+      const url = new URL('https://serpapi.com/search.json');
+      url.searchParams.set('engine', 'google');
+      url.searchParams.set('q', query);
+      url.searchParams.set('num', String(num));
+      url.searchParams.set('api_key', process.env.SERPAPI_API_KEY);
+      const r = await fetch(url, { method: 'GET' });
+      const j = await r.json();
+      const org = j.organic_results || [];
+      for (const it of org) {
+        const title = (it.title || '').trim();
+        const link = (it.link || '').trim();
+        if (!title || !link) continue;
+        if (/top|best|vs|compare|review|blog|news|wikipedia/i.test(title)) continue;
+        out.push({ title: title.replace(/\s*[|\-].*$/, '').trim(), url: link });
+      }
+    } else if (process.env.BING_SUBSCRIPTION_KEY) {
+      const r = await fetch('https://api.bing.microsoft.com/v7.0/search?q=' + encodeURIComponent(query), {
+        headers: { 'Ocp-Apim-Subscription-Key': process.env.BING_SUBSCRIPTION_KEY },
+      });
+      const j = await r.json();
+      const web = j.webPages?.value || [];
+      for (const it of web) {
+        const title = (it.name || '').trim();
+        const link = (it.url || '').trim();
+        if (!title || !link) continue;
+        if (/top|best|vs|compare|review|blog|news|wikipedia/i.test(title)) continue;
+        out.push({ title: title.replace(/\s*[|\-].*$/, '').trim(), url: link });
+      }
+    }
+  } catch (_) {}
+  // unique by url
+  const seen = new Set();
+  const uniq = [];
+  for (const it of out) {
+    if (seen.has(it.url)) continue;
+    seen.add(it.url);
+    uniq.push(it);
+    if (uniq.length >= num) break;
+  }
+  return uniq;
+}
 async function callOpenAI({ type, input, contextText }) {
   const client = getOpenAI();
   const system =
@@ -40,8 +109,20 @@ async function callOpenAI({ type, input, contextText }) {
     'Avoid marketing buzzwords. Be specific and concrete. ' +
     'Always keep suggestions consistent with any provided context and user input — do not contradict earlier answers.';
 
+  let ragText = '';
+  try {
+    if (process.env.RAG_ENABLE !== 'false') {
+      const results = await rag.retrieve([type, input].filter(Boolean).join(' \n ').slice(0, 500));
+      if (results && results.length) {
+        const clip = results.map((r) => r.text).join('\n\n---\n\n');
+        ragText = `Additional guidance from Business Trainer (internal knowledge):\n${clip}`;
+      }
+    }
+  } catch (_) {}
+
   const userPrompt = [
     contextText || '',
+    ragText || '',
     `Task: Generate exactly 1 option for the ${type}.`,
     'Constraints:',
     '- Keep it to 1-2 sentences.',
@@ -117,8 +198,20 @@ async function callOpenAIList({ type, input, contextText, n = 3 }) {
     'Avoid marketing buzzwords. Be specific and concrete. ' +
     'Always keep suggestions consistent with any provided context and user input — do not contradict earlier answers.';
 
+  let ragText2 = '';
+  try {
+    if (process.env.RAG_ENABLE !== 'false') {
+      const results = await rag.retrieve([type, input].filter(Boolean).join(' \n ').slice(0, 500));
+      if (results && results.length) {
+        const clip = results.map((r) => r.text).join('\n\n---\n\n');
+        ragText2 = `Additional guidance from Business Trainer (internal knowledge):\n${clip}`;
+      }
+    }
+  } catch (_) {}
+
   const userPrompt = [
     contextText || '',
+    ragText2 || '',
     `Task: Generate exactly ${n} distinct, high-quality options for the ${type}.`,
     'Constraints:',
     '- Each option should be 1-2 sentences.',
@@ -177,8 +270,20 @@ async function callOpenAIProse({ type, input, contextText, maxTokens = 800 }) {
     'Use clear, concise language and avoid fluff. ' +
     'Stay faithful to the provided context — do not fabricate specific numbers that were not supplied.';
 
+  let ragText = '';
+  try {
+    if (process.env.RAG_ENABLE !== 'false') {
+      const results = await rag.retrieve([type, input].filter(Boolean).join(' \n ').slice(0, 500));
+      if (results && results.length) {
+        const clip = results.map((r) => r.text).join('\n\n---\n\n');
+        ragText = `Additional guidance from Business Trainer (internal knowledge):\n${clip}`;
+      }
+    }
+  } catch (_) {}
+
   const userPrompt = [
     contextText || '',
+    ragText || '',
     `Task: Write a cohesive, professional narrative for the ${type}.`,
     'Guidelines:',
     '- 2–4 short paragraphs (roughly 150–300 words).',
@@ -218,6 +323,7 @@ exports.callOpenAIProse = callOpenAIProse;
 exports.generateActionInsightsForUser = async function generateActionInsightsForUser(userId, assignments = {}, n = 6) {
   const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
   const baseCtx = buildContextText(ob);
+  const answersCtx = buildAnswersContext(ob);
   const lines = [];
   try {
     Object.entries(assignments || {}).forEach(([dept, arr]) => {
@@ -243,9 +349,42 @@ exports.generateActionInsightsForUser = async function generateActionInsightsFor
     });
   } catch (_) {}
 
+  // Optional: enrich with internal RAG and quick web research
+  let ragText = '';
+  try {
+    if (process.env.RAG_ENABLE !== 'false') {
+      const clip = await rag.retrieve([baseCtx, answersCtx, lines.join('\n')].filter(Boolean).join(' \n ').slice(0, 500));
+      if (clip && clip.length) ragText = `Additional guidance from Business Trainer (internal knowledge):\n${clip.map((r)=>r.text).join('\n\n---\n\n')}`;
+    }
+  } catch (_) {}
+  let webLinksText = '';
+  try {
+    const bp = (ob && ob.businessProfile) || {};
+    const industry = String(bp.industry || '').trim();
+    const ventureType = String(bp.ventureType || '').trim();
+    const queries = [
+      [industry, ventureType, 'market trends'].filter(Boolean).join(' ').trim(),
+      [industry, 'operational best practices'].filter(Boolean).join(' ').trim(),
+    ].filter((q) => q && q.length >= 3);
+    const seen = new Set();
+    const linkLines = [];
+    for (const q of queries) {
+      const links = await webSearch(q, 3);
+      for (const l of links) {
+        if (!l || !l.url || seen.has(l.url)) continue;
+        seen.add(l.url);
+        linkLines.push(`- ${l.title} (${l.url})`);
+      }
+    }
+    if (linkLines.length) webLinksText = `External research (recent web results):\n${linkLines.join('\n')}`;
+  } catch (_) {}
+
   const contextText = [
     baseCtx,
+    answersCtx,
     lines.length ? `Current action plans:\n${lines.join('\n')}` : 'No detailed fields provided for action plans.',
+    ragText,
+    webLinksText,
   ]
     .filter(Boolean)
     .join('\n\n');
@@ -266,6 +405,7 @@ exports.generateActionInsightsForUser = async function generateActionInsightsFor
 exports.generateActionInsightSectionsForUser = async function generateActionInsightSectionsForUser(userId, assignments = {}, maxSections = 2) {
   const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
   const baseCtx = buildContextText(ob);
+  const answersCtx = buildAnswersContext(ob);
   const lines = [];
   try {
     Object.entries(assignments || {}).forEach(([dept, arr]) => {
@@ -291,9 +431,42 @@ exports.generateActionInsightSectionsForUser = async function generateActionInsi
     });
   } catch (_) {}
 
+  // Optional: enrich with internal RAG and quick web research
+  let ragText = '';
+  try {
+    if (process.env.RAG_ENABLE !== 'false') {
+      const clip = await rag.retrieve([baseCtx, answersCtx, lines.join('\n')].filter(Boolean).join(' \n ').slice(0, 500));
+      if (clip && clip.length) ragText = `Additional guidance from Business Trainer (internal knowledge):\n${clip.map((r)=>r.text).join('\n\n---\n\n')}`;
+    }
+  } catch (_) {}
+  let webLinksText = '';
+  try {
+    const bp = (ob && ob.businessProfile) || {};
+    const industry = String(bp.industry || '').trim();
+    const ventureType = String(bp.ventureType || '').trim();
+    const queries = [
+      [industry, ventureType, 'market trends'].filter(Boolean).join(' ').trim(),
+      [industry, 'operational best practices'].filter(Boolean).join(' ').trim(),
+    ].filter((q) => q && q.length >= 3);
+    const seen = new Set();
+    const linkLines = [];
+    for (const q of queries) {
+      const links = await webSearch(q, 3);
+      for (const l of links) {
+        if (!l || !l.url || seen.has(l.url)) continue;
+        seen.add(l.url);
+        linkLines.push(`- ${l.title} (${l.url})`);
+      }
+    }
+    if (linkLines.length) webLinksText = `External research (recent web results):\n${linkLines.join('\n')}`;
+  } catch (_) {}
+
   const contextText = [
     baseCtx,
+    answersCtx,
     lines.length ? `Current action plans:\n${lines.join('\n')}` : 'No detailed fields provided for action plans.',
+    ragText,
+    webLinksText,
   ]
     .filter(Boolean)
     .join('\n\n');
@@ -382,6 +555,7 @@ exports.generateActionInsightSectionsForUser = async function generateActionInsi
 exports.generateSingleInsightSectionForUser = async function generateSingleInsightSectionForUser(userId, assignments = {}, title = 'Recommendations') {
   const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
   const baseCtx = buildContextText(ob);
+  const answersCtx = buildAnswersContext(ob);
   const lines = [];
   try {
     Object.entries(assignments || {}).forEach(([dept, arr]) => {
@@ -406,7 +580,37 @@ exports.generateSingleInsightSectionForUser = async function generateSingleInsig
       });
     });
   } catch (_) {}
-  const contextText = [baseCtx, lines.length ? `Current action plans:\n${lines.join('\n')}` : ''].filter(Boolean).join('\n\n');
+  // Optional: enrich with internal RAG and quick web research
+  let ragText = '';
+  try {
+    if (process.env.RAG_ENABLE !== 'false') {
+      const clip = await rag.retrieve([baseCtx, answersCtx, lines.join('\n')].filter(Boolean).join(' \n ').slice(0, 500));
+      if (clip && clip.length) ragText = `Additional guidance from Business Trainer (internal knowledge):\n${clip.map((r)=>r.text).join('\n\n---\n\n')}`;
+    }
+  } catch (_) {}
+  let webLinksText = '';
+  try {
+    const bp = (ob && ob.businessProfile) || {};
+    const industry = String(bp.industry || '').trim();
+    const ventureType = String(bp.ventureType || '').trim();
+    const queries = [
+      [industry, ventureType, 'market trends'].filter(Boolean).join(' ').trim(),
+      [industry, 'operational best practices'].filter(Boolean).join(' ').trim(),
+    ].filter((q) => q && q.length >= 3);
+    const seen = new Set();
+    const linkLines = [];
+    for (const q of queries) {
+      const links = await webSearch(q, 3);
+      for (const l of links) {
+        if (!l || !l.url || seen.has(l.url)) continue;
+        seen.add(l.url);
+        linkLines.push(`- ${l.title} (${l.url})`);
+      }
+    }
+    if (linkLines.length) webLinksText = `External research (recent web results):\n${linkLines.join('\n')}`;
+  } catch (_) {}
+
+  const contextText = [baseCtx, answersCtx, lines.length ? `Current action plans:\n${lines.join('\n')}` : '', ragText, webLinksText].filter(Boolean).join('\n\n');
 
   const client = getOpenAI();
   const system = 'You are a helpful business planning assistant. Write crisp, concrete steps under a single section.';
@@ -451,8 +655,20 @@ async function callOpenAIRewrite({ type, text, contextText }) {
     'Avoid marketing buzzwords. Be specific and concrete. ' +
     'Always keep suggestions consistent with any provided context and user input — do not contradict earlier answers.';
 
+  let ragText3 = '';
+  try {
+    if (process.env.RAG_ENABLE !== 'false') {
+      const results = await rag.retrieve([type, text].filter(Boolean).join(' \n ').slice(0, 500));
+      if (results && results.length) {
+        const clip = results.map((r) => r.text).join('\n\n---\n\n');
+        ragText3 = `Additional guidance from Business Trainer (internal knowledge):\n${clip}`;
+      }
+    }
+  } catch (_) {}
+
   const userPrompt = [
     contextText || '',
+    ragText3 || '',
     `Task: Rewrite the user's draft for the ${type}.`,
     'Constraints:',
     '- Keep it to 1-2 sentences.',
@@ -572,7 +788,7 @@ exports.suggestValuesCore = async (req, res) => {
     const { input } = req.body || {};
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
-    const contextText = buildContextText(ob);
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
     const suggestions = await callOpenAIList({ type: 'Core values statement', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -635,6 +851,75 @@ exports.rewriteCultureFeeling = async (req, res) => {
   }
 };
 
+// SWOT: strengths, weaknesses, opportunities, threats
+exports.suggestSwotStrengths = async (req, res) => {
+  try {
+    const { input } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const suggestions = await callOpenAIList({ type: 'SWOT Strengths for this organization', input, contextText, n: 3 });
+    return res.json({ suggestion: suggestions[0] || '', suggestions });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestions';
+    return res.status(500).json({ message });
+  }
+};
+
+exports.suggestSwotWeaknesses = async (req, res) => {
+  try {
+    const { input } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const suggestions = await callOpenAIList({ type: 'SWOT Weaknesses for this organization', input, contextText, n: 3 });
+    return res.json({ suggestion: suggestions[0] || '', suggestions });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestions';
+    return res.status(500).json({ message });
+  }
+};
+
+exports.suggestSwotOpportunities = async (req, res) => {
+  try {
+    const { input } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const suggestions = await callOpenAIList({ type: 'SWOT Opportunities for this organization', input, contextText, n: 3 });
+    return res.json({ suggestion: suggestions[0] || '', suggestions });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestions';
+    return res.status(500).json({ message });
+  }
+};
+
+exports.suggestSwotThreats = async (req, res) => {
+  try {
+    const { input } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const suggestions = await callOpenAIList({ type: 'SWOT Threats for this organization', input, contextText, n: 3 });
+    return res.json({ suggestion: suggestions[0] || '', suggestions });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestions';
+    return res.status(500).json({ message });
+  }
+};
+
 exports.suggestMarketCustomer = async (req, res) => {
   try {
     const { input } = req.body || {};
@@ -642,12 +927,32 @@ exports.suggestMarketCustomer = async (req, res) => {
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob);
     const suggestions = await callOpenAIList({ type: 'Target market and ideal customer profile summary', input, contextText, n: 3 });
-    return res.json({ suggestion: suggestions[0] || '', suggestions });
+    const bp = ob?.businessProfile || {};
+    const q = [bp.industry || '', bp.businessName || '', bp.city || '', bp.country || '', 'ideal customer profile'].filter(Boolean).join(' ');
+    const links = await webSearch(q, 3);
+    return res.json({ suggestion: suggestions[0] || '', suggestions, links });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
       return res.status(500).json({ message: 'OpenAI API key not configured on server' });
     }
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestions';
+    return res.status(500).json({ message });
+  }
+};
+
+exports.rewriteMarketCustomer = async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const rewrite = await callOpenAIRewrite({ type: 'Target market and ideal customer profile summary', text, contextText });
+    return res.json({ rewrite });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to rewrite';
     return res.status(500).json({ message });
   }
 };
@@ -659,7 +964,10 @@ exports.suggestMarketPartners = async (req, res) => {
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob);
     const suggestions = await callOpenAIList({ type: 'Go-to-market partners and channels plan', input, contextText, n: 3 });
-    return res.json({ suggestion: suggestions[0] || '', suggestions });
+    const bp = ob?.businessProfile || {};
+    const q = [bp.industry || '', bp.businessName || '', 'go-to-market partners channels', bp.country || ''].filter(Boolean).join(' ');
+    const links = await webSearch(q, 3);
+    return res.json({ suggestion: suggestions[0] || '', suggestions, links });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
       return res.status(500).json({ message: 'OpenAI API key not configured on server' });
@@ -693,7 +1001,10 @@ exports.suggestMarketCompetitors = async (req, res) => {
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob);
     const suggestions = await callOpenAIList({ type: 'Competitive differentiation notes', input, contextText, n: 3 });
-    return res.json({ suggestion: suggestions[0] || '', suggestions });
+    const bp = ob?.businessProfile || {};
+    const q = [bp.industry || '', bp.city || '', bp.country || '', 'competitive landscape'].filter(Boolean).join(' ');
+    const links = await webSearch(q, 3);
+    return res.json({ suggestion: suggestions[0] || '', suggestions, links });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
       return res.status(500).json({ message: 'OpenAI API key not configured on server' });
@@ -720,6 +1031,29 @@ exports.rewriteMarketCompetitors = async (req, res) => {
   }
 };
 
+// Given up to 3 competitor names, generate what they likely do better than the user's org
+exports.suggestCompetitorAdvantages = async (req, res) => {
+  try {
+    const names = Array.isArray(req.body?.names) ? req.body.names.slice(0, 3) : [];
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const out = [];
+    for (const name of names) {
+      const input = `Competitor name: ${String(name || '').trim()}`;
+      const suggestion = await callOpenAI({ type: 'one-line competitor advantage (what they do better)', input, contextText });
+      out.push(suggestion || '');
+    }
+    return res.json({ advantages: out });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate competitor advantages';
+    return res.status(500).json({ message });
+  }
+};
+
 // New: competitor names (2–3) based on prior inputs
 exports.suggestCompetitorNames = async (req, res) => {
   try {
@@ -727,37 +1061,6 @@ exports.suggestCompetitorNames = async (req, res) => {
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob);
-    // Try provider-backed search first for real companies
-    async function providerSearch(query) {
-      const out = [];
-      try {
-        if (process.env.SERPAPI_API_KEY) {
-          const url = new URL('https://serpapi.com/search.json');
-          url.searchParams.set('engine', 'google');
-          url.searchParams.set('q', query);
-          url.searchParams.set('num', '10');
-          url.searchParams.set('api_key', process.env.SERPAPI_API_KEY);
-          const r = await fetch(url, { method: 'GET' });
-          const j = await r.json();
-          const org = j.organic_results || [];
-          for (const it of org) {
-            const t = (it.title || '').replace(/\s*[|\-].*$/, '').trim();
-            if (t && !/top|best|vs|compare|review|blog|news|wikipedia/i.test(t)) out.push(t);
-          }
-        } else if (process.env.BING_SUBSCRIPTION_KEY) {
-          const r = await fetch('https://api.bing.microsoft.com/v7.0/search?q=' + encodeURIComponent(query), {
-            headers: { 'Ocp-Apim-Subscription-Key': process.env.BING_SUBSCRIPTION_KEY },
-          });
-          const j = await r.json();
-          const web = j.webPages?.value || [];
-          for (const it of web) {
-            const t = (it.name || '').replace(/\s*[|\-].*$/, '').trim();
-            if (t && !/top|best|vs|compare|review|blog|news|wikipedia/i.test(t)) out.push(t);
-          }
-        }
-      } catch (_) {}
-      return Array.from(new Set(out));
-    }
 
     const bp = ob?.businessProfile || {};
     const q = [
@@ -769,7 +1072,9 @@ exports.suggestCompetitorNames = async (req, res) => {
       .join(' ')
       .trim() || 'top competitors';
 
-    let suggestions = await providerSearch(q);
+    const results = await webSearch(q, 6);
+    let suggestions = results.map((r) => (r.title || '').replace(/\s*[|\-].*$/, '').trim()).filter(Boolean);
+    suggestions = Array.from(new Set(suggestions));
     let source = (suggestions && suggestions.length > 0) ? 'search' : 'ai';
     if (!suggestions || suggestions.length === 0) {
       // Fallback to AI list if provider not configured or no results
@@ -781,7 +1086,8 @@ exports.suggestCompetitorNames = async (req, res) => {
       });
     }
     suggestions = suggestions.slice(0, 3);
-    return res.json({ suggestion: suggestions[0] || '', suggestions, source });
+    const links = (results || []).slice(0, 3);
+    return res.json({ suggestion: suggestions[0] || '', suggestions, source, links });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
       return res.status(500).json({ message: 'OpenAI API key not configured on server' });
@@ -1174,6 +1480,24 @@ exports.rewriteActionCost = async (req, res) => {
     return res.json({ rewrite });
   } catch (err) {
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to rewrite';
+    return res.status(500).json({ message });
+  }
+};
+
+// Core Strategic Projects: suggest 3–4 high-level deliverables
+exports.suggestCoreDeliverables = async (req, res) => {
+  try {
+    const { input } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const suggestions = await callOpenAIList({ type: 'core strategic project deliverables (3–4 high-level items)', input, contextText, n: 4 });
+    return res.json({ suggestion: suggestions[0] || '', suggestions });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate deliverables';
     return res.status(500).json({ message });
   }
 };

@@ -22,6 +22,7 @@
     "mongoose": "^8.6.1",
     "morgan": "^1.10.0",
     "openai": "^4.56.0",
+    "pdf-parse": "^2.4.5",
     "resend": "^4.0.0"
   },
   "devDependencies": {

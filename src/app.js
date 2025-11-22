@@ -45,7 +45,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-View-As'],
   maxAge: 86400, // cache preflight for 24h
 };
 
@@ -62,6 +62,7 @@ app.use('/api/onboarding', require('./routes/onboarding.routes'));
 app.use('/api/misc', require('./routes/misc.routes'));
 app.use('/api/dashboard', require('./routes/dashboard.routes'));
 app.use('/api/user', require('./routes/user.routes'));
+app.use('/api/collab', require('./routes/collab.routes'));
 // Optional integrations
 app.use('/api/gamma', require('./routes/gamma.routes'));
 // Chat

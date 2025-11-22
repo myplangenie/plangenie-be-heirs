@@ -71,12 +71,19 @@ router.post('/values/core/suggest', auth(false), ai.suggestValuesCore);
 router.post('/values/feeling/suggest', auth(false), ai.suggestCultureFeeling);
 router.post('/values/core/rewrite', auth(false), ai.rewriteValuesCore);
 router.post('/values/feeling/rewrite', auth(false), ai.rewriteCultureFeeling);
+// SWOT analysis
+router.post('/values/swot/strengths/suggest', auth(false), ai.suggestSwotStrengths);
+router.post('/values/swot/weaknesses/suggest', auth(false), ai.suggestSwotWeaknesses);
+router.post('/values/swot/opportunities/suggest', auth(false), ai.suggestSwotOpportunities);
+router.post('/values/swot/threats/suggest', auth(false), ai.suggestSwotThreats);
 router.post('/market/customer/suggest', auth(false), ai.suggestMarketCustomer);
+router.post('/market/customer/rewrite', auth(false), ai.rewriteMarketCustomer);
 router.post('/market/partners/suggest', auth(false), ai.suggestMarketPartners);
 router.post('/market/competitors/suggest', auth(false), ai.suggestMarketCompetitors);
 router.post('/market/competitors/names', auth(false), ai.suggestCompetitorNames);
 router.post('/market/partners/rewrite', auth(false), ai.rewriteMarketPartners);
 router.post('/market/competitors/rewrite', auth(false), ai.rewriteMarketCompetitors);
+router.post('/market/competitors/advantages', auth(false), ai.suggestCompetitorAdvantages);
 router.post('/financial/forecast/suggest', auth(false), ai.suggestFinancialForecast);
 router.post('/financial/number/suggest', auth(false), ai.suggestFinancialNumber);
 router.post('/financial/suggest-all', auth(false), ai.suggestFinancialAll);
@@ -95,6 +102,8 @@ router.post('/actions/due/rewrite', auth(false), ai.rewriteActionDue);
 router.post('/actions/cost/suggest', auth(false), ai.suggestActionCost);
 router.post('/actions/cost/rewrite', auth(false), ai.rewriteActionCost);
 router.post('/actions/suggest-all', auth(false), ai.suggestActionAll);
+// Core Strategic Projects deliverables
+router.post('/actions/core/deliverables', auth(false), ai.suggestCoreDeliverables);
 // Bulk goals per department/section
 router.post('/actions/sections/goals', auth(false), ai.suggestDeptGoalsBulk);
 router.post('/financial/forecast/rewrite', auth(false), ai.rewriteFinancialForecast);
