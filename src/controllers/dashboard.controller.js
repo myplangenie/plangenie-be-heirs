@@ -756,6 +756,23 @@ exports.getNotifications = async (req, res, next) => {
       } catch { return 'info'; }
     }
     const items = [];
+    // Load persisted notifications (e.g., collaboration invites)
+    try {
+      const docs = await Notification.find({ user: userId }).sort({ createdAt: -1 }).limit(50).lean().exec();
+      for (const n of docs) {
+        items.push({
+          nid: n.nid,
+          title: n.title,
+          description: n.description,
+          type: n.type || 'info',
+          severity: n.severity || 'info',
+          time: n.time || '',
+          actions: Array.isArray(n.actions) ? n.actions : [],
+          read: !!n.read,
+          data: n.data || null,
+        });
+      }
+    } catch (_e) {}
     // Helper: compute completion percent for an assignment item
     const pctForItem = (it) => {
       const v = Number(it?.progress);
@@ -786,8 +803,12 @@ exports.getNotifications = async (req, res, next) => {
         });
       });
     });
+    // Put collaboration items first, then others (stable within groups)
+    const collab = items.filter((it) => String(it.type) === 'collaboration');
+    const other = items.filter((it) => String(it.type) !== 'collaboration');
+    const ordered = [...collab, ...other];
     const prefs = await NotificationSettings.findOne({ user: userId }).lean().exec();
-    return res.json({ items, preferences: { frequency: prefs?.frequency || 'Real-time', tone: prefs?.tone || 'Professional' } });
+    return res.json({ items: ordered, preferences: { frequency: prefs?.frequency || 'Real-time', tone: prefs?.tone || 'Professional' } });
   } catch (err) {
     next(err);
   }

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const NotificationSchema = new mongoose.Schema(
+  const NotificationSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     nid: { type: String, required: true, index: true },
@@ -15,6 +15,7 @@ const NotificationSchema = new mongoose.Schema(
         kind: { type: String, enum: ['primary', 'secondary'], default: 'primary' },
       },
     ],
+    data: { type: Object, default: null },
     read: { type: Boolean, default: false },
   },
   { timestamps: true }
@@ -23,4 +24,3 @@ const NotificationSchema = new mongoose.Schema(
 NotificationSchema.index({ user: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Notification', NotificationSchema);
-

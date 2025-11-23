@@ -24,12 +24,8 @@ module.exports = async function viewAs(req, res, next) {
     const email = (me.email || '').toLowerCase();
     const row = await Collaboration.findOne({ owner: asId, $or: [{ viewer: req.user.id }, { email }] }).exec();
     if (!row) return res.status(403).json({ message: 'No access to requested dashboard' });
-    // If not accepted yet and email matches, auto-accept
     if (row.status !== 'accepted') {
-      row.status = 'accepted';
-      row.viewer = row.viewer || req.user.id;
-      row.acceptedAt = row.acceptedAt || new Date();
-      await row.save().catch(()=>{});
+      return res.status(403).json({ message: row.status === 'declined' ? 'Invite declined' : 'Invite pending – please accept' });
     }
     // Stash original id and impersonate for downstream handlers
     const original = req.user.id;
@@ -39,4 +35,3 @@ module.exports = async function viewAs(req, res, next) {
     return res.status(500).json({ message: err?.message || 'Failed to authorize collaborator' });
   }
 }
-
