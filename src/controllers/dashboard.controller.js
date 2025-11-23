@@ -188,10 +188,10 @@ async function ensureSeedTeamMembers(userId) {
   const count = await TeamMember.countDocuments({ user: userId });
   if (count > 0) return;
   await TeamMember.insertMany([
-    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@company.com', role: 'Editor', department: 'Operations', status: 'Active' },
-    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@company.com', role: 'Editor', department: 'Operations', status: 'Inactive' },
-    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@company.com', role: 'Editor', department: 'Operations', status: 'Inactive' },
-    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@company.com', role: 'Editor', department: 'Operations', status: 'Active' },
+    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@plangenie.com', role: 'Editor', department: 'Operations', status: 'Active' },
+    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@plangenie.com', role: 'Editor', department: 'Operations', status: 'Inactive' },
+    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@plangenie.com', role: 'Editor', department: 'Operations', status: 'Inactive' },
+    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@plangenie.com', role: 'Editor', department: 'Operations', status: 'Active' },
   ]);
 }
 

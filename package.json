@@ -8,7 +8,7 @@
     "dev": "nodemon src/server.js",
     "lint": "echo 'No linter configured'",
     "promote-admin": "node scripts/promote-admin.js",
-    "send:test-email": "node scripts/send-test-email.js --to eadelekeife@gmail.com"
+    "send:test-email": "node scripts/send-test-email.js --to eadelekeife@plangenie.com"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.637.0",

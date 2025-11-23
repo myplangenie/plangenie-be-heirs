@@ -43,7 +43,7 @@ exports.register = async (req, res) => {
   
   try {
   const resend = new Resend(process.env.RESEND_API_KEY);
-    const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@kariiya.com>';
+    const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
     const result = await resend.emails.send({
       from,
       to: user.email,
@@ -86,7 +86,7 @@ exports.login = async (req, res) => {
       await User.findByIdAndUpdate(user._id, { verificationCode: otpHash, verificationExpires: vexp });
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
-        const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@kariiya.com>';
+        const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
         const result = await resend.emails.send({
           from,
           to: user.email,
@@ -208,7 +208,7 @@ exports.resendOtp = async (req, res) => {
     await User.findByIdAndUpdate(user._id, { verificationCode: otpHash, verificationExpires: vexp });
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
-      const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@kariiya.com>';
+      const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
       const result = await resend.emails.send({
         from,
         to: user.email,

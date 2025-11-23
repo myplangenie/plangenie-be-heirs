@@ -16,7 +16,7 @@ function parseArgs(argv) {
 (async () => {
   const { email, demote } = parseArgs(process.argv.slice(2));
   if (!email) {
-    console.error('Usage: node scripts/promote-admin.js --email user@example.com [--demote]');
+    console.error('Usage: node scripts/promote-admin.js --email user@plangenie.com [--demote]');
     process.exit(2);
   }
   const uri = process.env.MONGO_URI;
@@ -37,4 +37,3 @@ function parseArgs(argv) {
   console.error('Error:', err?.message || err);
   process.exit(1);
 });
-

@@ -8,7 +8,7 @@ const { Resend } = require('resend');
 async function main() {
   const args = process.argv.slice(2);
   const toArgIndex = args.findIndex((a) => a === '--to' || a === '-t');
-  const to = toArgIndex >= 0 ? args[toArgIndex + 1] : 'eadelekeife@gmail.com';
+  const to = toArgIndex >= 0 ? args[toArgIndex + 1] : 'eadelekeife@plangenie.com';
   const fromArgIndex = args.findIndex((a) => a === '--from' || a === '-f');
 
   if (!to || to.startsWith('--')) {
