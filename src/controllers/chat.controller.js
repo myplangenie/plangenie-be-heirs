@@ -28,7 +28,35 @@ function buildContextText(ob) {
     bp.businessStage && `Stage: ${bp.businessStage}`,
     up.role && `User Role: ${up.role}`,
   ].filter(Boolean);
-  return fields.length ? `Context about the business:\n- ${fields.join('\n- ')}` : '';
+  const base = fields.length ? `Context about the business:\n- ${fields.join('\n- ')}` : '';
+  const a = (ob && ob.answers) || {};
+  const parts = [];
+  if (a.ubp) parts.push(`UBP: ${String(a.ubp).trim()}`);
+  if (a.purpose) parts.push(`Purpose: ${String(a.purpose).trim()}`);
+  if (a.visionBhag) parts.push(`BHAG: ${String(a.visionBhag).trim()}`);
+  if (a.vision1y) parts.push(`1-Year Goals: ${(String(a.vision1y).trim().split('\n').filter(Boolean).join('; '))}`);
+  if (a.vision3y) parts.push(`3-Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
+  if (a.valuesCore) parts.push(`Core Values: ${String(a.valuesCore).trim()}`);
+  if (a.cultureFeeling) parts.push(`Culture: ${String(a.cultureFeeling).trim()}`);
+  // Summarize action assignments (dashboard context)
+  try {
+    const assignments = a.actionAssignments || {};
+    const lines = [];
+    Object.entries(assignments).forEach(([dept, arr]) => {
+      (arr || []).slice(0, 2).forEach((u) => {
+        const goal = String(u?.goal || '').trim();
+        if (!goal) return;
+        const kpi = String(u?.kpi || '').trim();
+        const due = String(u?.dueWhen || '').trim();
+        const owner = `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim();
+        const bits = [goal, owner && `Owner: ${owner}`, dept && `Dept: ${dept}`, kpi && `KPI: ${kpi}`, due && `Due: ${due}`].filter(Boolean);
+        if (bits.length) lines.push('- ' + bits.join(' | '));
+      });
+    });
+    if (lines.length) parts.push(`Current action plans:\n${lines.join('\n')}`);
+  } catch {}
+  const tail = parts.length ? `\n\nUser plan context:\n- ${parts.join('\n- ')}` : '';
+  return [base, tail].filter(Boolean).join('\n');
 }
 
 exports.respond = async (req, res) => {
@@ -74,4 +102,3 @@ exports.respond = async (req, res) => {
     return res.status(500).json({ message });
   }
 };
-

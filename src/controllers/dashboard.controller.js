@@ -631,6 +631,9 @@ exports.saveCompiledPlan = async (req, res, next) => {
       try {
         const normalized = (cp.coreProjectDetails || []).map((p) => ({
           title: String((p && p.title) || '').trim(),
+          kpi: typeof p?.kpi !== 'undefined' ? String(p.kpi || '').trim() : undefined,
+          cost: typeof p?.cost !== 'undefined' ? String(p.cost || '').trim() : undefined,
+          dueWhen: typeof p?.dueWhen !== 'undefined' ? String(p.dueWhen || '').trim() : undefined,
           deliverables: Array.isArray(p && p.deliverables)
             ? (p.deliverables || []).map((d) => ({
                 text: String((d && d.text) || '').trim(),

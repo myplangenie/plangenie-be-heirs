@@ -999,11 +999,28 @@ exports.suggestMarketCompetitors = async (req, res) => {
     const { input } = req.body || {};
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
-    const contextText = buildContextText(ob);
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
     const suggestions = await callOpenAIList({ type: 'Competitive differentiation notes', input, contextText, n: 3 });
     const bp = ob?.businessProfile || {};
-    const q = [bp.industry || '', bp.city || '', bp.country || '', 'competitive landscape'].filter(Boolean).join(' ');
-    const links = await webSearch(q, 3);
+    const a = (ob && ob.answers) || {};
+    const q1 = [bp.businessName || '', 'competitors', bp.industry || '', [bp.city, bp.country].filter(Boolean).join(', ')].filter(Boolean).join(' ');
+    const q2 = [bp.industry || '', a.marketCustomer || '', 'market competitors'].filter(Boolean).join(' ');
+    const seen = new Map();
+    const links = [];
+    for (const q of [q1, q2]) {
+      if (!q || q.replace(/\s+/g, '').length < 3) continue;
+      try {
+        const r = await webSearch(q, 3);
+        for (const it of r) {
+          const key = it.url || it.title;
+          if (!key || seen.has(key)) continue;
+          seen.set(key, true);
+          links.push(it);
+          if (links.length >= 5) break;
+        }
+      } catch (_) {}
+      if (links.length >= 5) break;
+    }
     return res.json({ suggestion: suggestions[0] || '', suggestions, links });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1623,6 +1640,41 @@ exports.rewriteVision3y = async (req, res) => {
   }
 };
 
+// BHAG (Long-term vision)
+exports.suggestVisionBhag = async (req, res) => {
+  try {
+    const { input } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const suggestions = await callOpenAIList({ type: 'Long-term vision (BHAG)', input, contextText, n: 3 });
+    return res.json({ suggestion: suggestions[0] || '', suggestions });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestions';
+    return res.status(500).json({ message });
+  }
+};
+
+exports.rewriteVisionBhag = async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const rewrite = await callOpenAIRewrite({ type: 'Long-term vision (BHAG)', text, contextText });
+    return res.json({ rewrite });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to rewrite';
+    return res.status(500).json({ message });
+  }
+};
+
 // Strategic Identity Summary (UBP + Purpose + 1y + 3y)
 exports.suggestIdentitySummary = async (req, res) => {
   try {
@@ -1647,6 +1699,74 @@ exports.rewriteIdentitySummary = async (req, res) => {
     const rewrite = await callOpenAIRewrite({ type: 'strategic identity summary (1–3 sentences, polished narrative)', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to rewrite';
+    return res.status(500).json({ message });
+  }
+};
+// SWOT item rewrites (per item, preserve user meaning while improving clarity)
+exports.rewriteSwotStrengths = async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const rewrite = await callOpenAIRewrite({ type: 'SWOT Strength item', text, contextText });
+    return res.json({ rewrite });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to rewrite';
+    return res.status(500).json({ message });
+  }
+};
+
+exports.rewriteSwotWeaknesses = async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const rewrite = await callOpenAIRewrite({ type: 'SWOT Weakness item', text, contextText });
+    return res.json({ rewrite });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to rewrite';
+    return res.status(500).json({ message });
+  }
+};
+
+exports.rewriteSwotOpportunities = async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const rewrite = await callOpenAIRewrite({ type: 'SWOT Opportunity item', text, contextText });
+    return res.json({ rewrite });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to rewrite';
+    return res.status(500).json({ message });
+  }
+};
+
+exports.rewriteSwotThreats = async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob) + buildAnswersContext(ob);
+    const rewrite = await callOpenAIRewrite({ type: 'SWOT Threat item', text, contextText });
+    return res.json({ rewrite });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to rewrite';
     return res.status(500).json({ message });
   }

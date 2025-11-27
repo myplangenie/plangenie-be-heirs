@@ -59,11 +59,13 @@ router.post('/vision/ubp/suggest', auth(false), ai.suggestUbp);
 router.post('/vision/purpose/suggest', auth(false), ai.suggestPurpose);
 router.post('/vision/destination/1y/suggest', auth(false), ai.suggestVision1y);
 router.post('/vision/destination/3y/suggest', auth(false), ai.suggestVision3y);
+router.post('/vision/destination/bhag/suggest', auth(false), ai.suggestVisionBhag);
 // Rewrite endpoints (immediate rewrite of current text)
 router.post('/vision/ubp/rewrite', auth(false), ai.rewriteUbp);
 router.post('/vision/purpose/rewrite', auth(false), ai.rewritePurpose);
 router.post('/vision/destination/1y/rewrite', auth(false), ai.rewriteVision1y);
 router.post('/vision/destination/3y/rewrite', auth(false), ai.rewriteVision3y);
+router.post('/vision/destination/bhag/rewrite', auth(false), ai.rewriteVisionBhag);
 // Strategic Identity Summary
 router.post('/vision/identity/summary/suggest', auth(false), ai.suggestIdentitySummary);
 router.post('/vision/identity/summary/rewrite', auth(false), ai.rewriteIdentitySummary);
@@ -76,6 +78,10 @@ router.post('/values/swot/strengths/suggest', auth(false), ai.suggestSwotStrengt
 router.post('/values/swot/weaknesses/suggest', auth(false), ai.suggestSwotWeaknesses);
 router.post('/values/swot/opportunities/suggest', auth(false), ai.suggestSwotOpportunities);
 router.post('/values/swot/threats/suggest', auth(false), ai.suggestSwotThreats);
+router.post('/values/swot/strengths/rewrite', auth(false), ai.rewriteSwotStrengths);
+router.post('/values/swot/weaknesses/rewrite', auth(false), ai.rewriteSwotWeaknesses);
+router.post('/values/swot/opportunities/rewrite', auth(false), ai.rewriteSwotOpportunities);
+router.post('/values/swot/threats/rewrite', auth(false), ai.rewriteSwotThreats);
 router.post('/market/customer/suggest', auth(false), ai.suggestMarketCustomer);
 router.post('/market/customer/rewrite', auth(false), ai.rewriteMarketCustomer);
 router.post('/market/partners/suggest', auth(false), ai.suggestMarketPartners);
