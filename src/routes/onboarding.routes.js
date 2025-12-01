@@ -72,6 +72,7 @@ router.post('/vision/identity/summary/rewrite', auth(false), ai.rewriteIdentityS
 router.post('/values/core/suggest', auth(false), ai.suggestValuesCore);
 router.post('/values/feeling/suggest', auth(false), ai.suggestCultureFeeling);
 router.post('/values/core/rewrite', auth(false), ai.rewriteValuesCore);
+router.post("/values/core/keywords", auth(false), ai.extractValuesCoreKeywords);
 router.post('/values/feeling/rewrite', auth(false), ai.rewriteCultureFeeling);
 // SWOT analysis
 router.post('/values/swot/strengths/suggest', auth(false), ai.suggestSwotStrengths);

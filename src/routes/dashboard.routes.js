@@ -33,6 +33,7 @@ router.patch('/action-assignments/item', ensureOnboarded, ctrl.updateActionAssig
 // Financials
 router.get('/financials', ensureOnboarded, ctrl.getFinancials);
 router.post('/financials/recalculate', ensureOnboarded, ctrl.recalculateFinancials);
+router.post('/financials/assumptions', ensureOnboarded, ctrl.saveFinancialAssumptions);
 router.post('/financials/insights', ensureOnboarded, ctrl.generateFinancialInsights);
 // Update/blend actuals for financials (monthly)
 router.post('/financials/actuals', ensureOnboarded, ctrl.saveFinancialActuals);

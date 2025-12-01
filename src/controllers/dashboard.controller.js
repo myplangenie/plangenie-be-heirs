@@ -1268,6 +1268,14 @@ exports.getFinancials = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    // Load any saved assumptions for this user (current values)
+    let savedAssumptions = {};
+    try {
+      const finDoc = await Financials.findOne({ user: userId }).lean().exec();
+      if (finDoc && Array.isArray(finDoc.assumptions)) {
+        savedAssumptions = Object.fromEntries(finDoc.assumptions.map((r)=> [String(r.key||''), String(r.value||'')]));
+      }
+    } catch {}
     const ob = await Onboarding.findOne({ user: userId }).lean().exec();
     const a = ob?.answers || {};
     function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
@@ -1408,14 +1416,39 @@ exports.getFinancials = async (req, res, next) => {
         runway: { months: runwayIdx >= 0 ? runwayIdx : burn },
       },
       assumptions: [
-        { key: 'growth', assumption: 'Monthly Growth Rate', control: 'input', placeholder: 'e.g. 10%', ai: `${(growth*100||0).toFixed(1)}%`, aiClass: 'text-primary font-semibold', rationale: 'From your onboarding inputs' },
-        { key: 'margin', assumption: 'Target Profit Margin', control: 'input', placeholder: 'e.g. 15%', ai: `${(num(a.finTargetProfitMarginPct)||0).toFixed(1)}%`, aiClass: 'text-primary font-semibold', rationale: 'From your onboarding inputs' },
-        { key: 'churn', assumption: 'Customer Churn Rate', control: 'input', placeholder: 'e.g. 3%', ai: `${(assumeChurn*100).toFixed(1)}%`, aiClass: 'text-primary font-semibold', rationale: 'From your assumptions' },
-        { key: 'acv', assumption: 'Average Contract Value', control: 'input', placeholder: 'e.g. $500', ai: `$${Math.round(assumeACV).toLocaleString()}`, aiClass: 'text-primary font-semibold', rationale: 'From your assumptions or products' },
-        { key: 'revenueRecog', assumption: 'Revenue Recognition', control: 'select', placeholder: 'Monthly', ai: 'Monthly', aiClass: 'text-primary font-semibold', rationale: 'Standard monthly recognition' },
+        { key: 'growth', assumption: 'Monthly Growth Rate', control: 'input', placeholder: 'e.g. 10%', ai: `${(growth*100||0).toFixed(1)}%`, aiClass: 'text-primary font-semibold', rationale: 'From your onboarding inputs', value: savedAssumptions['growth'] || '' },
+        { key: 'margin', assumption: 'Target Profit Margin', control: 'input', placeholder: 'e.g. 15%', ai: `${(num(a.finTargetProfitMarginPct)||0).toFixed(1)}%`, aiClass: 'text-primary font-semibold', rationale: 'From your onboarding inputs', value: savedAssumptions['margin'] || '' },
+        { key: 'churn', assumption: 'Customer Churn Rate', control: 'input', placeholder: 'e.g. 3%', ai: `${(assumeChurn*100).toFixed(1)}%`, aiClass: 'text-primary font-semibold', rationale: 'From your assumptions', value: savedAssumptions['churn'] || '' },
+        { key: 'acv', assumption: 'Average Contract Value', control: 'input', placeholder: 'e.g. $500', ai: `$${Math.round(assumeACV).toLocaleString()}`, aiClass: 'text-primary font-semibold', rationale: 'From your assumptions or products', value: savedAssumptions['acv'] || '' },
+        { key: 'revenueRecog', assumption: 'Revenue Recognition', control: 'select', placeholder: 'Monthly', ai: 'Monthly', aiClass: 'text-primary font-semibold', rationale: 'Standard monthly recognition', value: savedAssumptions['revenueRecog'] || '' },
       ],
     };
     return res.json({ financials });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/financials/assumptions
+// Body: { rows: [{ key, value }] }
+exports.saveFinancialAssumptions = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    const map = new Map();
+    rows.forEach((r)=>{ const k = String(r?.key || '').trim(); if (k) map.set(k, String(r?.value ?? '')); });
+    // Upsert Financials doc for user; merge values by key
+    const fin = await Financials.findOne({ user: userId }) || await Financials.create({ user: userId, metrics:{}, chart:[], revenueBars:[], cashflowBars:[], assumptions:[] });
+    const existing = new Map((fin.assumptions || []).map((r)=> [String(r.key||''), r]));
+    // Update or insert
+    map.forEach((val, key) => {
+      if (existing.has(key)) { existing.get(key).value = val; }
+      else existing.set(key, { key, value: val });
+    });
+    fin.assumptions = Array.from(existing.values());
+    await fin.save();
+    return res.json({ ok: true });
   } catch (err) {
     next(err);
   }

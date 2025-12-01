@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const FinancialAssumptionSchema = new mongoose.Schema(
   {
     key: String,
+    value: String,
     assumption: String,
     control: { type: String, enum: ['input', 'select'], default: 'input' },
     placeholder: String,
@@ -38,4 +39,3 @@ const FinancialsSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model('Financials', FinancialsSchema);
-

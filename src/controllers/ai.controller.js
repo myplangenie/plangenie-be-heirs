@@ -789,8 +789,10 @@ exports.suggestValuesCore = async (req, res) => {
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob) + buildAnswersContext(ob);
-    const suggestions = await callOpenAIList({ type: 'Core values statement', input, contextText, n: 3 });
-    return res.json({ suggestion: suggestions[0] || '', suggestions });
+    const items = await callOpenAIListWithKeywords({ type: 'Core values statement', input, contextText, n: 3 });
+    const suggestions = items.map((it) => it.text);
+    const topKeywords = items[0]?.keywords || [];
+    return res.json({ suggestion: suggestions[0] || '', suggestions, items, keywords: topKeywords });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
       return res.status(500).json({ message: 'OpenAI API key not configured on server' });
@@ -807,7 +809,9 @@ exports.rewriteValuesCore = async (req, res) => {
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob);
     const rewrite = await callOpenAIRewrite({ type: 'Core values statement', text, contextText });
-    return res.json({ rewrite });
+    let keywords = [];
+    try { keywords = await callOpenAIKeywordsForText({ type: 'Core values statement', text: rewrite, contextText: '' }); } catch (_) {}
+    return res.json({ rewrite, keywords });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
       return res.status(500).json({ message: 'OpenAI API key not configured on server' });
@@ -858,7 +862,7 @@ exports.suggestSwotStrengths = async (req, res) => {
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob) + buildAnswersContext(ob);
-    const suggestions = await callOpenAIList({ type: 'SWOT Strengths for this organization', input, contextText, n: 3 });
+    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Strengths (short phrases)', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -875,7 +879,7 @@ exports.suggestSwotWeaknesses = async (req, res) => {
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob) + buildAnswersContext(ob);
-    const suggestions = await callOpenAIList({ type: 'SWOT Weaknesses for this organization', input, contextText, n: 3 });
+    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Weaknesses (short phrases)', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -892,7 +896,7 @@ exports.suggestSwotOpportunities = async (req, res) => {
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob) + buildAnswersContext(ob);
-    const suggestions = await callOpenAIList({ type: 'SWOT Opportunities for this organization', input, contextText, n: 3 });
+    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Opportunities (short phrases)', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -909,7 +913,7 @@ exports.suggestSwotThreats = async (req, res) => {
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob) + buildAnswersContext(ob);
-    const suggestions = await callOpenAIList({ type: 'SWOT Threats for this organization', input, contextText, n: 3 });
+    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Threats (short phrases)', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -962,12 +966,51 @@ exports.suggestMarketPartners = async (req, res) => {
     const { input } = req.body || {};
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
-    const contextText = buildContextText(ob);
-    const suggestions = await callOpenAIList({ type: 'Go-to-market partners and channels plan', input, contextText, n: 3 });
+    const baseCtx = buildContextText(ob) + buildAnswersContext(ob);
     const bp = ob?.businessProfile || {};
-    const q = [bp.industry || '', bp.businessName || '', 'go-to-market partners channels', bp.country || ''].filter(Boolean).join(' ');
-    const links = await webSearch(q, 3);
-    return res.json({ suggestion: suggestions[0] || '', suggestions, links });
+    // Web search for potential partner platforms/distributors relevant to the industry/location
+    const query = [
+      bp.industry || '',
+      'partner platforms distributors channel partners',
+      [bp.city, bp.country].filter(Boolean).join(', '),
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim() || 'industry partner platforms';
+    const links = await webSearch(query, 6);
+    const refs = (links || []).map((l) => `- ${l.title} (${l.url})`).join('\n');
+
+    // Ask AI to propose 2–3 concrete partners with a one-line rationale
+    const client = getOpenAI();
+    const system = 'You are a helpful go-to-market strategist. Return structured JSON only.';
+    const userPrompt = [
+      baseCtx || '',
+      refs ? ('Recent web results (titles):\n' + refs) : '',
+      'Task: Propose 2–3 specific partner platforms or distributors relevant to the business context.',
+      'For EACH, include:',
+      '- name: the platform/company name',
+      '- url: a plausible official URL if clearly implied by results (optional)',
+      '- note: one sentence on how to partner or what they offer',
+      'Output format (strict JSON): [{ "name": string, "url"?: string, "note": string }]',
+      'No extra text before/after the JSON.'
+    ].filter(Boolean).join('\n');
+    let partners = [];
+    try {
+      const resp = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.7,
+        messages: [ { role: 'system', content: system }, { role: 'user', content: userPrompt } ],
+        max_tokens: 500,
+      });
+      let text = (resp.choices?.[0]?.message?.content || '').trim();
+      const fence = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i); if (fence) text = fence[1].trim();
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) partners = parsed.map((p) => ({ name: String(p?.name || '').trim(), url: p?.url ? String(p.url) : undefined, note: String(p?.note || '').trim() })).filter((p) => p.name && p.note).slice(0,3);
+    } catch (_) {}
+
+    // Also keep simple sentence suggestions for backward-compatibility
+    const suggestions = await callOpenAIList({ type: 'Go-to-market partners and channels plan', input, contextText: baseCtx, n: 3 });
+    return res.json({ suggestion: suggestions[0] || '', suggestions, links, partners });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
       return res.status(500).json({ message: 'OpenAI API key not configured on server' });
@@ -1000,7 +1043,17 @@ exports.suggestMarketCompetitors = async (req, res) => {
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob) + buildAnswersContext(ob);
-    const suggestions = await callOpenAIList({ type: 'Competitive differentiation notes', input, contextText, n: 3 });
+    // Build competitor names list from stored answers or infer later
+    const ans = (ob && ob.answers) || {};
+    let compNames = Array.isArray(ans.competitorNames) ? ans.competitorNames.map((s)=>String(s||'').trim()).filter(Boolean).slice(0,3) : [];
+    // Try to enrich with URLs
+    const linkMap = {};
+    try {
+      for (const name of compNames) {
+        const r = await webSearch(name + ' official site', 1);
+        if (r && r[0] && r[0].url) linkMap[name] = r[0].url;
+      }
+    } catch (_) {}
     const bp = ob?.businessProfile || {};
     const a = (ob && ob.answers) || {};
     const q1 = [bp.businessName || '', 'competitors', bp.industry || '', [bp.city, bp.country].filter(Boolean).join(', ')].filter(Boolean).join(' ');
@@ -1021,7 +1074,38 @@ exports.suggestMarketCompetitors = async (req, res) => {
       } catch (_) {}
       if (links.length >= 5) break;
     }
-    return res.json({ suggestion: suggestions[0] || '', suggestions, links });
+    // Ask AI to structure per-competitor better/worse statements
+    const client = getOpenAI();
+    const system = 'You are a helpful competitive analyst. Return structured JSON only.';
+    const namesText = compNames.length ? ('Competitors to analyze: ' + compNames.join(', ')) : '';
+    const userPrompt = [
+      contextText || '',
+      namesText,
+      'Task: For each competitor, provide a one-sentence "they do better" and a one-sentence "we do better".',
+      'Output format (strict JSON): [ { "name": string, "theyDoBetter": string, "weDoBetter": string } ]',
+      'No extra commentary before or after the JSON.'
+    ].filter(Boolean).join('\n');
+    let competitors = [];
+    try {
+      const resp = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.7,
+        messages: [ { role: 'system', content: system }, { role: 'user', content: userPrompt } ],
+        max_tokens: 500,
+      });
+      let text = (resp.choices?.[0]?.message?.content || '').trim();
+      const fence = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i); if (fence) text = fence[1].trim();
+      const parsed = JSON.parse(text);
+      if (Array.isArray(parsed)) {
+        competitors = parsed.map((it)=>({ name: String(it?.name||'').trim(), theyDoBetter: String(it?.theyDoBetter||'').trim(), weDoBetter: String(it?.weDoBetter||'').trim() }))
+          .filter((it)=> it.name && it.theyDoBetter && it.weDoBetter)
+          .slice(0,3);
+      }
+    } catch (_) {}
+    // Add any enriched links first
+    Object.entries(linkMap).forEach(([name,url])=>{ links.push({ title: name, url }); });
+    const suggestions = await callOpenAIList({ type: 'Competitive differentiation notes', input, contextText, n: 3 });
+    return res.json({ suggestion: suggestions[0] || '', suggestions, links, competitors });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
       return res.status(500).json({ message: 'OpenAI API key not configured on server' });
@@ -1272,34 +1356,73 @@ exports.suggestFinancialAll = async (req, res) => {
       });
       const out = String(resp.choices?.[0]?.message?.content || '').trim();
       const m = out.match(/\d{4}-\d{2}/);
-      return m ? m[0] : '';
+      let val = m ? m[0] : '';
+      // Ensure month is in the future relative to current month
+      const now = new Date();
+      const cy = now.getFullYear();
+      const cm = now.getMonth() + 1; // 1-12
+      const nextMonth = () => {
+        const nm = cm === 12 ? 1 : cm + 1;
+        const ny = cm === 12 ? cy + 1 : cy;
+        return `${ny}-${String(nm).padStart(2, '0')}`;
+      };
+      if (!val) return nextMonth();
+      const parts = val.split('-');
+      const y = parseInt(parts[0] || '0', 10);
+      const mm = parseInt(parts[1] || '0', 10);
+      if (!y || !mm || mm < 1 || mm > 12) return nextMonth();
+      if (y < cy || (y === cy && mm <= cm)) {
+        return nextMonth();
+      }
+      return `${y}-${String(mm).padStart(2, '0')}`;
     }
 
-    const [
-      salesVolume,
-      salesGrowthPct,
-      avgUnitCost,
-      fixedOperatingCosts,
-      marketingSalesSpend,
-      payrollCost,
-      startingCash,
-      additionalFundingAmount,
-      additionalFundingMonth,
-      paymentCollectionDays,
-      targetProfitMarginPct,
-    ] = await Promise.all([
-      askNumber('Projected first-month sales volume (or funding per source if nonprofit).'),
-      askNumber('Monthly sales growth rate percentage (enter just the number).'),
-      askNumber('Average direct cost per unit to deliver.'),
-      askNumber('Total monthly fixed operating costs.'),
-      askNumber('Monthly marketing and sales spend.'),
-      askNumber('Total team or payroll cost per month.'),
-      askNumber('Starting cash or bank balance.'),
-      askNumber('Additional funding or grants expected amount.'),
-      askMonth('Expected month when additional funding arrives.'),
-      askNumber('Typical payment collection time in days.'),
-      askNumber('Desired profit margin percentage (enter just the number).'),
-    ]);
+    // Gather numeric inputs first
+    const salesVolume = await askNumber('Projected first-month sales volume (or funding per source if nonprofit).');
+    const salesGrowthPct = await askNumber('Monthly sales growth rate percentage (enter just the number).');
+    const avgUnitCost = await askNumber('Average direct cost per unit to deliver.');
+    const fixedOperatingCosts = await askNumber('Total monthly fixed operating costs.');
+    const marketingSalesSpend = await askNumber('Monthly marketing and sales spend.');
+    const payrollCost = await askNumber('Total team or payroll cost per month.');
+    const startingCash = await askNumber('Starting cash or bank balance.');
+    const additionalFundingAmount = await askNumber('Additional funding or grants expected amount.');
+    const paymentCollectionDays = await askNumber('Typical payment collection time in days.');
+    const targetProfitMarginPct = await askNumber('Desired profit margin percentage (enter just the number).');
+
+    // Compute an informed future month for additional funding/grants
+    function toNum(s) { const n = parseFloat(String(s||'').replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
+    const vol = toNum(salesVolume);
+    const unitCost = toNum(avgUnitCost);
+    const fixed = toNum(fixedOperatingCosts);
+    const mkt = toNum(marketingSalesSpend);
+    const pay = toNum(payrollCost);
+    const cash = toNum(startingCash);
+    const marginPct = Math.min(95, Math.max(0, toNum(targetProfitMarginPct)));
+    const margin = marginPct/100;
+    // Approximate price from margin: price = unitCost/(1-margin), gross profit per unit = price - unitCost
+    const grossPerUnit = margin > 0 && margin < 0.95 ? (unitCost * (margin/(1-margin))) : 0;
+    const grossMonthly = vol * grossPerUnit;
+    const burnMonthly = Math.max(0, fixed + mkt + pay - grossMonthly);
+    // Heuristic: plan funding a bit before runway end, default to 3 months ahead if burn unknown
+    const monthsAhead = (() => {
+      if (burnMonthly <= 0) return 6; // profitable: target ~6 months out
+      const runway = cash / Math.max(1, burnMonthly); // months of runway
+      // Heuristic schedule: plan funding comfortably before exhaustion
+      if (runway <= 1) return 2;          // urgent: within 2 months
+      if (runway <= 3) return 2;          // short runway: 2 months
+      if (runway <= 6) return Math.ceil(runway - 2); // 1–4 months ahead
+      // long runway: halfway to exhaustion capped
+      return Math.min(12, Math.max(3, Math.ceil(runway * 0.5)));
+    })();
+    function addMonths(base, add) {
+      const y = base.getFullYear();
+      const m = base.getMonth();
+      const d = new Date(y, m + add, 1);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      return `${yyyy}-${mm}`;
+    }
+    const additionalFundingMonth = addMonths(new Date(), Math.max(2, monthsAhead));
 
     return res.json({
       salesVolume,
@@ -1710,7 +1833,7 @@ exports.rewriteSwotStrengths = async (req, res) => {
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob) + buildAnswersContext(ob);
-    const rewrite = await callOpenAIRewrite({ type: 'SWOT Strength item', text, contextText });
+    const rewrite = await callOpenAIRewritePhrase({ type: 'SWOT Strength item', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1727,7 +1850,7 @@ exports.rewriteSwotWeaknesses = async (req, res) => {
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob) + buildAnswersContext(ob);
-    const rewrite = await callOpenAIRewrite({ type: 'SWOT Weakness item', text, contextText });
+    const rewrite = await callOpenAIRewritePhrase({ type: 'SWOT Weakness item', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1744,7 +1867,7 @@ exports.rewriteSwotOpportunities = async (req, res) => {
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob) + buildAnswersContext(ob);
-    const rewrite = await callOpenAIRewrite({ type: 'SWOT Opportunity item', text, contextText });
+    const rewrite = await callOpenAIRewritePhrase({ type: 'SWOT Opportunity item', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1761,7 +1884,7 @@ exports.rewriteSwotThreats = async (req, res) => {
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
     const contextText = buildContextText(ob) + buildAnswersContext(ob);
-    const rewrite = await callOpenAIRewrite({ type: 'SWOT Threat item', text, contextText });
+    const rewrite = await callOpenAIRewritePhrase({ type: 'SWOT Threat item', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1782,3 +1905,181 @@ exports.generateFinancialInsightsFromContext = async function generateFinancialI
   });
   return suggestions.filter((s) => typeof s === 'string' && s.trim()).map((s) => String(s).trim());
 };
+
+// === Added: keyword-aware suggestion helpers ===
+async function callOpenAIListWithKeywords({ type, input, contextText, n = 3 }) {
+  const client = getOpenAI();
+  const system =
+    'You are a helpful business planning assistant. ' +
+    'Write crisp, human-sounding suggestions in plain language. ' +
+    'Avoid marketing buzzwords. Be specific and concrete. ' +
+    'Always keep suggestions consistent with any provided context and user input — do not contradict earlier answers.';
+
+  let ragText2 = '';
+  try {
+    if (process.env.RAG_ENABLE !== 'false') {
+      const results = await rag.retrieve([type, input].filter(Boolean).join(' \n ').slice(0, 500));
+      if (results && results.length) {
+        const clip = results.map((r) => r.text).join('\n\n---\n\n');
+        ragText2 = 'Additional guidance from Business Trainer (internal knowledge):\n' + clip;
+      }
+    }
+  } catch (_) {}
+
+  const userPrompt = [
+    contextText || '',
+    ragText2 || '',
+    `Task: Generate exactly ${n} distinct, high-quality options for the ${type}.`,
+    'For each option, also return 3–4 short behavioral trait keywords that capture the core principles (e.g., "Accountability", "Transparency", "Customer-first").',
+    'Constraints:',
+    '- Each option text: 1–2 sentences.',
+    '- Keywords should be single words or short hyphenated phrases (max 3 words).',
+    '- Output ONLY strict JSON: an array of objects [{ "text": string, "keywords": string[] }] of length exactly ${n}.',
+    '- Do NOT include any extra commentary or code fences.',
+    '',
+    input ? `User input: ${input}` : 'User input: (none provided)',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const resp = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.8,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: userPrompt },
+    ],
+    max_tokens: 700,
+  });
+
+  let text = resp.choices?.[0]?.message?.content || '';
+  text = String(text).trim();
+  const fenceMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch) text = fenceMatch[1].trim();
+
+  let arr = [];
+  try { arr = JSON.parse(text); } catch (_) { arr = []; }
+  if (!Array.isArray(arr)) arr = [];
+
+  const normalized = arr
+    .map((it) => ({
+      text: String(it?.text || '').trim(),
+      keywords: Array.isArray(it?.keywords) ? it.keywords.map((k) => String(k).trim()).filter(Boolean).slice(0, 4) : [],
+    }))
+    .filter((it) => it.text);
+  return normalized.slice(0, n);
+}
+
+async function callOpenAIKeywordsForText({ type, text, contextText }) {
+  const client = getOpenAI();
+  const system = 'You are a helpful assistant. Extract concise behavioral trait keywords from the provided statement.';
+  const userPrompt = [
+    contextText || '',
+    `Task: From the ${type}, extract 3–4 short behavioral trait keywords (e.g., Accountability, Transparency, Customer-first).`,
+    'Rules:',
+    '- Return ONLY a strict JSON array of 3 or 4 strings.',
+    '- Each keyword must be short (1–3 words), no punctuation, no numbering.',
+    '',
+    `Statement: ${text}`,
+  ].filter(Boolean).join('\n');
+
+  const resp = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.3,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: userPrompt },
+    ],
+    max_tokens: 120,
+  });
+  let out = (resp.choices?.[0]?.message?.content || '').trim();
+  const fenceMatch2 = out.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fenceMatch2) out = fenceMatch2[1].trim();
+  try {
+    const arr = JSON.parse(out);
+    if (Array.isArray(arr)) return arr.map((s) => String(s).trim()).filter(Boolean).slice(0, 4);
+  } catch (_) {}
+  return out.split(/[\,\n]/).map((s) => s.trim()).filter(Boolean).slice(0, 4);
+}
+
+
+// Extract keywords for a provided Core values statement (without rewriting)
+exports.extractValuesCoreKeywords = async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    if (!text || !String(text).trim()) return res.json({ keywords: [] });
+    const userId = req.user?.id;
+    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const contextText = buildContextText(ob);
+    const keywords = await callOpenAIKeywordsForText({ type: 'Core values statement', text: String(text).trim(), contextText });
+    return res.json({ keywords });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to extract keywords';
+    return res.status(500).json({ message });
+  }
+};
+
+// Short-phrase helpers for SWOT generation
+async function callOpenAIListPhrases({ type, input, contextText, n = 3 }) {
+  const client = getOpenAI();
+  const system = 'You are a helpful business planning assistant. Return short, concrete phrases.';
+  let ragText = '';
+  try {
+    if (process.env.RAG_ENABLE !== 'false') {
+      const results = await rag.retrieve([type, input].filter(Boolean).join(' \n ').slice(0, 500));
+      if (results && results.length) ragText = 'Additional guidance from Business Trainer (internal knowledge):\n' + results.map((r)=>r.text).join('\n\n---\n\n');
+    }
+  } catch(_){}
+  const userPrompt = [
+    contextText || '',
+    ragText || '',
+    `Task: Generate exactly ${n} concise options for the ${type}.`,
+    'Constraints:',
+    '- Each option must be a short phrase (1–4 words), no sentences.',
+    '- Avoid punctuation except hyphens when necessary.',
+    `- Output ONLY a strict JSON array of strings (length exactly ${n}).`,
+    '',
+    input ? `User input: ${input}` : 'User input: (none provided)'
+  ].filter(Boolean).join('\n');
+  const resp = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.7,
+    messages: [ { role: 'system', content: system }, { role: 'user', content: userPrompt } ],
+    max_tokens: 200,
+  });
+  let text = (resp.choices?.[0]?.message?.content || '').trim();
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i); if (fence) text = fence[1].trim();
+  let arr = [];
+  try { const parsed = JSON.parse(text); if (Array.isArray(parsed)) arr = parsed; } catch(_){}
+  if (!Array.isArray(arr) || !arr.length) {
+    arr = text.split('\n').map((l)=>l.replace(/^[-*\d\.\)\s]+/, '').trim()).filter(Boolean);
+  }
+  const uniq = Array.from(new Set(arr.map((x)=>String(x).trim()))).filter(Boolean);
+  return uniq.slice(0, n);
+}
+
+async function callOpenAIRewritePhrase({ type, text, contextText }) {
+  const client = getOpenAI();
+  const system = 'You are a helpful assistant. Rewrite into a concise phrase.';
+  const userPrompt = [
+    contextText || '',
+    `Task: Rewrite the ${type} into a short phrase (1–4 words).`,
+    'Rules: No sentences. Avoid punctuation except hyphens if needed. Return only the phrase as plain text.',
+    '',
+    `Draft: ${text}`
+  ].filter(Boolean).join('\n');
+  const resp = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0.5,
+    messages: [ { role: 'system', content: system }, { role: 'user', content: userPrompt } ],
+    max_tokens: 60,
+  });
+  let out = (resp.choices?.[0]?.message?.content || '').trim();
+  const fence = out.match(/```(?:json)?\s*([\s\S]*?)\s*```/i); if (fence) out = fence[1].trim();
+  out = out.split('\n').map((x)=>x.replace(/^[-*\d\.\)\s]+/, '').trim()).filter(Boolean)[0] || '';
+  if ((out.startsWith('"') && out.endsWith('"')) || (out.startsWith("'") && out.endsWith("'"))) out = out.slice(1,-1).trim();
+  return out;
+}
