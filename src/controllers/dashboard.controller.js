@@ -9,9 +9,28 @@ const Plan = require('../models/Plan');
 const PlanSection = require('../models/PlanSection');
 const TeamMember = require('../models/TeamMember');
 const nodeCrypto = require('crypto');
+const { PutObjectCommand } = require('@aws-sdk/client-s3');
+const { getR2Client } = require('../config/r2');
+const ejs = require('ejs');
+const path = require('path');
 
 function ensureId(prefix = '') {
   return `${prefix}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// Shared helper to parse base64 data URLs for image uploads
+function parseDataUrl(dataUrl) {
+  const m = /^data:([^;,]+)?(;base64)?,(.*)$/i.exec(String(dataUrl || ''));
+  if (!m) return null;
+  const mime = m[1] || 'application/octet-stream';
+  const isBase64 = !!m[2];
+  const data = m[3];
+  try {
+    const buf = isBase64 ? Buffer.from(data, 'base64') : Buffer.from(decodeURIComponent(data), 'utf8');
+    return { mime, buf };
+  } catch (_) {
+    return null;
+  }
 }
 
 function buildSeed(userId, ob) {
@@ -184,16 +203,6 @@ async function ensureSeedPlan(userId) {
   return plan;
 }
 
-async function ensureSeedTeamMembers(userId) {
-  const count = await TeamMember.countDocuments({ user: userId });
-  if (count > 0) return;
-  await TeamMember.insertMany([
-    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@plangenie.com', role: 'Editor', department: 'Operations', status: 'Active' },
-    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@plangenie.com', role: 'Editor', department: 'Operations', status: 'Inactive' },
-    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@plangenie.com', role: 'Editor', department: 'Operations', status: 'Inactive' },
-    { user: userId, mid: ensureId('m_'), name: 'Sarah Johnson', email: 'sarah@plangenie.com', role: 'Editor', department: 'Operations', status: 'Active' },
-  ]);
-}
 
 // GET /api/dashboard/summary
 exports.getSummary = async (req, res, next) => {
@@ -517,6 +526,9 @@ exports.updateStrategyCanvas = async (req, res, next) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const patch = req.body || {};
+    const ent = require('../config/entitlements');
+    const User = require('../models/User');
+    const user = await User.findById(userId).lean().exec();
     const ob = (await Onboarding.findOne({ user: userId })) || (await Onboarding.create({ user: userId }));
     const a = ob.answers || {};
     // Update UBPs and horizons
@@ -539,6 +551,10 @@ exports.updateStrategyCanvas = async (req, res, next) => {
     }
     // Optionally accept explicit goals list (flat) to update action assignments
     if (Array.isArray(patch.goals)) {
+      const limit = ent.getLimit(user, 'maxGoals');
+      if (limit && patch.goals.length > limit) {
+        return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 goals', plan: ent.effectivePlan(user), limit, limitKey: 'maxGoals', upgradeTo: 'premium' });
+      }
       const gg = patch.goals.map((g) => ({ goal: String(g || '') })).filter((g) => g.goal);
       // Persist under a neutral bucket to avoid losing department context; keep existing if empty
       const curr = a.actionAssignments || {};
@@ -559,6 +575,9 @@ exports.saveCompiledPlan = async (req, res, next) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const cp = req.body || {};
+    const ent = require('../config/entitlements');
+    const user = await User.findById(userId).lean().exec();
+    const plan = ent.effectivePlan(user);
     const ob = await Onboarding.findOne({ user: userId }) || await Onboarding.create({ user: userId });
     ob.userProfile = {
       ...(ob.userProfile || {}),
@@ -624,30 +643,48 @@ exports.saveCompiledPlan = async (req, res, next) => {
     }
     // Core Strategic Projects
     if (Array.isArray(cp.coreProjects)) {
-      a.coreProjects = cp.coreProjects.map((s) => String(s || '')).filter((s) => s && s.trim());
+      const v = cp.coreProjects.map((s) => String(s || '')).filter((s) => s && s.trim());
+      const limit = ent.getLimit(user, 'maxCoreProjects');
+      if (limit && v.length > limit) {
+        return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 core projects', plan, limit, limitKey: 'maxCoreProjects', upgradeTo: 'premium' });
+      }
+      a.coreProjects = v;
     }
     // Core Strategic Projects (detailed: deliverables with completion)
     if (Array.isArray(cp.coreProjectDetails)) {
       try {
-        const normalized = (cp.coreProjectDetails || []).map((p) => ({
-          title: String((p && p.title) || '').trim(),
-          kpi: typeof p?.kpi !== 'undefined' ? String(p.kpi || '').trim() : undefined,
-          cost: typeof p?.cost !== 'undefined' ? String(p.cost || '').trim() : undefined,
-          dueWhen: typeof p?.dueWhen !== 'undefined' ? String(p.dueWhen || '').trim() : undefined,
-          deliverables: Array.isArray(p && p.deliverables)
-            ? (p.deliverables || []).map((d) => ({
-                text: String((d && d.text) || '').trim(),
-                done: Boolean(d && d.done),
-              }))
-            : [],
-        })).filter((p) => p.title || (p.deliverables && p.deliverables.length));
-        a.coreProjectDetails = normalized;
+        const all = (cp.coreProjectDetails || []).map((p) => ({
+  title: String((p && p.title) || '').trim(),
+  goal: typeof p?.goal !== 'undefined' ? String(p.goal || '').trim() : undefined,
+  kpi: typeof p?.kpi !== 'undefined' ? String(p.kpi || '').trim() : undefined,
+  cost: typeof p?.cost !== 'undefined' ? String(p.cost || '').trim() : undefined,
+  dueWhen: typeof p?.dueWhen !== 'undefined' ? String(p.dueWhen || '').trim() : undefined,
+  priority: p?.priority ? String(p.priority) : undefined,
+  ownerId: p?.ownerId ? String(p.ownerId) : undefined,
+  ownerName: p?.ownerName ? String(p.ownerName) : undefined,
+  deliverables: Array.isArray(p && p.deliverables)
+    ? (p.deliverables || []).map((d) => ({
+        text: String((d && d.text) || '').trim(),
+        done: Boolean(d && d.done),
+        kpi: typeof d?.kpi !== 'undefined' ? String(d.kpi || '').trim() : undefined,
+        dueWhen: typeof d?.dueWhen !== 'undefined' ? String(d.dueWhen || '').trim() : undefined,
+      }))
+    : [],
+})).filter((p) => p.title || (p.deliverables && p.deliverables.length));
+        const limit = ent.getLimit(user, 'maxCoreProjects');
+        if (limit && all.length > limit) {
+          return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 core projects', plan, limit, limitKey: 'maxCoreProjects', upgradeTo: 'premium' });
+        }
+        a.coreProjectDetails = all;
       } catch (_) {
         // ignore malformed payloads
       }
     }
     // Action plans (departmental)
     if (cp.actionPlans && typeof cp.actionPlans === 'object') {
+      if (!require('../config/entitlements').hasFeature(user, 'departmentPlans')) {
+        return res.status(402).json({ code: 'UPGRADE_REQUIRED', message: 'Departmental plans are Premium', feature: 'departmentPlans', plan, upgradeTo: 'premium' });
+      }
       const norm = {};
       const deriveStatus = (prog) => {
         const n = Number(prog);
@@ -1159,7 +1196,7 @@ exports.updateActionAssignmentStatus = async (req, res, next) => {
 };
 
 // PATCH /api/dashboard/action-assignments/item
-// Body: { key?: string; department?: string; index: number; patch: { firstName?, lastName?, goal?, milestone?, resources?, cost?, kpi?, dueWhen?, progress? } }
+// Body: { key?: string; department?: string; index: number; patch: { firstName?, lastName?, title?, goal?, milestone?, resources?, cost?, kpi?, dueWhen?, progress? } }
 exports.updateActionAssignmentItem = async (req, res, next) => {
   try {
     const userId = req.user?.id;
@@ -1234,6 +1271,7 @@ exports.updateActionAssignmentItem = async (req, res, next) => {
       ...item,
       ...(p.firstName !== undefined ? { firstName: String(p.firstName || '') } : {}),
       ...(p.lastName !== undefined ? { lastName: String(p.lastName || '') } : {}),
+      ...(p.title !== undefined ? { title: String(p.title || '') } : {}),
       ...(p.goal !== undefined ? { goal: String(p.goal || '') } : {}),
       ...(p.milestone !== undefined ? { milestone: String(p.milestone || '') } : {}),
       ...(p.resources !== undefined ? { resources: String(p.resources || '') } : {}),
@@ -1493,73 +1531,171 @@ exports.generatePlanProse = async (req, res, next) => {
       return parts.length ? parts.join('\n') : '';
     })();
 
-    // Market statement context from onboarding Market & Opportunity answers
+    // Market and Opportunity Study generation from onboarding Market & Opportunity answers
     let marketStatement = undefined;
     if (wantMarket) {
-      const marketCtx = [
-        contextBase,
-        'Market & Opportunity Inputs:',
-        a.marketCustomer && `Ideal Customer: ${a.marketCustomer}`,
-        a.partnersDesc && `Partners/Ecosystem: ${a.partnersDesc}`,
-        a.compNotes && `Competitors/Positioning: ${a.compNotes}`,
-        Array.isArray(a.competitorNames) && a.competitorNames.length ? `Competitor Names: ${a.competitorNames.join(', ')}` : '',
-      ]
-        .filter(Boolean)
+      const bp = ob.businessProfile || {};
+      const products = Array.isArray(a.products) ? a.products : [];
+      const prodLines = products
+        .filter((p)=> String(p?.product||'').trim())
+        .map((p)=> `- ${String(p.product).trim()} — ${String(p.description||'').trim()}`)
         .join('\n');
-      marketStatement = await ai.callOpenAIProse({ type: 'Market & Opportunity section of a business plan', contextText: marketCtx, maxTokens: 700 });
+      const oneYearGoals = String(a.vision1y || '')
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s)=> `- ${s}`)
+        .join('\n');
+      const competitorNames = Array.isArray(a.competitorNames) && a.competitorNames.length
+        ? a.competitorNames.map((n)=> `- ${n}`).join('\n')
+        : '';
+      const partnerPrefs = Array.isArray(a.partnerPrefs) && a.partnerPrefs.length
+        ? a.partnerPrefs.map((n)=> `- ${n}`).join('\n')
+        : '';
+
+      const marketCtx = [
+        'BUSINESS PROFILE INPUTS',
+        bp.businessName && `Business name: ${bp.businessName}`,
+        bp.industry && `Industry: ${bp.industry}`,
+        (bp.city || bp.country) && `Geography/Region: ${[bp.city, bp.country].filter(Boolean).join(', ')}`,
+        bp.description && `Short description: ${bp.description}`,
+        oneYearGoals && `1-year goals:\n${oneYearGoals}`,
+        prodLines && `Products and services:\n${prodLines}`,
+        '',
+        'MARKET STUDY INPUTS',
+        a.autoMarket && `Main market served (auto vs manual): ${a.autoMarket}`,
+        a.custType && `Customer type: ${a.custType}`,
+        a.marketCustomer && `Market/Customer overview (free text): ${a.marketCustomer}`,
+        '',
+        'CUSTOMER INPUTS',
+        a.marketCustomer && `Primary customer segment: ${a.marketCustomer}`,
+        (bp.city || bp.country) && `Customer location (approx.): ${[bp.city, bp.country].filter(Boolean).join(', ')}`,
+        '',
+        'COMPETITOR INPUTS',
+        competitorNames && `Direct competitors:\n${competitorNames}`,
+        a.compNotes && `Competitive landscape notes: ${a.compNotes}`,
+        '',
+        'PARTNER INPUTS',
+        typeof a.partnersYN !== 'undefined' && `Relies on partners: ${a.partnersYN}`,
+        a.partnersDesc && `Existing partners: ${a.partnersDesc}`,
+        partnerPrefs && `Desired future partners:\n${partnerPrefs}`,
+        '',
+        'OPPORTUNITY INPUTS',
+        oneYearGoals && `1-year focus areas (goals):\n${oneYearGoals}`,
+      ].filter(Boolean).join('\n');
+
+      const studyInstruction = [
+        'Using the structured information provided, produce a Market and Opportunity Study with clear sections.',
+        'Write in a clear, confident tone. Use only user-supplied facts.',
+        'Do not create statistics unless explicitly supplied; if numbers are missing, use qualitative descriptions only.',
+        'Use numbered section headings and second-level subheadings where relevant (e.g., 2.1, 2.2).',
+        'Within sections such as Industry context and trends, Competitors and alternatives, and Partnerships and ecosystem, include short bullet lists (3–6 items) where helpful.',
+        'Convert raw bullet inputs into polished prose; include bullets only when they aid clarity. Do NOT include methodology or prompts in the output.',
+        'Required sections (exact order), with suggested substructure:',
+        '1. Market overview — scope of market served, positioning, immediate opportunity (1–2 paragraphs).',
+        '2. Industry context and trends — 2.1 Industry state (concise), 2.2 Key trends (3–6 bullets), 2.3 Implications for the business (paragraph).',
+        '3. Customer overview — 3.1 Primary segment (paragraph), 3.2 Secondary segments (bullets if any), 3.3 What they value (bullets).',
+        '4. Customer problems and needs — pain points (3–6 bullets) and current workarounds (bullets if provided).',
+        '5. Value proposition and market fit — begin with a detailed introductory paragraph that frames the value proposition and fit; then explain how offerings address needs and tie explicitly to user-provided products/services and goals.',
+        '6. Market size and growth — qualitative description only unless the user provided numbers; do not fabricate.',
+        '7. Competitors and alternatives — begin with a detailed introductory paragraph summarizing the competitive landscape; then cover direct competitors (bullets from user input), strengths vs. gaps (bullets), positioning (who serves which segment), and common alternatives.',
+        '8. Partnerships and ecosystem — begin with a detailed introductory paragraph summarizing the partnership approach and ecosystem role; then list existing partners (from user input), desired partner types (bullets), and the roles partners can play.',
+        '9. Market focus for the next 12 months — begin with a detailed introductory paragraph framing priorities for the next year; then list 3–6 focus areas linked to the user\'s 1‑year goals with brief rationale and expected result.',
+      ].join('\n');
+
+      marketStatement = await ai.callOpenAIProse({ type: 'Market and Opportunity Study', input: studyInstruction, contextText: marketCtx, maxTokens: 1400 });
     }
 
-    // Financial statement from forecasting inputs and derived values
+    // Financial section generation using client-provided prompt and headings
     let financialStatement = undefined;
     if (wantFinancial) {
-      // Reuse parts of financial computation (mirror getFinancials)
+      // Helper numeric parser
       function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
-      const growth = num(a.finSalesGrowthPct) / 100;
-      let totalVolFromProducts = 0, avgCostFromProducts = 0, avgPrice = 0;
-      try {
-        const list = Array.isArray(a.products) ? a.products : [];
-        const nums = list.map((p)=>({ v: num(p.monthlyVolume), price: num(p.price ?? p.pricing), cost: num(p.unitCost) }));
-        totalVolFromProducts = nums.reduce((sum, r)=> sum + (r.v||0), 0);
-        const totalW = nums.reduce((sum, r)=> sum + (r.v||0), 0);
-        const sumPrice = nums.reduce((sum, r)=> sum + ((r.price||0)*(r.v||0)), 0);
-        const sumCost = nums.reduce((sum, r)=> sum + ((r.cost||0)*(r.v||0)), 0);
-        avgPrice = totalW ? (sumPrice/totalW) : 0;
-        avgCostFromProducts = totalW ? (sumCost/totalW) : 0;
-      } catch {}
-      const units0 = num(a.finSalesVolume) || totalVolFromProducts;
-      const avgCost = num(a.finAvgUnitCost) || avgCostFromProducts;
+      // Collect product-level inputs (monthly volumes, prices, unit costs)
+      const list = Array.isArray(a.products) ? a.products : [];
+      const productLines = list.map((p) => {
+        const name = String(p?.product || 'Product').trim() || 'Product';
+        const volStr = String(p?.monthlyVolume || '').trim();
+        const priceStr = String(p?.price ?? p?.pricing ?? '').trim();
+        const costStr = String(p?.unitCost ?? '').trim();
+        const v = num(volStr);
+        const pr = num(priceStr);
+        const co = num(costStr);
+        const monthlyRev = (v && pr) ? Math.round(v * pr) : null;
+        const monthlyDirect = (v && co) ? Math.round(v * co) : null;
+        const monthlyGross = (monthlyRev !== null && monthlyDirect !== null) ? Math.round(monthlyRev - monthlyDirect) : null;
+        const parts = [
+          `Projected sales (monthly): ${volStr || '(not provided)'}`,
+          `Price per unit: ${priceStr || '(not provided)'}`,
+          `Direct cost per unit: ${costStr || '(not provided)'}`,
+          monthlyRev !== null ? `Approx. monthly revenue: ${monthlyRev}` : '',
+          monthlyDirect !== null ? `Approx. monthly direct cost: ${monthlyDirect}` : '',
+          monthlyGross !== null ? `Approx. monthly gross margin: ${monthlyGross}` : '',
+        ].filter(Boolean);
+        return `- ${name}: ${parts.join(' | ')}`;
+      }).join('\n');
+      // High-level financial inputs
       const fixedOperating = num(a.finFixedOperatingCosts);
       const marketingSpend = num(a.finMarketingSalesSpend);
       const payrollCost = num(a.finPayrollCost);
-      const fixed = fixedOperating + marketingSpend + payrollCost;
       const startCash = num(a.finStartingCash);
       const fundAmt = num(a.finAdditionalFundingAmount);
-      if (!avgPrice && avgCost) {
-        const m = num(a.finTargetProfitMarginPct)/100; avgPrice = m < 0.99 ? (avgCost/(1-m||1)) : avgCost;
-      }
-      // Month 1 approximations
-      const revenueM1 = units0 * (avgPrice||0);
-      const cogsM1 = units0 * (avgCost||0);
-      const opexM1 = fixed;
-      const profitM1 = revenueM1 - (cogsM1 + opexM1);
-      const monthlyBurn = Math.max(cogsM1 + opexM1 - revenueM1, 0);
-      const runway = monthlyBurn > 0 ? Math.round((startCash + fundAmt) / monthlyBurn) : null;
+      const taxRate = null; // Not captured explicitly
+      const staffCount = Array.isArray(a.orgPositions) ? a.orgPositions.length : null;
+      const avgSalary = (staffCount && payrollCost) ? Math.round(payrollCost / staffCount) : null;
+      const payDays = String(a.finPaymentCollectionDays || '').trim();
+      // Derive simple metrics from supplied inputs (for AI reference only)
+      // Average price/cost from products if available
+      let totalW = 0, sumPrice = 0, sumCost = 0;
+      try {
+        const nums = list.map((p)=>({ v: num(p.monthlyVolume), price: num(p.price ?? p.pricing), cost: num(p.unitCost) }));
+        totalW = nums.reduce((sum, r)=> sum + (r.v||0), 0);
+        sumPrice = nums.reduce((sum, r)=> sum + ((r.price||0)*(r.v||0)), 0);
+        sumCost = nums.reduce((sum, r)=> sum + ((r.cost||0)*(r.v||0)), 0);
+      } catch {}
+      const avgPrice = totalW ? (sumPrice/totalW) : 0;
+      const avgCost = totalW ? (sumCost/totalW) : 0;
       const finCtx = [
         contextBase,
-        'Financial Forecasting Inputs:',
-        `Sales Volume (Month 1): ${Math.round(units0)}`,
-        `Avg Unit Price: ${Math.round(avgPrice)}`,
-        `Avg Unit Cost: ${Math.round(avgCost)}`,
-        `Fixed Costs (operating + marketing + payroll): ${Math.round(fixed)}`,
-        `Growth (monthly): ${Math.round(growth*100)}%`,
-        `Starting Cash: ${Math.round(startCash)}`,
-        `Additional Funding: ${Math.round(fundAmt)}`,
-        `Projected Revenue (M1): ${Math.round(revenueM1)}`,
-        `Projected Costs (M1): ${Math.round(cogsM1 + opexM1)}`,
-        `Projected Net Profit (M1): ${Math.round(profitM1)}`,
-        (runway !== null) ? `Estimated Cash Runway (months): ${runway}` : '',
+        'FINANCIAL INPUTS (user-supplied):',
+        productLines && `Products:\n${productLines}`,
+        (fixedOperating || a.finFixedOperatingCosts) && `Monthly operating expenses (total): ${a.finFixedOperatingCosts || fixedOperating}`,
+        (payrollCost || a.finPayrollCost) && `Monthly staffing costs (total): ${a.finPayrollCost || payrollCost}`,
+        (staffCount ? `Team size (approx.): ${staffCount}` : ''),
+        (avgSalary ? `Avg monthly salary per staff (approx.): ${avgSalary}` : ''),
+        a.finAdditionalFundingAmount && `Funding expected this year: ${a.finAdditionalFundingAmount}`,
+        a.finStartingCash && `Opening cash balance: ${a.finStartingCash}`,
+        a.finPaymentCollectionDays && `Payment timing assumption (days): ${a.finPaymentCollectionDays}`,
+        '',
+        'DERIVED (from user inputs; optional):',
+        totalW ? `Approx. weighted avg unit price: ${Math.round(avgPrice)}` : '',
+        totalW ? `Approx. weighted avg unit cost: ${Math.round(avgCost)}` : '',
       ].filter(Boolean).join('\n');
-      financialStatement = await ai.callOpenAIProse({ type: 'Financial Summary & Forecast section of a business plan', contextText: finCtx, maxTokens: 900 });
+
+      const financialInstruction = [
+        'Using the financial inputs provided by the user, generate a clear and comprehensive Financial Section for the Market and Opportunity Study.',
+        'Use only the data supplied. Do not invent external statistics. Convert the raw inputs into a coherent narrative that explains revenue potential, cost structure, profitability, cash flow expectations, and funding position.',
+        'Structure your output using the following headings (exact order). For each section, begin with a detailed introductory paragraph that frames the topic, then add second-level subheadings and concise bullet points where helpful:',
+        '1. Financial overview',
+        '2. Revenue model — begin with a detailed intro; then cover by product/service where applicable; include per‑product inline summaries when data permit.',
+        '3. Direct costs and gross margin — begin with a detailed intro; then detail by product/service when data allow; avoid fabricated percentages.',
+        '4. Operating costs — begin with a detailed intro; then break down major categories if available (fixed operating, marketing, tools, other).',
+        '5. Staffing costs — begin with a detailed intro; then include team size (if known) and average monthly salary (if derivable), roles if provided.',
+        '6. Capital expenditure — begin with a detailed intro; note purpose if user described it; otherwise state as not provided.',
+        '7. Cash flow and runway — begin with a detailed intro; provide qualitative narrative; discuss seasonality/timing if payment days provided.',
+        '8. Funding position — begin with a detailed intro; explain role of planned funding (e.g., staffing, marketing, operations, capex).',
+        '9. Tax assumptions — begin with a detailed intro; note if not provided; do not infer rates.',
+        '10. Overall financial outlook — begin with a detailed intro; then interpretation, risks/opportunities, and near‑term priorities.',
+        'If sufficient numeric detail is provided for products, include a small inline summary list per product (Name — monthly units × price → approx. monthly revenue; direct cost; gross margin). Otherwise, keep qualitative.',
+        'Use clear paragraphs and simple language. Summarise insights and interpret what the numbers mean for the business. Write everything as if it will appear in a professional business plan. Do NOT include methodology or prompts in the output.',
+      ].join('\n');
+
+      financialStatement = await ai.callOpenAIProse({
+        type: 'Financial Section of Market and Opportunity Study',
+        contextText: finCtx,
+        input: financialInstruction,
+        maxTokens: 1400,
+      });
     }
 
     ob.answers = a;
@@ -1589,6 +1725,234 @@ exports.getPlan = async (req, res, next) => {
     ]);
     const sections = sectionsRaw.map((s) => ({ sid: s.sid, name: s.name, complete: s.complete }));
     return res.json({ plan: { sections, companyLogoUrl: (p && p.companyLogoUrl) || '' } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/logo  { dataUrl }
+exports.uploadCompanyLogo = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const { dataUrl } = req.body || {};
+    const parsed = parseDataUrl(dataUrl);
+    if (!parsed) return res.status(400).json({ message: 'Invalid image payload' });
+    const { mime, buf } = parsed;
+
+    const allowed = new Set(['image/png', 'image/jpeg', 'image/webp']);
+    if (!allowed.has(mime)) return res.status(400).json({ message: 'Unsupported image type' });
+    if (buf.length > 8 * 1024 * 1024) return res.status(400).json({ message: 'Image too large (max 8MB)' });
+
+    // Use a dedicated bucket for business logos; allow override via env
+    const bucket = process.env.R2_LOGOS_BUCKET || process.env.LOGOS_BUCKET || 'business-logos';
+
+    const s3 = getR2Client();
+    const ext = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
+    const key = `${Date.now()}.${ext}`;
+    await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: buf, ContentType: mime }));
+
+    // Compose public URL using a dedicated base; defaults to logos.plangenie.com
+    let base = (process.env.R2_LOGOS_PUBLIC_BASE_URL || process.env.LOGOS_PUBLIC_BASE_URL || 'https://logos.plangenie.com');
+    if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
+    base = base.replace(/\/$/, '');
+    const url = `${base}/${key}`;
+
+    // Save on the user's Plan document
+    await ensureSeedPlan(userId);
+    const updated = await Plan.findOneAndUpdate(
+      { user: userId },
+      { companyLogoUrl: url },
+      { new: true }
+    ).lean().exec();
+
+    return res.json({ ok: true, url, plan: { companyLogoUrl: updated?.companyLogoUrl || url } });
+  } catch (err) {
+    return next(err);
+  }
+};
+
+// GET /api/dashboard/plan/export/pdf
+exports.exportPlanPdf = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    // 1) Gather plan data (reuse compiled plan assembly)
+    // Ensure plan exists (for logo URL); then load Onboarding answers for compiled plan
+    const planDoc = await ensureSeedPlan(userId);
+    const planRecord = await Plan.findOne({ user: userId }).lean().exec();
+    let ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    if (!ob) {
+      const created = await Onboarding.create({ user: userId, answers: {} });
+      ob = created.toObject();
+    }
+    const a = ob.answers || {};
+    const compiled = {
+      userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
+      businessProfile: {
+        businessName: (ob.businessProfile && ob.businessProfile.businessName) || '',
+        ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '',
+      },
+      vision: {
+        ubp: a.ubp || (ob.vision && ob.vision.ubp) || '',
+        purpose: a.purpose || '',
+        oneYear: (a.vision1y || '').split('\n').filter(Boolean),
+        threeYear: (a.vision3y || '').split('\n').filter(Boolean),
+      },
+      values: { core: a.valuesCore || '', culture: a.cultureFeeling || '' },
+      market: {
+        customer: a.marketCustomer || '',
+        partners: a.partnersDesc || '',
+        competitors: a.compNotes || '',
+        competitorNames: a.competitorNames || [],
+      },
+      products: Array.isArray(a.products) ? a.products : [],
+      org: Array.isArray(a.orgPositions)
+        ? a.orgPositions.map((p) => ({
+            id: p.id,
+            name: p.name,
+            position: p.position,
+            department: p.department || null,
+            parentId: p.parentId || null,
+          }))
+        : [],
+      financial: {
+        salesVolume: a.finSalesVolume || '',
+        salesGrowthPct: a.finSalesGrowthPct || '',
+        avgUnitCost: a.finAvgUnitCost || '',
+        fixedOperatingCosts: a.finFixedOperatingCosts || '',
+        marketingSalesSpend: a.finMarketingSalesSpend || '',
+        payrollCost: a.finPayrollCost || '',
+        startingCash: a.finStartingCash || '',
+        additionalFundingAmount: a.finAdditionalFundingAmount || '',
+        additionalFundingMonth: a.finAdditionalFundingMonth || '',
+        paymentCollectionDays: a.finPaymentCollectionDays || '',
+        targetProfitMarginPct: a.finTargetProfitMarginPct || '',
+      },
+      prose: a.planProse || {},
+    };
+
+    // Optional: refresh prose when requested (best-effort)
+    const refresh = String(req.query.refreshProse || '').toLowerCase();
+    if (refresh === '1' || refresh === 'true') {
+      try {
+        // Call the existing generation logic through module without refactor
+        const ai = require('./ai.controller');
+        // Build minimal contexts like generatePlanProse does
+        const contextBase = (() => {
+          const bp = ob.businessProfile || {};
+          const parts = [
+            bp.businessName && `Business Name: ${bp.businessName}`,
+            bp.industry && `Industry: ${bp.industry}`,
+            bp.ventureType && `Venture Type: ${bp.ventureType}`,
+            bp.city && bp.country && `Location: ${bp.city}, ${bp.country}`,
+            a.ubp && `UBP: ${a.ubp}`,
+            a.purpose && `Purpose: ${a.purpose}`,
+          ].filter(Boolean);
+          return parts.length ? parts.join('\n') : '';
+        })();
+        // Market study
+        let marketStatement = null;
+        try {
+          const products = Array.isArray(a.products) ? a.products : [];
+          const prodLines = products.filter((p) => String(p?.product || '').trim()).map((p) => `- ${String(p.product).trim()} — ${String(p.description || '').trim()}`).join('\n');
+          const oneYearGoals = String(a.vision1y || '')
+            .split('\n').map((s) => s.trim()).filter(Boolean).map((s) => `- ${s}`).join('\n');
+          const competitorNames = Array.isArray(a.competitorNames) && a.competitorNames.length ? a.competitorNames.map((n) => `- ${n}`).join('\n') : '';
+          const partnerPrefs = Array.isArray(a.partnerPrefs) && a.partnerPrefs.length ? a.partnerPrefs.map((n) => `- ${n}`).join('\n') : '';
+          const marketCtx = [
+            'BUSINESS PROFILE INPUTS',
+            contextBase,
+            oneYearGoals && `1-year goals:\n${oneYearGoals}`,
+            prodLines && `Products and services:\n${prodLines}`,
+            '',
+            'MARKET STUDY INPUTS',
+            a.marketCustomer && `Market/Customer overview (free text): ${a.marketCustomer}`,
+            competitorNames && `Direct competitors:\n${competitorNames}`,
+            a.compNotes && `Competitive landscape notes: ${a.compNotes}`,
+            partnerPrefs && `Desired future partners:\n${partnerPrefs}`,
+          ].filter(Boolean).join('\n');
+          const studyInstruction = [
+            'Using the structured information provided, produce a Market and Opportunity Study with clear sections.',
+            'Write in a clear, confident tone. Use only user-supplied facts.',
+            'Use numbered section headings and second-level subheadings where relevant; include short bullet lists (3–6 items) where natural.',
+          ].join('\n');
+          marketStatement = await ai.callOpenAIProse({ type: 'Market and Opportunity Study', input: studyInstruction, contextText: marketCtx, maxTokens: 1200 });
+        } catch {}
+        // Financial narrative
+        let financialStatement = null;
+        try {
+          const finCtx = [
+            contextBase,
+            'FINANCIAL INPUTS (user-supplied):',
+            a.finFixedOperatingCosts && `Monthly operating expenses (total): ${a.finFixedOperatingCosts}`,
+            a.finMarketingSalesSpend && `Monthly marketing & sales spend: ${a.finMarketingSalesSpend}`,
+            a.finPayrollCost && `Monthly staffing costs (total): ${a.finPayrollCost}`,
+            a.finStartingCash && `Opening cash balance: ${a.finStartingCash}`,
+          ].filter(Boolean).join('\n');
+          const financialInstruction = [
+            'Using the financial inputs provided by the user, generate a clear and comprehensive Financial Section.',
+            'Use only the data supplied. Do not invent external statistics. Keep the narrative professional and concise.',
+          ].join('\n');
+          financialStatement = await ai.callOpenAIProse({ type: 'Financial Section', input: financialInstruction, contextText: finCtx, maxTokens: 900 });
+        } catch {}
+        const prose = {
+          ...(compiled.prose || {}),
+          ...(typeof marketStatement === 'string' ? { marketStatement } : {}),
+          ...(typeof financialStatement === 'string' ? { financialStatement } : {}),
+          generatedAt: new Date().toISOString(),
+        };
+        // Persist back to onboarding answers for reuse
+        await Onboarding.updateOne({ user: userId }, { $set: { 'answers.planProse': prose } }).exec();
+        compiled.prose = prose;
+      } catch {}
+    }
+
+    // 2) Render template to HTML
+    const templatePath = path.join(__dirname, '..', 'views', 'plan-export.ejs');
+    const html = await ejs.renderFile(templatePath, {
+      title: 'Business Plan',
+      businessName: (ob.businessProfile && ob.businessProfile.businessName) || '',
+      preparedBy: (compiled.userProfile && compiled.userProfile.fullName) || '',
+      logoUrl: (planRecord && planRecord.companyLogoUrl) || '',
+      ubp: compiled.vision.ubp,
+      purpose: compiled.vision.purpose,
+      oneYearGoals: compiled.vision.oneYear,
+      threeYearGoals: compiled.vision.threeYear,
+      valuesCore: compiled.values.core,
+      valuesCulture: compiled.values.culture,
+      marketCustomer: compiled.market.customer,
+      marketPartners: compiled.market.partners,
+      marketCompetitors: compiled.market.competitors,
+      competitorNames: compiled.market.competitorNames,
+      products: compiled.products,
+      org: compiled.org,
+      fin: compiled.financial,
+      prose: compiled.prose,
+    });
+
+    // 3) Generate PDF via Puppeteer
+    const puppeteer = require('puppeteer');
+    const browser = await puppeteer.launch({
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
+    try {
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      const pdf = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' },
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="Business_Plan.pdf"');
+      return res.send(Buffer.from(pdf));
+    } finally {
+      try { await browser.close(); } catch {}
+    }
   } catch (err) {
     next(err);
   }
@@ -1843,9 +2207,8 @@ exports.getSettings = async (req, res, next) => {
         status: p.status || 'Active',
       }));
     } catch {}
-    // Fallback to seeded members only if org chart is empty
+    // Fallback: read any members from TeamMember collection (no seeding)
     if (!members.length) {
-      await ensureSeedTeamMembers(userId);
       const membersRaw = await TeamMember.find({ user: userId }).lean().exec();
       members = membersRaw.map((m) => ({ mid: m.mid, name: m.name, email: m.email, position: m.role, department: m.department, status: m.status }));
     }
@@ -1974,6 +2337,26 @@ exports.deleteMember = async (req, res, next) => {
     }
     const result = await TeamMember.deleteOne({ user: userId, mid }).exec();
     return res.json({ ok: true, removed: result.deletedCount > 0 });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /api/dashboard/settings/members/sample
+// Remove seeded sample members (e.g., Sarah Johnson) for the current user
+exports.purgeSampleMembers = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    // Delete known seeded entries by email or name match
+    const result = await TeamMember.deleteMany({
+      user: userId,
+      $or: [
+        { email: 'sarah@plangenie.com' },
+        { name: { $regex: /^sarah\s+johnson$/i } },
+      ],
+    }).exec();
+    return res.json({ ok: true, removed: result.deletedCount || 0 });
   } catch (err) {
     next(err);
   }

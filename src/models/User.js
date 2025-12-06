@@ -35,6 +35,10 @@ const UserSchema = new mongoose.Schema(
     isAdmin: { type: Boolean, default: false },
     status: { type: String, enum: ['active', 'suspended'], default: 'active' },
     lastActiveAt: { type: Date },
+
+    // Billing/Subscription
+    stripeCustomerId: { type: String, default: undefined },
+    hasActiveSubscription: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

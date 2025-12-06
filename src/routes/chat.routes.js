@@ -1,11 +1,11 @@
 const express = require('express');
 const auth = require('../middleware/auth');
+const viewAs = require('../middleware/viewAs');
 const ctrl = require('../controllers/chat.controller');
 
 const router = express.Router();
 
 // Allow both public and authed, but prefer authed for personalized context
-router.post('/respond', auth(false), ctrl.respond);
+router.post('/respond', auth(false), viewAs, ctrl.respond);
 
 module.exports = router;
-

@@ -33,11 +33,12 @@ exports.uploadAvatar = async (req, res) => {
     if (!allowed.has(mime)) return res.status(400).json({ message: 'Unsupported image type' });
     if (buf.length > 8 * 1024 * 1024) return res.status(400).json({ message: 'Image too large (max 8MB)' });
 
-    const bucket = process.env.R2_BUCKET;
-    if (!bucket) return res.status(500).json({ message: 'Storage not configured' });
+    // Allow override via R2_BUCKET; default to a shared bucket name for profile pictures
+    const bucket = process.env.R2_BUCKET || 'profile-pictures';
 
     const ext = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
-    const key = `avatars/${userId}/${Date.now()}-${crypto.randomBytes(4).toString('hex')}.${ext}`;
+    // Store at the bucket root (no nested folders) using timestamp-only naming per requirement
+    const key = `${Date.now()}.${ext}`;
 
     const s3 = getR2Client();
     await s3.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: buf, ContentType: mime }));
@@ -53,4 +54,3 @@ exports.uploadAvatar = async (req, res) => {
     return res.status(500).json({ message: 'Upload failed' });
   }
 };
-

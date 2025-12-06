@@ -32,6 +32,9 @@ async function readTrainerText() {
   // PDF or pre-extracted text under public/downloads
   candidates.push(path.join(process.cwd(), 'public', 'downloads', 'original-plan-genie-business-trainer.pdf'));
   candidates.push(path.join(process.cwd(), 'public', 'downloads', 'original-plan-genie-business-trainer.pdf.txt'));
+  // Also check repo root public path
+  candidates.push(path.join(process.cwd(), 'public', 'original-plan-genie-business-trainer.pdf'));
+  candidates.push(path.join(process.cwd(), 'public', 'original-plan-genie-business-trainer.pdf.txt'));
   // Monorepo fallback: use frontend public/downloads copy if present (../plangenie/public/downloads)
   candidates.push(path.join(process.cwd(), '..', 'plangenie', 'public', 'downloads', 'original-plan-genie-business-trainer.pdf'));
   candidates.push(path.join(process.cwd(), '..', 'plangenie', 'public', 'downloads', 'original-plan-genie-business-trainer.pdf.txt'));

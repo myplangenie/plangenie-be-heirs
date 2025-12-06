@@ -1,4 +1,15 @@
 const Onboarding = require('../models/Onboarding');
+const TeamMember = require('../models/TeamMember');
+const Department = require('../models/Department');
+const User = require('../models/User');
+
+// Optional internal knowledge (Business Trainer)
+let rag;
+try {
+  rag = require('../rag/index.js');
+} catch (e) {
+  rag = { initRag: async () => ({ ready: false, error: e }), retrieve: async () => [] };
+}
 
 // Local helper copied to avoid tight coupling to ai.controller internals
 let openaiClient = null;
@@ -15,62 +26,572 @@ function getOpenAI() {
   return openaiClient;
 }
 
-function buildContextText(ob) {
-  if (!ob) return '';
-  const bp = ob.businessProfile || {};
-  const up = ob.userProfile || {};
-  const fields = [
-    bp.businessName && `Business Name: ${bp.businessName}`,
+// Simple JSON-safe parse
+function tryParseJSON(text, fallback) {
+  try {
+    return JSON.parse(String(text || ''));
+  } catch (_) {
+    return fallback;
+  }
+}
+
+// Planner: ask the model which facts to fetch from DB for this user request
+// Allowed ops:
+// - user.profile
+// - business.profile
+// - team.members.count
+// - team.members.list { limit?: number }
+// - departments.count
+// - departments.list { limit?: number }
+// - coreProjects.count
+// - coreProjects.list { limit?: number }
+// - deadlines.list { limit?: number }
+async function planFacts(messages, contextText) {
+  const client = getOpenAI();
+  const system = [
+    'You are an assistant that returns ONLY JSON to plan which facts to fetch from the database.',
+    'Use the minimal set of operations needed to answer the latest user message.',
+    'Allowed ops: user.profile | business.profile | team.members.count | team.members.list | departments.count | departments.list | coreProjects.count | coreProjects.list | deadlines.list.',
+    'JSON schema: { "operations": Array<{ "op": string, "limit"?: number }> }',
+    'Do NOT include any text outside JSON. Avoid redundant operations.',
+  ].join(' ');
+  const lastUser = (messages || []).slice().reverse().find((m) => m && m.role !== 'assistant');
+  const content = [
+    contextText ? '(Context provided; do not duplicate here).' : '',
+    'User message:',
+    String(lastUser?.content || '').slice(0, 1000),
+  ].filter(Boolean).join('\n');
+
+  const resp = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    temperature: 0,
+    max_tokens: 120,
+    messages: [ { role: 'system', content: system }, { role: 'user', content } ],
+  });
+  let text = String(resp.choices?.[0]?.message?.content || '').trim();
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (fence) text = fence[1].trim();
+  const j = tryParseJSON(text, { operations: [] });
+  const ops = Array.isArray(j?.operations) ? j.operations : [];
+  const allowed = new Set([
+    'user.profile', 'business.profile',
+    'team.members.count', 'team.members.list',
+    'departments.count', 'departments.list',
+    'coreProjects.count', 'coreProjects.list',
+    'deadlines.list',
+  ]);
+  return ops
+    .map((o) => ({ op: String(o?.op || '').trim(), limit: Number.isFinite(o?.limit) ? o.limit : undefined }))
+    .filter((o) => allowed.has(o.op))
+    .slice(0, 8);
+}
+
+async function executeFactsPlan({ userId, me, ob, teamMembers, teamMembersCount, departments, limitDefault = 20 }) {
+  const a = (ob && ob.answers) || {};
+  const facts = {};
+
+  function deadlineItems() {
+    // Mirrors the aggregation in buildContextText
+    const parseDate = (s) => { const d = new Date(String(s||'')); return isNaN(d.getTime()) ? null : d; };
+    const items = [];
+    try {
+      Object.entries(a.actionAssignments || {}).forEach(([dept, arr]) => {
+        (arr || []).forEach((u) => {
+          const d = parseDate(u?.dueWhen); if (!d) return;
+          const goal = String(u?.goal || '').trim();
+          const owner = `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim();
+          items.push({ when: d, label: [goal, dept && `Dept: ${dept}`, owner && `Owner: ${owner}`].filter(Boolean).join(' | ') });
+        });
+      });
+    } catch {}
+    try {
+      (Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : []).forEach((p) => {
+        (Array.isArray(p?.deliverables) ? p.deliverables : []).forEach((d) => {
+          const dt = parseDate(d?.dueWhen); if (!dt) return;
+          const txt = String(d?.text || '').trim();
+          items.push({ when: dt, label: [p?.title && `Project: ${String(p.title).trim()}`, txt].filter(Boolean).join(' | ') });
+        });
+      });
+    } catch {}
+    items.sort((x, y) => x.when - y.when);
+    return items;
+  }
+
+  return {
+    get user_profile() {
+      const full = [String(me?.firstName||'').trim(), String(me?.lastName||'').trim()].filter(Boolean).join(' ') || String(me?.fullName||'').trim();
+      return { name: full || undefined, email: me?.email || undefined, role: ob?.userProfile?.role || undefined };
+    },
+    get business_profile() {
+      const bp = ob?.businessProfile || {};
+      return { name: bp.businessName || me?.companyName || undefined, industry: bp.industry || undefined, location: [bp.city, bp.country].filter(Boolean).join(', ') || undefined };
+    },
+    get team_members_count() { return teamMembersCount || 0; },
+    get team_members_list() { return (teamMembers || []).map((t)=>({ name: t?.name||'', role: t?.role||'', department: t?.department||'', email: t?.email||'' })); },
+    get departments_count() { return (departments || []).length; },
+    get departments_list() { return (departments || []).map((d)=>({ name: d?.name||'', status: d?.status||'', owner: d?.owner||'', dueDate: d?.dueDate||'' })); },
+    get core_projects_count() {
+      if (Array.isArray(a?.coreProjectDetails) && a.coreProjectDetails.length) return a.coreProjectDetails.length;
+      if (Array.isArray(a?.coreProjects)) return a.coreProjects.length; return 0;
+    },
+    get core_projects_list() {
+      const list = [];
+      if (Array.isArray(a?.coreProjectDetails) && a.coreProjectDetails.length) {
+        a.coreProjectDetails.forEach((p) => list.push({ title: String(p?.title||'').trim(), ownerName: p?.ownerName || '', dueWhen: p?.dueWhen || '', deliverables: Array.isArray(p?.deliverables) ? p.deliverables : [] }));
+      } else if (Array.isArray(a?.coreProjects)) {
+        a.coreProjects.forEach((t) => list.push({ title: String(t||'').trim() }));
+      }
+      return list;
+    },
+    get deadlines_list() { return deadlineItems(); },
+  };
+}
+
+function buildContextText(ob, stats, extras) {
+  const bp = (ob && ob.businessProfile) || {};
+  const up = (ob && ob.userProfile) || {};
+  const a = (ob && ob.answers) || {};
+  const fallbackBiz = String(extras?.user?.companyName || '').trim();
+  const userFullName = (String(up?.fullName || '').trim()) ||
+    ([String(extras?.user?.firstName||'').trim(), String(extras?.user?.lastName||'').trim()].filter(Boolean).join(' ') || String(extras?.user?.fullName||'').trim());
+
+  // Section: Business & User Profile
+  const profileLines = [
+    (bp.businessName || fallbackBiz) && `Business Name: ${bp.businessName || fallbackBiz}`,
     bp.industry && `Industry: ${bp.industry}`,
     bp.city && bp.country && `Location: ${bp.city}, ${bp.country}`,
     bp.ventureType && `Venture Type: ${bp.ventureType}`,
     bp.teamSize && `Team Size: ${bp.teamSize}`,
     bp.businessStage && `Stage: ${bp.businessStage}`,
+    bp.description && `Business Profile Description: ${String(bp.description).trim()}`,
     up.role && `User Role: ${up.role}`,
+    userFullName && `User Name: ${userFullName}`,
+    typeof stats?.teamMembersCount === 'number' && `Active Team Members: ${stats.teamMembersCount}`,
+    typeof stats?.coreProjectsCount === 'number' && `Core Strategic Projects: ${stats.coreProjectsCount}`,
   ].filter(Boolean);
-  const base = fields.length ? `Context about the business:\n- ${fields.join('\n- ')}` : '';
-  const a = (ob && ob.answers) || {};
-  const parts = [];
-  if (a.ubp) parts.push(`UBP: ${String(a.ubp).trim()}`);
-  if (a.purpose) parts.push(`Purpose: ${String(a.purpose).trim()}`);
-  if (a.visionBhag) parts.push(`BHAG: ${String(a.visionBhag).trim()}`);
-  if (a.vision1y) parts.push(`1-Year Goals: ${(String(a.vision1y).trim().split('\n').filter(Boolean).join('; '))}`);
-  if (a.vision3y) parts.push(`3-Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
-  if (a.valuesCore) parts.push(`Core Values: ${String(a.valuesCore).trim()}`);
-  if (a.cultureFeeling) parts.push(`Culture: ${String(a.cultureFeeling).trim()}`);
-  // Summarize action assignments (dashboard context)
+  const profileText = profileLines.length ? `Context about the business:\n- ${profileLines.join('\n- ')}` : '';
+
+  // Section: Vision & Values
+  const vvParts = [];
+  if (a.ubp) vvParts.push(`UBP: ${String(a.ubp).trim()}`);
+  if (a.purpose) vvParts.push(`Purpose: ${String(a.purpose).trim()}`);
+  if (a.visionBhag) vvParts.push(`BHAG: ${String(a.visionBhag).trim()}`);
+  if (a.vision1y) vvParts.push(`1-Year Goals: ${(String(a.vision1y).trim().split('\n').filter(Boolean).join('; '))}`);
+  if (a.vision3y) vvParts.push(`3-Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
+  if (a.valuesCore) vvParts.push(`Core Values: ${String(a.valuesCore).trim()}`);
+  if (a.cultureFeeling) vvParts.push(`Culture: ${String(a.cultureFeeling).trim()}`);
+  const vvText = vvParts.length ? `\n\nVision & Values:\n- ${vvParts.join('\n- ')}` : '';
+
+  // Section: Market & Competition
+  const marketLines = [];
+  if (a.marketCustomer) marketLines.push(`Customer: ${String(a.marketCustomer).trim()}`);
+  if (a.partnersDesc) marketLines.push(`Partners: ${String(a.partnersDesc).trim()}`);
+  if (a.compNotes) marketLines.push(`Competitors Notes: ${String(a.compNotes).trim()}`);
+  if (Array.isArray(a.competitorNames) && a.competitorNames.length) marketLines.push(`Competitor Names: ${a.competitorNames.map(String).join(', ')}`);
+  const marketText = marketLines.length ? `\n\nMarket & Competition:\n- ${marketLines.join('\n- ')}` : '';
+
+  // Section: Products & Services
+  let productsText = '';
+  try {
+    const prods = Array.isArray(a.products) ? a.products : [];
+    if (prods.length) {
+      const lines = prods.map((p) => {
+        const name = String(p?.product || '').trim();
+        const desc = String(p?.description || '').trim();
+        const pricing = [
+          typeof p?.price !== 'undefined' && String(p.price || '').trim() && `Price: ${String(p.price).trim()}`,
+          typeof p?.unitCost !== 'undefined' && String(p.unitCost || '').trim() && `Unit Cost: ${String(p.unitCost).trim()}`,
+          typeof p?.pricing !== 'undefined' && String(p.pricing || '').trim() && `Pricing: ${String(p.pricing).trim()}`,
+          typeof p?.monthlyVolume !== 'undefined' && String(p.monthlyVolume || '').trim() && `Monthly Volume: ${String(p.monthlyVolume).trim()}`,
+        ].filter(Boolean).join(' | ');
+        const bits = [name && `Product: ${name}`, desc && `Desc: ${desc}`, pricing].filter(Boolean);
+        return bits.length ? '- ' + bits.join(' | ') : '';
+      }).filter(Boolean);
+      if (lines.length) productsText = `\n\nProducts & Services:\n${lines.join('\n')}`;
+    }
+  } catch {}
+
+  // Section: Organization (positions/structure)
+  let orgText = '';
+  try {
+    const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+    if (org.length) {
+      const head = `Positions: ${org.length}`;
+      const lines = org.slice(0, 50).map((o) => {
+        const nm = String(o?.name || o?.position || '').trim();
+        const pos = String(o?.position || '').trim();
+        const dept = String(o?.department || '').trim();
+        const bits = [nm, pos && `Role: ${pos}`, dept && `Dept: ${dept}`].filter(Boolean);
+        return bits.length ? '- ' + bits.join(' | ') : '';
+      }).filter(Boolean);
+      orgText = `\n\nOrganization:\n- ${head}${lines.length ? `\n${lines.join('\n')}` : ''}`;
+    }
+  } catch {}
+
+  // Section: Financial Snapshot
+  const finLines = [];
+  try {
+    const add = (label, v) => { if (typeof v !== 'undefined' && String(v).trim() !== '') finLines.push(`${label}: ${String(v).trim()}`); };
+    add('Projected Sales Volume (M1)', a.finSalesVolume);
+    add('Projected Sales Growth %', a.finSalesGrowthPct);
+    add('Average Unit Cost', a.finAvgUnitCost);
+    add('Fixed Operating Costs (M1)', a.finFixedOperatingCosts);
+    add('Marketing/Sales Spend (M1)', a.finMarketingSalesSpend);
+    add('Payroll Cost (M1)', a.finPayrollCost);
+    add('Starting Cash', a.finStartingCash);
+    add('Additional Funding Amount', a.finAdditionalFundingAmount);
+    add('Additional Funding Month', a.finAdditionalFundingMonth);
+    add('Payment Collection Days', a.finPaymentCollectionDays);
+    add('Target Profit Margin %', a.finTargetProfitMarginPct);
+    add('Nonprofit', a.finIsNonprofit);
+  } catch {}
+  const finText = finLines.length ? `\n\nFinancial Snapshot:\n- ${finLines.join('\n- ')}` : '';
+
+  // Section: Derived Metrics (computed from provided numbers)
+  let derivedText = '';
+  try {
+    const num = (v) => {
+      const s = String(v ?? '').replace(/[^0-9.\-]/g, '').trim();
+      const n = parseFloat(s);
+      return isFinite(n) ? n : 0;
+    };
+    const vol = num(a.finSalesVolume);
+    const avgUnitCost = num(a.finAvgUnitCost);
+    const fixed = num(a.finFixedOperatingCosts);
+    const mkt = num(a.finMarketingSalesSpend);
+    const pay = num(a.finPayrollCost);
+    const cash = num(a.finStartingCash);
+    const targetMarginPct = num(a.finTargetProfitMarginPct);
+    const burnMonthly = Math.max(0, fixed + mkt + pay);
+    const runwayMonths = burnMonthly > 0 ? (cash / burnMonthly) : 0;
+    const derived = [];
+    if (burnMonthly > 0) derived.push(`Monthly Burn (approx): ${Math.round(burnMonthly)}`);
+    if (cash > 0 && burnMonthly > 0) derived.push(`Runway (months): ${Math.max(0, Math.round(runwayMonths * 10) / 10)}`);
+    if (vol > 0 && avgUnitCost > 0) derived.push(`Unit Cost: ${Math.round(avgUnitCost)} (Volume: ${Math.round(vol)})`);
+    if (targetMarginPct > 0) derived.push(`Target Gross Margin %: ${Math.round(targetMarginPct)}`);
+    if (derived.length) derivedText = `\n\nDerived Metrics (approx):\n- ${derived.join('\n- ')}`;
+  } catch {}
+
+  // Section: Core Strategic Projects (detailed)
+  let coreProjectsText = '';
+  try {
+    const cps = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
+    if (cps.length) {
+      const lines = cps.map((p) => {
+        const title = String(p?.title || '').trim();
+        const goal = String(p?.goal || '').trim();
+        const kpi = String(p?.kpi || '').trim();
+        const due = String(p?.dueWhen || '').trim();
+        const owner = String(p?.ownerName || '').trim();
+        const head = ['Project', title || goal].filter(Boolean).join(': ');
+        const meta = [owner && `Owner: ${owner}`, kpi && `KPI: ${kpi}`, due && `Due: ${due}`].filter(Boolean).join(' | ');
+        const dels = Array.isArray(p?.deliverables) ? p.deliverables : [];
+        const dlines = dels.map((d) => {
+          const txt = String(d?.text || '').trim();
+          const dk = String(d?.kpi || '').trim();
+          const dd = String(d?.dueWhen || '').trim();
+          const done = d?.done ? 'Done' : '';
+          const bits = [txt && `• ${txt}`, dk && `KPI: ${dk}`, dd && `Due: ${dd}`, done].filter(Boolean);
+          return bits.length ? '  - ' + bits.join(' | ') : '';
+        }).filter(Boolean);
+        return ['- ' + head, meta && '  - ' + meta, ...dlines].filter(Boolean).join('\n');
+      });
+      coreProjectsText = `\n\nCore Strategic Projects:\n${lines.join('\n')}`;
+    } else if (Array.isArray(a.coreProjects) && a.coreProjects.length) {
+      coreProjectsText = `\n\nCore Strategic Projects:\n- ${a.coreProjects.map((s)=>String(s||'').trim()).filter(Boolean).join('\n- ')}`;
+    }
+  } catch {}
+
+  // Section: Action Plans by Department (all items)
+  let actionsText = '';
   try {
     const assignments = a.actionAssignments || {};
     const lines = [];
     Object.entries(assignments).forEach(([dept, arr]) => {
-      (arr || []).slice(0, 2).forEach((u) => {
+      const alines = (arr || []).map((u) => {
         const goal = String(u?.goal || '').trim();
-        if (!goal) return;
+        if (!goal) return '';
         const kpi = String(u?.kpi || '').trim();
+        const m = String(u?.milestone || '').trim();
+        const r = String(u?.resources || '').trim();
         const due = String(u?.dueWhen || '').trim();
         const owner = `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim();
-        const bits = [goal, owner && `Owner: ${owner}`, dept && `Dept: ${dept}`, kpi && `KPI: ${kpi}`, due && `Due: ${due}`].filter(Boolean);
-        if (bits.length) lines.push('- ' + bits.join(' | '));
-      });
+        const bits = [goal, owner && `Owner: ${owner}`, m && `Milestone: ${m}`, kpi && `KPI: ${kpi}`, r && `Resources: ${r}`, due && `Due: ${due}`].filter(Boolean);
+        return bits.length ? '  - ' + bits.join(' | ') : '';
+      }).filter(Boolean);
+      if (alines.length) {
+        lines.push(`- Department: ${dept}`);
+        lines.push(...alines);
+      }
     });
-    if (lines.length) parts.push(`Current action plans:\n${lines.join('\n')}`);
+    if (lines.length) actionsText = `\n\nAction Plans:\n${lines.join('\n')}`;
   } catch {}
-  const tail = parts.length ? `\n\nUser plan context:\n- ${parts.join('\n- ')}` : '';
-  return [base, tail].filter(Boolean).join('\n');
+
+  // Section: Team Members (active)
+  let teamText = '';
+  try {
+    const tm = Array.isArray(extras?.teamMembers) ? extras.teamMembers : [];
+    if (tm.length) {
+      const lines = tm.map((t) => {
+        const name = String(t?.name || '').trim();
+        const role = String(t?.role || '').trim();
+        const dept = String(t?.department || '').trim();
+        const email = String(t?.email || '').trim();
+        const bits = [name && `Name: ${name}`, role && `Role: ${role}`, dept && `Dept: ${dept}`, email && `Email: ${email}`].filter(Boolean);
+        return bits.length ? '- ' + bits.join(' | ') : '';
+      }).filter(Boolean);
+      teamText = `\n\nTeam Members (Active):\n${lines.join('\n')}`;
+    }
+  } catch {}
+
+  // Section: Departments
+  let departmentsText = '';
+  try {
+    const deps = Array.isArray(extras?.departments) ? extras.departments : [];
+    if (deps.length) {
+      const lines = deps.slice(0, 12).map((d) => {
+        const nm = String(d?.name || '').trim();
+        const st = String(d?.status || '').trim();
+        const due = String(d?.dueDate || '').trim();
+        const owner = String(d?.owner || '').trim();
+        const bits = [nm && `Dept: ${nm}`, owner && `Owner: ${owner}`, st && `Status: ${st}`, due && `Due: ${due}`].filter(Boolean);
+        return bits.length ? '- ' + bits.join(' | ') : '';
+      }).filter(Boolean);
+      if (lines.length) departmentsText = `\n\nDepartments:\n${lines.join('\n')}`;
+    }
+  } catch {}
+
+  // Section: Upcoming Deadlines (aggregated)
+  let deadlinesText = '';
+  try {
+    const parseDate = (s) => {
+      const t = String(s || '').trim();
+      if (!t) return null;
+      const d = new Date(t);
+      return isNaN(d.getTime()) ? null : d;
+    };
+    const items = [];
+    // From action assignments
+    try {
+      Object.entries(a.actionAssignments || {}).forEach(([dept, arr]) => {
+        (arr || []).forEach((u) => {
+          const d = parseDate(u?.dueWhen);
+          if (!d) return;
+          const goal = String(u?.goal || '').trim();
+          const owner = `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim();
+          items.push({ when: d, label: [goal, dept && `Dept: ${dept}`, owner && `Owner: ${owner}`].filter(Boolean).join(' | ') });
+        });
+      });
+    } catch {}
+    // From core project deliverables
+    try {
+      (Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : []).forEach((p) => {
+        (Array.isArray(p?.deliverables) ? p.deliverables : []).forEach((d) => {
+          const dt = parseDate(d?.dueWhen);
+          if (!dt) return;
+          const txt = String(d?.text || '').trim();
+          items.push({ when: dt, label: [p?.title && `Project: ${String(p.title).trim()}`, txt].filter(Boolean).join(' | ') });
+        });
+      });
+    } catch {}
+    items.sort((x, y) => x.when - y.when);
+    if (items.length) deadlinesText = `\n\nUpcoming Deadlines:\n- ${items.slice(0, 50).map((it) => `${it.when.toISOString().slice(0,10)} — ${it.label}`).join('\n- ')}`;
+  } catch {}
+
+  return [
+    profileText,
+    vvText,
+    marketText,
+    productsText,
+    orgText,
+    finText,
+    derivedText,
+    coreProjectsText,
+    actionsText,
+    teamText,
+    departmentsText,
+    deadlinesText,
+  ].filter(Boolean).join('\n');
 }
 
 exports.respond = async (req, res) => {
   try {
     const raw = req.body?.messages;
+    const wantDebug = (req?.query && String(req.query.debug||'') === '1') || (req.body && req.body.debug === true);
     const messages = Array.isArray(raw) ? raw : [];
     const userId = req.user?.id;
     const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
-    const contextText = buildContextText(ob);
+
+    // Derive simple, real user stats to ground AI responses
+    let stats = {};
+    try {
+      if (userId) {
+        let [me, teamMembersCount, teamMembers, departments] = await Promise.all([
+          User.findById(userId).lean().exec(),
+          TeamMember.countDocuments({ user: userId, status: 'Active' }).exec(),
+          TeamMember.find({ user: userId, status: 'Active' }).select('name email role department status').limit(200).lean().exec(),
+          Department.find({ user: userId }).select('name status owner dueDate').limit(50).lean().exec(),
+        ]);
+        const a = (ob && ob.answers) || {};
+        // Prefer orgPositions (Settings source of truth) over TeamMember collection
+        try {
+          const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+          if (org.length) {
+            const active = org.filter((p) => String(p?.status || 'Active').trim() === 'Active');
+            teamMembers = active.map((p) => ({
+              name: String(p?.name || '').trim(),
+              email: String(p?.email || '').trim(),
+              role: String(p?.position || '').trim(),
+              department: String(p?.department || '').trim(),
+              status: 'Active',
+            }));
+            teamMembersCount = teamMembers.length;
+          }
+        } catch {}
+        const coreProjectsCount = Array.isArray(a?.coreProjectDetails) && a.coreProjectDetails.length
+          ? a.coreProjectDetails.length
+          : (Array.isArray(a?.coreProjects) ? a.coreProjects.length : 0);
+        stats = { teamMembersCount, coreProjectsCount };
+        // Build context with expanded extras
+        const contextText = buildContextText(ob, stats, { teamMembers, departments, user: me });
+
+        // No regex intercepts — use tool-calling planner pattern below
+
+        // Optional: augment with internal business trainer snippets
+        let ragText = '';
+        try {
+          if (process.env.RAG_ENABLE !== 'false') {
+            const lastUser = messages.slice(-5).map((m)=>String(m?.content||'')).join(' \n ').slice(0, 500);
+            const seed = [contextText, lastUser].filter(Boolean).join(' \n ');
+            const results = await rag.retrieve(seed);
+            if (results && results.length) ragText = 'Additional guidance from Business Trainer (internal knowledge):\n' + results.map((r)=>r.text).join('\n\n---\n\n');
+          }
+        } catch {}
+        
+        const system = [
+          'You are Plangenie, a helpful business planning copilot.',
+          'Be concise, human, and specific. Avoid buzzwords.',
+          'Ground every answer in the provided business context and the conversation. Do not invent facts or numbers.',
+          'If a detail is missing from context, say what is missing and ask a concise follow-up question.',
+          'When giving recommendations, explicitly reference the business name and/or industry when known.',
+          'Treat any numeric counts in the context (e.g., Active Team Members) as the source of truth; do not contradict them.',
+          'Prefer concrete, prioritized bullet points tied to departments, projects, team members, KPIs, and upcoming deadlines from the context.',
+          'Do not provide generic templates or boilerplate. Keep advice specific to this business.',
+          'Never mention that you are an AI model.',
+          'Never output example or placeholder names; only use names enumerated in the context.',
+          'If team member names are not in context, do not guess; state that they are not provided.',
+        ].join(' ');
+
+        const safeMsgs = messages
+          .slice(-20)
+          .map((m) => ({
+            role: m?.role === 'assistant' ? 'assistant' : 'user',
+            content: String(m?.content ?? '').slice(0, 4000),
+          }));
+        // TOOL CALLING: Let the model decide which DB-backed tools to call, then answer with verified facts
+        const tools = [
+          { type: 'function', function: { name: 'get_user_profile', description: 'Get user profile (name, email, role).', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_business_profile', description: 'Get business profile (name, industry, location).', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_team_members_count', description: 'Get count of active team members.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_team_members', description: 'List active team members.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_departments_count', description: 'Get count of departments.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_departments', description: 'List departments.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 100 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_core_projects_count', description: 'Get count of core strategic projects.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_core_projects', description: 'List core strategic projects.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_deadlines', description: 'List upcoming deadlines.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 } }, additionalProperties: false } } },
+        ];
+
+        const aAns = (ob && ob.answers) || {};
+        const deadlineItems = () => {
+          const parseDate = (s) => { const d = new Date(String(s||'')); return isNaN(d.getTime()) ? null : d; };
+          const items = [];
+          try {
+            Object.entries(aAns.actionAssignments || {}).forEach(([dept, arr]) => {
+              (arr || []).forEach((u) => {
+                const d = parseDate(u?.dueWhen); if (!d) return;
+                const goal = String(u?.goal || '').trim();
+                const owner = `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim();
+                items.push({ when: d, label: [goal, dept && `Dept: ${dept}`, owner && `Owner: ${owner}`].filter(Boolean).join(' | ') });
+              });
+            });
+          } catch {}
+          try {
+            (Array.isArray(aAns.coreProjectDetails) ? aAns.coreProjectDetails : []).forEach((p) => {
+              (Array.isArray(p?.deliverables) ? p.deliverables : []).forEach((d) => {
+                const dt = parseDate(d?.dueWhen); if (!dt) return;
+                const txt = String(d?.text || '').trim();
+                items.push({ when: dt, label: [p?.title && `Project: ${String(p.title).trim()}`, txt].filter(Boolean).join(' | ') });
+              });
+            });
+          } catch {}
+          items.sort((x, y) => x.when - y.when);
+          return items;
+        };
+
+        const runTool = (name, args) => {
+          const limitNum = (v, def, max) => { const n = parseInt(v, 10); if (!Number.isFinite(n) || n <= 0) return def; return Math.min(n, max); };
+          switch (name) {
+            case 'get_user_profile': {
+              const full = [String(me?.firstName||'').trim(), String(me?.lastName||'').trim()].filter(Boolean).join(' ') || String(me?.fullName||'').trim();
+              return { name: full || undefined, email: me?.email || undefined, role: ob?.userProfile?.role || undefined };
+            }
+            case 'get_business_profile': { const bp = ob?.businessProfile || {}; return { name: bp.businessName || me?.companyName || undefined, industry: bp.industry || undefined, location: [bp.city, bp.country].filter(Boolean).join(', ') || undefined }; }
+            case 'get_team_members_count': return { count: teamMembersCount || 0 };
+            case 'get_team_members': { const limit = limitNum(args?.limit, 20, 200); return { list: (teamMembers || []).slice(0, limit).map((t)=>({ name: t?.name||'', role: t?.role||'', department: t?.department||'', email: t?.email||'' })) }; }
+            case 'get_departments_count': return { count: (departments || []).length };
+            case 'get_departments': { const limit = limitNum(args?.limit, 20, 100); return { list: (departments || []).slice(0, limit).map((d)=>({ name: d?.name||'', status: d?.status||'', owner: d?.owner||'', dueDate: d?.dueDate||'' })) }; }
+            case 'get_core_projects_count': { let count = 0; if (Array.isArray(aAns?.coreProjectDetails) && aAns.coreProjectDetails.length) count = aAns.coreProjectDetails.length; else if (Array.isArray(aAns?.coreProjects)) count = aAns.coreProjects.length; return { count }; }
+            case 'get_core_projects': { const limit = limitNum(args?.limit, 10, 50); const list = []; if (Array.isArray(aAns?.coreProjectDetails) && aAns.coreProjectDetails.length) { aAns.coreProjectDetails.forEach((p) => list.push({ title: String(p?.title||'').trim(), ownerName: p?.ownerName || '', dueWhen: p?.dueWhen || '', deliverables: Array.isArray(p?.deliverables) ? p.deliverables : [] })); } else if (Array.isArray(aAns?.coreProjects)) { aAns.coreProjects.forEach((t) => list.push({ title: String(t||'').trim() })); } return { list: list.slice(0, limit) }; }
+            case 'get_deadlines': { const limit = limitNum(args?.limit, 20, 200); return { list: deadlineItems().slice(0, limit).map((d)=>({ date: d.when.toISOString().slice(0,10), label: d.label })) }; }
+            default: return {};
+          }
+        };
+
+        let chatMessages = [
+          { role: 'system', content: system },
+          ...(contextText ? [{ role: 'system', content: contextText }] : []),
+          ...(ragText ? [{ role: 'system', content: ragText }] : []),
+          ...safeMsgs,
+        ];
+        const client = getOpenAI();
+        const toolTrace = [];
+        for (let i = 0; i < 3; i++) {
+          const resp = await client.chat.completions.create({ model: 'gpt-4o-mini', temperature: 0.2, max_tokens: 600, messages: chatMessages, tools, tool_choice: 'auto' });
+          const msg = resp.choices?.[0]?.message;
+          const toolCalls = msg?.tool_calls || [];
+          if (toolCalls.length === 0) {
+            const reply = String(msg?.content || '').trim() || 'I did not find an answer.';
+            return res.json({ reply, ...(wantDebug ? { _debug: { contextText, rag: Boolean(ragText), tools: toolTrace } } : {}) });
+          }
+          chatMessages.push({ role: 'assistant', content: msg?.content || '', tool_calls: toolCalls });
+          for (const tc of toolCalls) {
+            const name = tc?.function?.name || '';
+            const args = tryParseJSON(tc?.function?.arguments || '{}', {});
+            const out = runTool(name, args);
+            toolTrace.push({ name, args, out });
+            chatMessages.push({ role: 'tool', tool_call_id: tc?.id, content: JSON.stringify(out) });
+          }
+        }
+        const reply = 'I could not complete the tool-assisted response.';
+        return res.json({ reply, ...(wantDebug ? { _debug: { contextText, rag: Boolean(ragText), note: 'tool loop exhausted' } } : {}) });
+      }
+    } catch (_) {
+      // Non-fatal: if stats fail, continue without them
+    }
+    // If we couldn't gather expanded data (e.g., unauthenticated), fallback to minimal context
+    const contextText = buildContextText(ob, stats, {});
 
     const system = [
       'You are Plangenie, a helpful business planning copilot.',
       'Be concise, human, and specific. Avoid buzzwords.',
       'Use provided context if relevant; never contradict it.',
+      'When giving recommendations, explicitly reference the business name and/or industry when known.',
+      'Treat any numeric counts in the context (e.g., Active Team Members) as the source of truth; do not contradict them.',
+      'Prefer concrete, prioritized bullet points tied to departments, projects, team members, KPIs, and upcoming deadlines from the context.',
+      'Do not provide generic templates or boilerplate. Keep advice specific to this business.',
+      'Never mention that you are an AI model.',
+      'Never output example or placeholder names; only use names enumerated in the context.',
+      'If team member names are not in context, do not guess; state that they are not provided.',
     ].join(' ');
 
     const safeMsgs = messages
@@ -83,8 +604,8 @@ exports.respond = async (req, res) => {
     const client = getOpenAI();
     const resp = await client.chat.completions.create({
       model: 'gpt-4o-mini',
-      temperature: 0.6,
-      max_tokens: 400,
+      temperature: 0.2,
+      max_tokens: 500,
       messages: [
         { role: 'system', content: system },
         ...(contextText ? [{ role: 'system', content: contextText }] : []),
@@ -93,7 +614,7 @@ exports.respond = async (req, res) => {
     });
 
     const reply = String(resp.choices?.[0]?.message?.content || '').trim() || 'I did not find an answer.';
-    return res.json({ reply });
+    return res.json({ reply, ...(wantDebug ? { _debug: { contextText } } : {}) });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
       return res.status(500).json({ message: 'OpenAI API key not configured on server' });

@@ -191,11 +191,21 @@ exports.saveAllAnswers = async (req, res) => {
   const payload = req.body || {};
   const answers = payload.answers || payload; // allow raw payload
   if (!userId) {
-    // No auth: return ephemeral
-    // Compute derived forecasting fields if products present
-    try {
-      if (answers && Array.isArray(answers.products)) {
-        const nums = answers.products.map((p) => {
+    // No auth: return ephemeral; do NOT auto-link financials for Lite
+    return res.json({ answers });
+  }
+  const ob = await getOrCreate(userId);
+  ob.answers = { ...(ob.answers || {}), ...(answers || {}) };
+  // Auto-populate forecasting fields in DB when products are present (Premium only)
+  try {
+    const ent = require('../config/entitlements');
+    const user = await User.findById(userId).lean().exec();
+    const allowAuto = ent.hasFeature(user, 'financialAutoLinkage');
+    if (allowAuto) {
+      const a = ob.answers || {};
+      const list = Array.isArray(a.products) ? a.products : [];
+      if (list.length) {
+        const nums = list.map((p) => {
           const v = parseFloat(String(p?.monthlyVolume || '').replace(/[^0-9.]/g, '')) || 0;
           const price = parseFloat(String((p?.price ?? p?.pricing) || '').replace(/[^0-9.]/g, '')) || 0;
           const cost = parseFloat(String(p?.unitCost || '').replace(/[^0-9.]/g, '')) || 0;
@@ -208,36 +218,10 @@ exports.saveAllAnswers = async (req, res) => {
         const avgCost = totalW ? (sumCost / totalW) : 0;
         const avgPrice = totalW ? (sumPrice / totalW) : 0;
         const marginPct = avgPrice > 0 ? Math.max(0, Math.round(((avgPrice - avgCost) / avgPrice) * 100)) : 0;
-        if (totalVol > 0) answers.finSalesVolume = String(totalVol);
-        if (avgCost > 0) answers.finAvgUnitCost = String(Math.round(avgCost));
-        if (marginPct > 0) answers.finTargetProfitMarginPct = String(marginPct);
+        if (totalVol > 0) ob.answers.finSalesVolume = String(totalVol);
+        if (avgCost > 0) ob.answers.finAvgUnitCost = String(Math.round(avgCost));
+        if (marginPct > 0) ob.answers.finTargetProfitMarginPct = String(marginPct);
       }
-    } catch {}
-    return res.json({ answers });
-  }
-  const ob = await getOrCreate(userId);
-  ob.answers = { ...(ob.answers || {}), ...(answers || {}) };
-  // Auto-populate forecasting fields in DB when products are present
-  try {
-    const a = ob.answers || {};
-    const list = Array.isArray(a.products) ? a.products : [];
-    if (list.length) {
-      const nums = list.map((p) => {
-        const v = parseFloat(String(p?.monthlyVolume || '').replace(/[^0-9.]/g, '')) || 0;
-        const price = parseFloat(String((p?.price ?? p?.pricing) || '').replace(/[^0-9.]/g, '')) || 0;
-        const cost = parseFloat(String(p?.unitCost || '').replace(/[^0-9.]/g, '')) || 0;
-        return { v, price, cost };
-      });
-      const totalVol = nums.reduce((sum, r) => sum + (r.v || 0), 0);
-      const totalW = nums.reduce((sum, r) => sum + (r.v || 0), 0);
-      const sumPrice = nums.reduce((sum, r) => sum + ((r.price || 0) * (r.v || 0)), 0);
-      const sumCost = nums.reduce((sum, r) => sum + ((r.cost || 0) * (r.v || 0)), 0);
-      const avgCost = totalW ? (sumCost / totalW) : 0;
-      const avgPrice = totalW ? (sumPrice / totalW) : 0;
-      const marginPct = avgPrice > 0 ? Math.max(0, Math.round(((avgPrice - avgCost) / avgPrice) * 100)) : 0;
-      if (totalVol > 0) ob.answers.finSalesVolume = String(totalVol);
-      if (avgCost > 0) ob.answers.finAvgUnitCost = String(Math.round(avgCost));
-      if (marginPct > 0) ob.answers.finTargetProfitMarginPct = String(marginPct);
     }
   } catch {}
   await ob.save();

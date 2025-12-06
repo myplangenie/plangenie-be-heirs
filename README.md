@@ -3,6 +3,8 @@ PlanGenie Backend (Express + Mongoose)
 Overview
 - Express API with MongoDB (Mongoose) for auth and onboarding.
 - Mirrors the fields used in the current frontend forms.
+- Stripe-based monthly subscriptions with webhook handling.
+- In-code entitlements for plans: Lite (free) and Premium (paid).
 
 Getting Started
 1) Copy `.env.example` to `.env` and set values:
@@ -11,10 +13,13 @@ Getting Started
    - `CORS_ORIGINS` (comma-separated list, e.g., http://localhost:3000)
    - Storage (Cloudflare R2 – S3-compatible):
      - `R2_ENDPOINT` (e.g., https://<accountid>.r2.cloudflarestorage.com)
-     - `R2_BUCKET` (bucket name)
+     - `R2_BUCKET` (optional; defaults to `profile-pictures` for avatars)
      - `R2_ACCESS_KEY_ID`
      - `R2_SECRET_ACCESS_KEY`
-     - `R2_PUBLIC_BASE_URL` (public base URL for objects, e.g., https://cdn.example.com)
+     - `R2_PUBLIC_BASE_URL` (public base URL for user avatars)
+     - Optional business logos (if not set, defaults are used):
+       - `R2_LOGOS_BUCKET` (defaults to `business-logos`)
+       - `R2_LOGOS_PUBLIC_BASE_URL` (defaults to `https://logos.plangenie.com`)
 2) Install deps and run:
    - npm install
    - npm run dev
@@ -36,18 +41,42 @@ Auth
 
 - POST `/api/auth/login`
   - body: `{ email, password }`
-  - returns: `{ token, user }`
+  - returns: `{ token, user, nextRoute, plan: { slug: 'lite'|'premium', name } }`
 
 - GET `/api/auth/me`
   - headers: `Authorization: Bearer <token>`
-  - returns: `{ user }`
+  - returns: `{ user, nextRoute, plan: { slug: 'lite'|'premium', name } }`
 
 User
 - POST `/api/user/avatar`
   - headers: `Authorization: Bearer <token>`
   - body: `{ dataUrl: string }` where `dataUrl` is a data URI for an image (png/jpeg/webp)
-  - uploads to R2 and saves `avatarUrl` on user
+  - uploads to R2 bucket root with filename `<timestamp>.<ext>` and saves `avatarUrl` on user
   - returns: `{ ok: true, url, user }`
+
+Subscriptions
+- POST `/api/subscriptions/checkout`
+  - headers: `Authorization: Bearer <token>`
+  - creates a Stripe Checkout Session for a monthly plan; returns `{ url, sessionId }`
+- POST `/api/subscriptions/portal`
+  - headers: `Authorization: Bearer <token>`
+  - returns a Stripe Billing Portal URL: `{ url }`
+- POST `/api/subscriptions/cancel`
+  - headers: `Authorization: Bearer <token>`
+  - requests cancellation at period end: `{ ok: true, cancelAtPeriodEnd: true }`
+- GET `/api/subscriptions/me`
+  - headers: `Authorization: Bearer <token>`
+  - returns `{ user: { id, hasActiveSubscription }, subscription }`
+- POST `/api/subscriptions/webhook` (Stripe)
+  - consumes raw JSON body for signature verification (configured in `src/app.js`).
+  - handles: `checkout.session.completed`, `checkout.session.expired`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated/deleted`
+
+Models
+- Subscription
+  - One per user; tracks `status`, Stripe IDs, period start/end, `cancelAtPeriodEnd`.
+- SubscriptionHistory
+  - Immutable log of events: `initialized`, `completed`, `canceled`, `payment_failed`, `activated`, `deactivated`, `updated`, `portal_opened`, `cancellation_requested`.
+  - Helps audit how users attempt to subscribe.
 
 Onboarding
 All onboarding endpoints require auth header: `Authorization: Bearer <token>`
@@ -66,6 +95,20 @@ All onboarding endpoints require auth header: `Authorization: Bearer <token>`
 - POST `/api/onboarding/vision`
   - body: `{ ubp? }` – Unique Business Proposition text
 
+Dashboard
+- GET `/api/dashboard/plan`
+  - returns `{ plan: { sections: Array<{ sid, name, complete }>, companyLogoUrl: string } }`
+- POST `/api/dashboard/logo`
+  - headers: `Authorization: Bearer <token>`
+  - body: `{ dataUrl: string }` (data URI: png/jpeg/webp up to 8MB)
+  - uploads to the business logos bucket root with filename `<timestamp>.<ext>` and saves `companyLogoUrl` on the user's Plan
+  - returns: `{ ok: true, url, plan }`
+- GET `/api/dashboard/plan/export/pdf`
+  - headers: `Authorization: Bearer <token>`
+  - Generates a properly formatted PDF via Puppeteer using an EJS template (first page shows Business Name and Logo).
+  - Optional query: `?refreshProse=1` to regenerate narrative sections before export.
+  - streams `application/pdf` with `Content-Disposition: attachment`
+
 Models
 - User
   - `fullName, firstName, lastName, companyName, avatarUrl, email (unique), password (hashed)`
@@ -80,3 +123,12 @@ Models
 Notes
 - CORS is controlled via `CORS_ORIGINS`. Add your frontend origin (e.g., http://localhost:3000).
 - Passwords are hashed (bcryptjs). JWT tokens expire in 7 days.
+- Stripe setup: set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, and `STRIPE_WEBHOOK_SECRET` in `.env`.
+  - Configure your Stripe webhook to POST to `/api/subscriptions/webhook`.
+  - `APP_WEB_URL` is used for success/cancel URLs and billing portal return URL.
+
+Plans and Entitlements
+- Plan slugs: `lite` (free), `premium` (paid).
+- Lite removes: Financials (all endpoints), AI competitor discovery, AI customer analysis, AI-generated action plans, automatic financial linkage from Products/Services, departmental action plans, My Plan editing (view-only), multi-user collaboration.
+- Lite limits: maxGoals=3, maxCoreProjects=3.
+- Effective plan is derived from `user.hasActiveSubscription` and enforced via middleware in `src/middleware/plan.js` and config in `src/config/entitlements.js`.

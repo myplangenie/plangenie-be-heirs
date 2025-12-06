@@ -1,0 +1,190 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title><%= title %></title>
+  <style>
+    @page { size: A4; margin: 22mm 18mm; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif; color: #111; }
+    h1 { font-size: 28px; margin: 0 0 8px; color: #0E2B50; }
+    h2 { font-size: 20px; margin: 24px 0 12px; color: #0E2B50; }
+    h3 { font-size: 16px; margin: 16px 0 8px; color: #173B6D; }
+    p { line-height: 1.5; margin: 8px 0; }
+    ul { margin: 6px 0 6px 18px; }
+    li { margin: 4px 0; }
+    .cover { page-break-after: always; height: calc(100vh - 44mm); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    .cover .logo { margin-top: 16px; }
+    .meta { margin-top: 12px; color: #555; font-size: 12px; }
+    .box { border: 1px solid #EAEAEA; border-radius: 10px; background: #fff; padding: 12px; margin: 8px 0; }
+    .label { font-weight: 700; color: #173B6D; margin-bottom: 6px; }
+    .table { width: 100%; border-collapse: collapse; }
+    .table th, .table td { border: 1px solid #EAEAEA; padding: 8px; text-align: left; }
+    .muted { color: #666; }
+    .section { break-inside: avoid; page-break-inside: avoid; }
+  </style>
+</head>
+<body>
+  <!-- Cover Page -->
+  <div class="cover">
+    <h1><%= businessName || 'Business Plan' %></h1>
+    <% if (logoUrl) { %>
+      <div class="logo">
+        <img src="<%= logoUrl %>" alt="Logo" style="max-height: 90px; max-width: 360px; object-fit: contain;" />
+      </div>
+    <% } %>
+    <div class="meta">
+      <div>Prepared for: <%= businessName || '—' %></div>
+      <div>Date: <%= new Date().toLocaleDateString() %></div>
+      <% if (preparedBy) { %><div>Prepared by: <%= preparedBy %></div><% } %>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="section">
+    <h2>Unique Business Proposition (UBP)</h2>
+    <div class="box"><%= ubp || '—' %></div>
+  </div>
+
+  <div class="section">
+    <h2>Purpose Statement</h2>
+    <div class="box"><%= purpose || '—' %></div>
+  </div>
+
+  <div class="section">
+    <h2>1‑Year Goals</h2>
+    <% if ((oneYearGoals || []).length) { %>
+      <div class="box">
+        <ul>
+          <% oneYearGoals.forEach(function(g){ %>
+            <li><%= g %></li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } else { %>
+      <div class="box muted">—</div>
+    <% } %>
+  </div>
+
+  <div class="section">
+    <h2>3‑Year Goals</h2>
+    <% if ((threeYearGoals || []).length) { %>
+      <div class="box">
+        <ul>
+          <% threeYearGoals.forEach(function(g){ %>
+            <li><%= g %></li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } else { %>
+      <div class="box muted">—</div>
+    <% } %>
+  </div>
+
+  <div class="section">
+    <h2>Values and Culture</h2>
+    <div class="box">
+      <div class="label">Core Values</div>
+      <div><%= valuesCore || '—' %></div>
+    </div>
+    <div class="box">
+      <div class="label">Culture and Behaviors</div>
+      <div><%= valuesCulture || '—' %></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Market and Opportunity Study</h2>
+    <div class="box">
+      <div class="label">Ideal Customer Profile</div>
+      <div><%= marketCustomer || '—' %></div>
+    </div>
+    <div class="box">
+      <div class="label">Partners and Ecosystem</div>
+      <div><%= marketPartners || '—' %></div>
+    </div>
+    <div class="box">
+      <div class="label">Competitors and Positioning</div>
+      <div><%= marketCompetitors || '—' %></div>
+    </div>
+    <% if ((competitorNames||[]).length) { %>
+      <div class="box">
+        <div class="label">Competitor Names</div>
+        <ul>
+          <% competitorNames.forEach(function(n){ %>
+            <li><%= n %></li>
+          <% }) %>
+        </ul>
+      </div>
+    <% } %>
+  </div>
+
+  <div class="section">
+    <h2>Products and Services</h2>
+    <div class="box">
+      <table class="table">
+        <thead><tr><th>Product/Service</th><th>Description</th><th>Unit Cost</th><th>Price</th><th>Monthly Volume</th></tr></thead>
+        <tbody>
+          <% if ((products||[]).length) { %>
+            <% products.forEach(function(p){ %>
+              <tr>
+                <td><%= p.product || '—' %></td>
+                <td><%= p.description || '—' %></td>
+                <td><%= p.unitCost || p.pricing || '—' %></td>
+                <td><%= p.price || p.pricing || '—' %></td>
+                <td><%= p.monthlyVolume || '—' %></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+              <tr><td colspan="5" class="muted">—</td></tr>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Organizational Structure</h2>
+    <div class="box">
+      <% if ((org||[]).length) { %>
+        <ul>
+          <% org.forEach(function(n){ %>
+            <li><%= (n.name || '—') %> — <%= (n.position || '') %><%= n.department ? ' ('+n.department+')' : '' %></li>
+          <% }) %>
+        </ul>
+      <% } else { %>
+        <span class="muted">—</span>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Financial Forecasting Inputs</h2>
+    <div class="box"><div class="label">Projected Monthly Sales Volume</div><div><%= fin.salesVolume || '—' %></div></div>
+    <div class="box"><div class="label">Monthly Sales Growth (%)</div><div><%= fin.salesGrowthPct || '—' %></div></div>
+    <div class="box"><div class="label">Average Unit Cost</div><div><%= fin.avgUnitCost || '—' %></div></div>
+    <div class="box"><div class="label">Fixed Operating Costs</div><div><%= fin.fixedOperatingCosts || '—' %></div></div>
+    <div class="box"><div class="label">Marketing and Sales Spend</div><div><%= fin.marketingSalesSpend || '—' %></div></div>
+    <div class="box"><div class="label">Payroll Cost</div><div><%= fin.payrollCost || '—' %></div></div>
+    <div class="box"><div class="label">Starting Cash</div><div><%= fin.startingCash || '—' %></div></div>
+    <div class="box"><div class="label">Additional Funding Amount</div><div><%= fin.additionalFundingAmount || '—' %></div></div>
+    <div class="box"><div class="label">Additional Funding Month</div><div><%= fin.additionalFundingMonth || '—' %></div></div>
+    <div class="box"><div class="label">Payment Collection Days</div><div><%= fin.paymentCollectionDays || '—' %></div></div>
+    <div class="box"><div class="label">Target Profit Margin (%)</div><div><%= fin.targetProfitMarginPct || '—' %></div></div>
+  </div>
+
+  <% if (prose && (prose.marketStatement || prose.financialStatement)) { %>
+    <div class="section">
+      <h2>Market & Financial Narrative</h2>
+      <% if (prose.marketStatement) { %>
+        <div class="box"><div class="label">Market and Opportunity Study</div><div><%- prose.marketStatement %></div></div>
+      <% } %>
+      <% if (prose.financialStatement) { %>
+        <div class="box"><div class="label">Financial Section</div><div><%- prose.financialStatement %></div></div>
+      <% } %>
+    </div>
+  <% } %>
+
+</body>
+</html>
+

@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { Resend } = require('resend');
 const User = require('../models/User');
+const { effectivePlan, plans } = require('../config/entitlements');
 
 function signToken(userId) {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -120,7 +121,9 @@ exports.login = async (req, res) => {
   const nextRoute = !safe.onboardingDone
     ? '/onboarding'
     : (!safe.onboardingDetailCompleted ? '/onboarding-detail' : '/dashboard');
-  return res.json({ token, user: safe, nextRoute });
+  const planSlug = effectivePlan(user);
+  const planName = plans[planSlug]?.name || planSlug;
+  return res.json({ token, user: safe, nextRoute, plan: { slug: planSlug, name: planName } });
 };
 
 exports.me = async (req, res) => {
@@ -131,7 +134,9 @@ exports.me = async (req, res) => {
   const nextRoute = !safe.onboardingDone
     ? '/onboarding'
     : (!safe.onboardingDetailCompleted ? '/onboarding-detail' : '/dashboard');
-  return res.json({ user: safe, nextRoute });
+  const planSlug = effectivePlan(user);
+  const planName = plans[planSlug]?.name || planSlug;
+  return res.json({ user: safe, nextRoute, plan: { slug: planSlug, name: planName } });
 };
 
 exports.markOnboarded = async (req, res) => {

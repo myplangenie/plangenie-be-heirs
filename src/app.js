@@ -2,8 +2,12 @@ const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 const errorHandler = require('./middleware/errorHandler');
+const subscriptionCtrl = require('./controllers/subscription.controller');
 
 const app = express();
+
+// Webhook (Stripe) must use raw body for signature verification; mount BEFORE json parser
+app.post('/api/subscriptions/webhook', express.raw({ type: 'application/json' }), subscriptionCtrl.webhook);
 
 // Middleware
 // Increase JSON limit to allow base64 image payloads for avatar upload
@@ -63,6 +67,8 @@ app.use('/api/misc', require('./routes/misc.routes'));
 app.use('/api/dashboard', require('./routes/dashboard.routes'));
 app.use('/api/user', require('./routes/user.routes'));
 app.use('/api/collab', require('./routes/collab.routes'));
+// Subscriptions
+app.use('/api/subscriptions', require('./routes/subscription.routes'));
 // Optional integrations
 app.use('/api/gamma', require('./routes/gamma.routes'));
 // Chat
