@@ -104,7 +104,8 @@ router.post('/actions/resources/suggest', auth(false), requireFeature('aiActionP
 router.post('/actions/resources/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionResources);
 router.post('/actions/kpi/suggest', auth(false), requireFeature('aiActionPlans'), ai.suggestActionKpi);
 router.post('/actions/kpi/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionKpi);
-router.post('/actions/due/suggest', auth(false), requireFeature('aiActionPlans'), ai.suggestActionDue);
+// Allow Lite users to suggest due dates for core project details
+router.post('/actions/due/suggest', auth(false), ai.suggestActionDue);
 router.post('/actions/due/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionDue);
 // Cost + suggest-all
 router.post('/actions/cost/suggest', auth(false), requireFeature('aiActionPlans'), ai.suggestActionCost);
@@ -115,7 +116,8 @@ router.post('/actions/core/deliverables', auth(false), requireFeature('aiCorePro
 // Core Strategic Project (full) suggestion
 router.post('/actions/core/project/suggest', auth(false), requireFeature('aiCoreProjects'), ai.suggestCoreProject);
 // Bulk goals per department/section
-router.post('/actions/sections/goals', auth(false), requireFeature('aiActionPlans'), ai.suggestDeptGoalsBulk);
+// Allow Lite users to generate section goals used by core projects workflows
+router.post('/actions/sections/goals', auth(false), ai.suggestDeptGoalsBulk);
 router.post('/financial/forecast/rewrite', auth(false), requireFeature('financials'), ai.rewriteFinancialForecast);
 
 // Save/load all onboarding answers (optional server persistence)
