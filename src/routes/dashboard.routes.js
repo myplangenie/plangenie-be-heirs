@@ -54,7 +54,8 @@ router.post('/plan/sections',  requireFeature('planEdit'), ctrl.addPlanSection);
 router.delete('/plan/sections/:sid',  requireFeature('planEdit'), ctrl.deletePlanSection);
 // Compiled Plan (Customizable Plan Builder)
 // Allow access during onboarding-detail builder before final completion
-router.post('/plan/compiled', requireFeature('planEdit'), ctrl.saveCompiledPlan);
+// Lite users must be able to save Core Strategic Projects and Details; controller enforces fine-grained limits
+router.post('/plan/compiled', ctrl.saveCompiledPlan);
 router.get('/plan/compiled', ctrl.getCompiledPlan);
 // Plan Prose (AI-generated narrative sections)
 router.get('/plan/prose', ctrl.getPlanProse);
