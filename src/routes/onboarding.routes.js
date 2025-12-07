@@ -102,7 +102,8 @@ router.post('/actions/milestone/suggest', auth(false), requireFeature('aiActionP
 router.post('/actions/milestone/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionMilestone);
 router.post('/actions/resources/suggest', auth(false), requireFeature('aiActionPlans'), ai.suggestActionResources);
 router.post('/actions/resources/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionResources);
-router.post('/actions/kpi/suggest', auth(false), requireFeature('aiActionPlans'), ai.suggestActionKpi);
+// Allow Lite users to generate KPI suggestions
+router.post('/actions/kpi/suggest', auth(false), ai.suggestActionKpi);
 router.post('/actions/kpi/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionKpi);
 // Allow Lite users to suggest due dates for core project details
 router.post('/actions/due/suggest', auth(false), ai.suggestActionDue);
@@ -110,7 +111,8 @@ router.post('/actions/due/rewrite', auth(false), requireFeature('aiActionPlans')
 // Cost + suggest-all
 router.post('/actions/cost/suggest', auth(false), requireFeature('aiActionPlans'), ai.suggestActionCost);
 router.post('/actions/cost/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionCost);
-router.post('/actions/suggest-all', auth(false), requireFeature('aiActionPlans'), ai.suggestActionAll);
+// Allow Lite users to use the bulk suggest-all for action plan fields
+router.post('/actions/suggest-all', auth(false), ai.suggestActionAll);
 // Core Strategic Projects deliverables
 router.post('/actions/core/deliverables', auth(false), requireFeature('aiCoreProjects'), ai.suggestCoreDeliverables);
 // Core Strategic Project (full) suggestion
