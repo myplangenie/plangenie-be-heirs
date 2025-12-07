@@ -196,7 +196,7 @@ exports.saveAllAnswers = async (req, res) => {
   }
   const ob = await getOrCreate(userId);
   ob.answers = { ...(ob.answers || {}), ...(answers || {}) };
-  // Auto-populate forecasting fields in DB when products are present (Premium only)
+  // Auto-populate forecasting fields in DB when products are present (Pro only)
   try {
     const ent = require('../config/entitlements');
     const user = await User.findById(userId).lean().exec();

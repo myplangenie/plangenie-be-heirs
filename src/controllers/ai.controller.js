@@ -47,7 +47,7 @@ function buildAnswersContext(ob) {
     const lines = [];
     if (a.ubp) lines.push(`UBP: ${String(a.ubp).trim()}`);
     if (a.purpose) lines.push(`Purpose: ${String(a.purpose).trim()}`);
-    if (a.visionBhag) lines.push(`Long-term Vision (BHAG): ${String(a.visionBhag).trim()}`);
+    if (a.visionBhag) lines.push(`Long-Term Strategic Vision (BHAG): ${String(a.visionBhag).trim()}`);
     if (a.vision1y) lines.push(`1-Year Goals: ${(String(a.vision1y).trim().split('\n').filter(Boolean).join('; '))}`);
     if (a.vision3y) lines.push(`3-Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
     if (a.valuesCore) lines.push(`Core Values: ${String(a.valuesCore).trim()}`);
@@ -1935,7 +1935,7 @@ exports.suggestVisionBhag = async (req, res) => {
     const { input } = req.body || {};
     const userId = req.user?.id;
     const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
-    const suggestions = await callOpenAIList({ type: 'Long-term vision (BHAG)', input, contextText, n: 3 });
+    const suggestions = await callOpenAIList({ type: 'Long-Term Strategic Vision (BHAG)', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1951,7 +1951,7 @@ exports.rewriteVisionBhag = async (req, res) => {
     const { text } = req.body || {};
     const userId = req.user?.id;
     const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
-    const rewrite = await callOpenAIRewrite({ type: 'Long-term vision (BHAG)', text, contextText });
+    const rewrite = await callOpenAIRewrite({ type: 'Long-Term Strategic Vision (BHAG)', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {

@@ -55,11 +55,11 @@
     <h2>1‑Year Goals</h2>
     <% if ((oneYearGoals || []).length) { %>
       <div class="box">
-        <ul>
-          <% oneYearGoals.forEach(function(g){ %>
+        <ol>
+          <% oneYearGoals.forEach(function(g, i){ %>
             <li><%= g %></li>
           <% }) %>
-        </ul>
+        </ol>
       </div>
     <% } else { %>
       <div class="box muted">—</div>
@@ -70,11 +70,11 @@
     <h2>3‑Year Goals</h2>
     <% if ((threeYearGoals || []).length) { %>
       <div class="box">
-        <ul>
-          <% threeYearGoals.forEach(function(g){ %>
+        <ol>
+          <% threeYearGoals.forEach(function(g, i){ %>
             <li><%= g %></li>
           <% }) %>
-        </ul>
+        </ol>
       </div>
     <% } else { %>
       <div class="box muted">—</div>
@@ -187,4 +187,3 @@
 
 </body>
 </html>
-

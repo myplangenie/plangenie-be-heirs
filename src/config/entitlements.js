@@ -7,6 +7,9 @@ const plans = {
       financials: false,
       aiCompetitors: false,
       aiCustomerAnalysis: false,
+      // Allow AI for Core Strategic Projects in Lite
+      aiCoreProjects: true,
+      // Departmental action-plan AI remains off for Lite
       aiActionPlans: false,
       financialAutoLinkage: false,
       orgChartImage: false,
@@ -20,12 +23,13 @@ const plans = {
       maxCoreProjects: 3,
     },
   },
-  premium: {
-    name: 'Premium',
+  pro: {
+    name: 'Pro',
     features: {
       financials: true,
       aiCompetitors: true,
       aiCustomerAnalysis: true,
+      aiCoreProjects: true,
       aiActionPlans: true,
       financialAutoLinkage: true,
       orgChartImage: true,
@@ -42,7 +46,7 @@ const plans = {
 };
 
 function effectivePlan(user) {
-  if (user && user.hasActiveSubscription) return 'premium';
+  if (user && user.hasActiveSubscription) return 'pro';
   return 'lite';
 }
 

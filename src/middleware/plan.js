@@ -8,9 +8,9 @@ async function loadUser(req) {
 }
 
 function upgradeRequiredRes(res, feature, planSlug) {
-  const upgradeTo = 'premium';
+  const upgradeTo = 'pro';
   const planName = plans[planSlug]?.name || planSlug;
-  return res.status(402).json({ code: 'UPGRADE_REQUIRED', message: 'This feature requires Premium', feature, plan: planSlug, planName, upgradeTo });
+  return res.status(402).json({ code: 'UPGRADE_REQUIRED', message: 'This feature requires Plan Genie Pro', feature, plan: planSlug, planName, upgradeTo });
 }
 
 function requireFeature(feature) {
@@ -31,7 +31,7 @@ function enforceLimit(limitKey, getCount) {
     try {
       const count = await Promise.resolve(getCount(req));
       if (typeof count === 'number' && count > limit) {
-        return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: `Limit exceeded for ${limitKey}`, plan, limit, limitKey, upgradeTo: 'premium' });
+        return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: `Limit exceeded for ${limitKey}`, plan, limit, limitKey, upgradeTo: 'pro' });
       }
       return next();
     } catch (err) {
@@ -41,4 +41,3 @@ function enforceLimit(limitKey, getCount) {
 }
 
 module.exports = { requireFeature, enforceLimit };
-

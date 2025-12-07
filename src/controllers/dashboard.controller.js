@@ -306,7 +306,12 @@ exports.getSummary = async (req, res, next) => {
       snapshot: { vision, ubp, purpose },
       team: teamList,
     };
-    return res.json({ summary });
+    // Compute readiness: Core Strategic Projects presence
+    const coreProjectDetails = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
+    const coreProjectsFlat = Array.isArray(a.coreProjects) ? a.coreProjects.filter((s)=> String(s||'').trim()) : [];
+    const coreProjectsCount = coreProjectDetails.length || coreProjectsFlat.length || 0;
+    const coreProjectsExist = coreProjectsCount > 0;
+    return res.json({ summary, coreProjects: { exists: coreProjectsExist, count: coreProjectsCount } });
   } catch (err) {
     next(err);
   }
@@ -553,7 +558,7 @@ exports.updateStrategyCanvas = async (req, res, next) => {
     if (Array.isArray(patch.goals)) {
       const limit = ent.getLimit(user, 'maxGoals');
       if (limit && patch.goals.length > limit) {
-        return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 goals', plan: ent.effectivePlan(user), limit, limitKey: 'maxGoals', upgradeTo: 'premium' });
+        return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 goals', plan: ent.effectivePlan(user), limit, limitKey: 'maxGoals', upgradeTo: 'pro' });
       }
       const gg = patch.goals.map((g) => ({ goal: String(g || '') })).filter((g) => g.goal);
       // Persist under a neutral bucket to avoid losing department context; keep existing if empty
@@ -646,7 +651,7 @@ exports.saveCompiledPlan = async (req, res, next) => {
       const v = cp.coreProjects.map((s) => String(s || '')).filter((s) => s && s.trim());
       const limit = ent.getLimit(user, 'maxCoreProjects');
       if (limit && v.length > limit) {
-        return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 core projects', plan, limit, limitKey: 'maxCoreProjects', upgradeTo: 'premium' });
+        return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 core projects', plan, limit, limitKey: 'maxCoreProjects', upgradeTo: 'pro' });
       }
       a.coreProjects = v;
     }
@@ -673,7 +678,7 @@ exports.saveCompiledPlan = async (req, res, next) => {
 })).filter((p) => p.title || (p.deliverables && p.deliverables.length));
         const limit = ent.getLimit(user, 'maxCoreProjects');
         if (limit && all.length > limit) {
-          return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 core projects', plan, limit, limitKey: 'maxCoreProjects', upgradeTo: 'premium' });
+          return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 core projects', plan, limit, limitKey: 'maxCoreProjects', upgradeTo: 'pro' });
         }
         a.coreProjectDetails = all;
       } catch (_) {
@@ -683,7 +688,7 @@ exports.saveCompiledPlan = async (req, res, next) => {
     // Action plans (departmental)
     if (cp.actionPlans && typeof cp.actionPlans === 'object') {
       if (!require('../config/entitlements').hasFeature(user, 'departmentPlans')) {
-        return res.status(402).json({ code: 'UPGRADE_REQUIRED', message: 'Departmental plans are Premium', feature: 'departmentPlans', plan, upgradeTo: 'premium' });
+        return res.status(402).json({ code: 'UPGRADE_REQUIRED', message: 'This feature requires Plan Genie Pro', feature: 'departmentPlans', plan, upgradeTo: 'pro' });
       }
       const norm = {};
       const deriveStatus = (prog) => {

@@ -111,9 +111,9 @@ router.post('/actions/cost/suggest', auth(false), requireFeature('aiActionPlans'
 router.post('/actions/cost/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionCost);
 router.post('/actions/suggest-all', auth(false), requireFeature('aiActionPlans'), ai.suggestActionAll);
 // Core Strategic Projects deliverables
-router.post('/actions/core/deliverables', auth(false), requireFeature('aiActionPlans'), ai.suggestCoreDeliverables);
+router.post('/actions/core/deliverables', auth(false), requireFeature('aiCoreProjects'), ai.suggestCoreDeliverables);
 // Core Strategic Project (full) suggestion
-router.post('/actions/core/project/suggest', auth(false), requireFeature('aiActionPlans'), ai.suggestCoreProject);
+router.post('/actions/core/project/suggest', auth(false), requireFeature('aiCoreProjects'), ai.suggestCoreProject);
 // Bulk goals per department/section
 router.post('/actions/sections/goals', auth(false), requireFeature('aiActionPlans'), ai.suggestDeptGoalsBulk);
 router.post('/financial/forecast/rewrite', auth(false), requireFeature('financials'), ai.rewriteFinancialForecast);
