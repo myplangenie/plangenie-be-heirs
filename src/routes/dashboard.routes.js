@@ -16,7 +16,8 @@ router.get('/summary',  ctrl.getSummary);
 router.get('/insights',  ctrl.getInsights);
 router.post('/insights/generate',  requireFeature('aiActionPlans'), ctrl.generateInsights);
 router.get('/strategy-canvas',  ctrl.getStrategyCanvas);
-router.patch('/strategy-canvas',  requireFeature('planEdit'), ctrl.updateStrategyCanvas);
+// Allow Lite users to edit Strategy Canvas (UBP, Purpose, 1y/3y, Summary)
+router.patch('/strategy-canvas',  ctrl.updateStrategyCanvas);
 
 // Notifications
 router.get('/notifications',  ctrl.getNotifications);
