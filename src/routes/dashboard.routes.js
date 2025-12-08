@@ -60,7 +60,8 @@ router.post('/plan/compiled', ctrl.saveCompiledPlan);
 router.get('/plan/compiled', ctrl.getCompiledPlan);
 // Plan Prose (AI-generated narrative sections)
 router.get('/plan/prose', ctrl.getPlanProse);
-router.post('/plan/prose/generate', requireFeature('planEdit'), ctrl.generatePlanProse);
+// Allow Lite users to generate Market/Financial prose for the plan
+router.post('/plan/prose/generate', ctrl.generatePlanProse);
 
 // Settings
 router.get('/settings',  ctrl.getSettings);
