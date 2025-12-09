@@ -9,8 +9,9 @@ router.post('/checkout', auth(true), ctrl.createCheckoutSession);
 router.post('/portal', auth(true), ctrl.createPortalSession);
 router.post('/cancel', auth(true), ctrl.cancelSubscription);
 router.get('/me', auth(true), ctrl.getMySubscription);
+// Promo code validation
+router.post('/promo/validate', auth(true), ctrl.validatePromoCode);
 
 // Note: webhook is mounted in app.js with express.raw body parser
 
 module.exports = router;
-

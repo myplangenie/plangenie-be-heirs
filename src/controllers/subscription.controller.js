@@ -33,9 +33,61 @@ async function ensureSubscriptionForUser(user, opts = {}) {
 
 exports.createCheckoutSession = async (req, res) => {
   try {
+    const appWebUrl = (() => {
+      try {
+        const xfProto = req.headers['x-forwarded-proto'];
+        const xfHost = req.headers['x-forwarded-host'];
+        const host = req.headers['host'];
+        const origin = req.headers['origin'];
+        const proto = Array.isArray(xfProto) ? xfProto[0] : (xfProto || req.protocol || 'https');
+        const h = Array.isArray(xfHost) ? xfHost[0] : (xfHost || host);
+        if (proto && h) return `${proto}://${h}`;
+        if (origin) return origin;
+      } catch (_) {}
+      return process.env.APP_WEB_URL || 'http://localhost:3000';
+    })();
+    const interval = (req.body && req.body.interval) || 'month';
+    const requestedPromo = String(req.body?.promoCode || '').trim();
+
+    // Bypass Stripe flow for testing when a configured promo code is used.
+    const isProd = (process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production');
+    const defaultBypass = isProd ? '' : 'PG-BYPASS-100';
+    const bypassList = (process.env.BYPASS_PROMO_CODES || defaultBypass)
+      .split(',')
+      .map((s) => String(s || '').trim().toLowerCase())
+      .filter(Boolean);
+
+    if (requestedPromo && bypassList.includes(requestedPromo.toLowerCase())) {
+      const user = await User.findById(req.user.id);
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      const sub = await ensureSubscriptionForUser(user);
+      // Simulate activation
+      sub.status = 'active';
+      sub.planType = 'Pro';
+      sub.amountCents = 0;
+      const now = new Date();
+      sub.currentPeriodStart = now;
+      const addDays = interval === 'year' ? 365 : 30;
+      sub.currentPeriodEnd = new Date(now.getTime() + addDays * 24 * 60 * 60 * 1000);
+      sub.renewalDate = sub.currentPeriodEnd;
+      await sub.save();
+      user.hasActiveSubscription = true;
+      await user.save();
+      await SubscriptionHistory.create({
+        user: user._id,
+        subscription: sub._id,
+        event: 'activated',
+        reason: 'bypass_code',
+        meta: { promoCode: requestedPromo },
+      });
+      // Send user to billing return success which handles redirect to next
+      const successUrl = `${appWebUrl}/billing/return?status=success`;
+      return res.json({ url: successUrl });
+    }
+
+    // Normal Stripe flow
     const stripe = getStripe();
     const priceId = requireEnv('STRIPE_PRICE_ID');
-    const appWebUrl = process.env.APP_WEB_URL || 'http://localhost:3000';
 
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
@@ -56,6 +108,23 @@ exports.createCheckoutSession = async (req, res) => {
     // Ensure a subscription record exists
     const subscription = await ensureSubscriptionForUser(user);
 
+    // Optional promo code support
+    let discounts = undefined;
+    try {
+      const code = String(req.body?.promoCode || '').trim();
+      if (code) {
+        const list = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
+        const pc = list?.data?.[0];
+        if (!pc) {
+          return res.status(400).json({ message: 'Promo code is invalid' });
+        }
+        discounts = [{ promotion_code: pc.id }];
+      }
+    } catch (_e) {
+      // If Stripe errors on lookup, surface a consistent message
+      return res.status(400).json({ message: 'Promo code is invalid' });
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,
@@ -66,8 +135,10 @@ exports.createCheckoutSession = async (req, res) => {
         },
       ],
       allow_promotion_codes: true,
-      success_url: `${appWebUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appWebUrl}/billing/cancelled`,
+      // Apply validated promotion code if provided
+      discounts,
+      success_url: `${appWebUrl}/billing/return?status=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appWebUrl}/billing/return?status=cancelled`,
       metadata: {
         userId: String(user._id),
         subscriptionId: String(subscription._id),
@@ -120,6 +191,40 @@ exports.createPortalSession = async (req, res) => {
   } catch (err) {
     console.error('createPortalSession error', err);
     res.status(500).json({ message: 'Failed to create portal session' });
+  }
+};
+
+// Validate a promo code and return percent_off if applicable
+exports.validatePromoCode = async (req, res) => {
+  try {
+    const code = String(req.body?.code || '').trim();
+    if (!code) return res.status(400).json({ message: 'Promo code is invalid' });
+
+    // First: allow env-configured bypass codes (works without Stripe)
+    const isProd = (process.env.NODE_ENV === 'production' || process.env.APP_ENV === 'production');
+    const defaultBypass = isProd ? '' : 'PG-BYPASS-100';
+    const bypassList = (process.env.BYPASS_PROMO_CODES || defaultBypass)
+      .split(',')
+      .map((s) => String(s || '').trim().toLowerCase())
+      .filter(Boolean);
+    if (bypassList.includes(code.toLowerCase())) {
+      // Treat bypass codes as 100% discount for preview purposes
+      return res.json({ ok: true, code, percentOff: 100 });
+    }
+
+    // Otherwise, validate against Stripe promotion codes
+    const stripe = getStripe();
+    const list = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
+    const pc = list?.data?.[0];
+    if (!pc) return res.status(404).json({ message: 'Promo code is invalid' });
+    const coupon = pc.coupon;
+    if (!coupon || coupon.percent_off == null) {
+      return res.status(400).json({ message: 'Promo code is invalid' });
+    }
+    return res.json({ ok: true, code: pc.code, percentOff: coupon.percent_off });
+  } catch (e) {
+    console.error('validatePromoCode error', e);
+    return res.status(400).json({ message: 'Promo code is invalid' });
   }
 };
 
@@ -346,4 +451,3 @@ exports.webhook = async (req, res) => {
     res.status(500).json({ message: 'Webhook handler error' });
   }
 };
-
