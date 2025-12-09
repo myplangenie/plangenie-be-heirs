@@ -33,19 +33,8 @@ async function ensureSubscriptionForUser(user, opts = {}) {
 
 exports.createCheckoutSession = async (req, res) => {
   try {
-    const appWebUrl = (() => {
-      try {
-        const xfProto = req.headers['x-forwarded-proto'];
-        const xfHost = req.headers['x-forwarded-host'];
-        const host = req.headers['host'];
-        const origin = req.headers['origin'];
-        const proto = Array.isArray(xfProto) ? xfProto[0] : (xfProto || req.protocol || 'https');
-        const h = Array.isArray(xfHost) ? xfHost[0] : (xfHost || host);
-        if (proto && h) return `${proto}://${h}`;
-        if (origin) return origin;
-      } catch (_) {}
-      return process.env.APP_WEB_URL || 'http://localhost:3000';
-    })();
+    // Always prefer explicit app base URL from environment for billing return pages
+    const appWebUrl = process.env.APP_WEB_URL || 'http://localhost:3000';
     const interval = (req.body && req.body.interval) || 'month';
     const requestedPromo = String(req.body?.promoCode || '').trim();
 
