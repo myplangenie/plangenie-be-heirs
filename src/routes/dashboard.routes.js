@@ -34,6 +34,7 @@ router.patch('/action-assignments/item',  requireFeature('departmentPlans'), ctr
 
 // Financials
 router.get('/financials',  requireFeature('financials'), ctrl.getFinancials);
+router.get('/financials/insights', requireFeature('financials'), ctrl.getFinancialInsights);
 router.post('/financials/recalculate',  requireFeature('financials'), ctrl.recalculateFinancials);
 router.post('/financials/assumptions',  requireFeature('financials'), ctrl.saveFinancialAssumptions);
 router.post('/financials/insights',  requireFeature('financials'), ctrl.generateFinancialInsights);

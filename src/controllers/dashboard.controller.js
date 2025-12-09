@@ -203,6 +203,27 @@ async function ensureSeedPlan(userId) {
   return plan;
 }
 
+// Ensure each insight item is prefixed with its section title, e.g., "Finance: ..."
+// Avoid double-prefixing if the text already begins with the title and a colon
+function prefixSectionItems(sections = []) {
+  try {
+    return (sections || []).map((s) => {
+      const title = String(s?.title || '').trim();
+      const items = Array.isArray(s?.items)
+        ? s.items.map((it) => {
+            const t = String(it || '').trim();
+            if (!t || !title) return t;
+            const already = t.toLowerCase().startsWith(title.toLowerCase() + ':');
+            return already ? t : `${title}: ${t}`;
+          })
+        : [];
+      return { title, items };
+    });
+  } catch (_) {
+    return sections || [];
+  }
+}
+
 
 // GET /api/dashboard/summary
 exports.getSummary = async (req, res, next) => {
@@ -217,6 +238,14 @@ exports.getSummary = async (req, res, next) => {
     const oneYear = (a.vision1y || '').split('\n').map((s) => s.trim()).filter(Boolean);
     const threeYear = (a.vision3y || '').split('\n').map((s) => s.trim()).filter(Boolean);
     const vision = oneYear[0] || threeYear[0] || '';
+    // Long-term Strategic Vision (BHAG) with robust fallbacks
+    // Prefer explicit BHAG saved in answers; otherwise fall back to 3-year or 1-year goals
+    let bhag = String(a.visionBhag || '').trim();
+    if (!bhag) {
+      const threeJoined = (threeYear || []).join('\n').trim();
+      const oneJoined = (oneYear || []).join('\n').trim();
+      bhag = threeJoined || oneJoined || vision;
+    }
     const assignments = a.actionAssignments || {};
     const activePlans = Object.values(assignments || {})
       .flat()
@@ -303,7 +332,7 @@ exports.getSummary = async (req, res, next) => {
       activePlans,
       insights: savedInsights,
       insightSections: savedSections,
-      snapshot: { vision, ubp, purpose },
+      snapshot: { vision, ubp, purpose, bhag },
       team: teamList,
     };
     // Compute readiness: Core Strategic Projects presence
@@ -356,6 +385,7 @@ exports.generateFinancialInsights = async (req, res, next) => {
     const fundAmt = num(a.finAdditionalFundingAmount);
     const monthlyBurn = Math.max(costM1 - revenueM1, 0);
     const runway = monthlyBurn > 0 ? Math.round((startCash + fundAmt) / monthlyBurn) : null;
+    const nonce = (req.body && Object.prototype.hasOwnProperty.call(req.body, 'nonce')) ? String(req.body.nonce) : '';
     const contextText = [
       'Financial Context:',
       `Monthly units (initial): ${Math.round(units0)}`,
@@ -371,10 +401,47 @@ exports.generateFinancialInsights = async (req, res, next) => {
       `Additional Funding: ${Math.round(fundAmt)}`,
       `Estimated Runway (months): ${runway ?? 'N/A'}`,
       `Growth rate (monthly): ${Math.round(growth*100)}%`,
-    ].join('\n');
+    ]
+      .concat(nonce ? [`Variation seed: ${nonce}`] : [])
+      .join('\n');
     const ai = require('./ai.controller');
     const items = await ai.generateFinancialInsightsFromContext(contextText, 3);
+    // Persist on dashboard summary so collaborators can read the same items
+    try {
+      const doc = await getOrCreate(userId);
+      doc.summary = doc.summary || {};
+      doc.summary.financialInsights = items;
+      try { doc.markModified && doc.markModified('summary'); } catch {}
+      await doc.save();
+    } catch (_) {}
     return res.json({ items });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/financials/insights — return saved financial insights (owner context)
+exports.getFinancialInsights = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const dash = await Dashboard.findOne({ user: userId }).lean().exec();
+    let items = [];
+    try {
+      if (dash && dash.summary && Array.isArray(dash.summary.financialInsights)) {
+        items = dash.summary.financialInsights;
+      }
+      // Fallback to general insight sections (first section) if financial-specific not present
+      if ((!items || items.length === 0) && dash && dash.summary && Array.isArray(dash.summary.insightSections)) {
+        const first = dash.summary.insightSections[0];
+        if (first && Array.isArray(first.items)) items = first.items.slice(0, 3);
+      }
+      // Final fallback to legacy summary.insights (flat)
+      if ((!items || items.length === 0) && dash && dash.summary && Array.isArray(dash.summary.insights)) {
+        items = dash.summary.insights.slice(0, 3);
+      }
+    } catch (_) {}
+    return res.json({ items: Array.isArray(items) ? items : [] });
   } catch (err) {
     next(err);
   }
@@ -425,6 +492,8 @@ exports.generateInsights = async (req, res, next) => {
         const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate insights';
         return res.status(500).json({ message });
       }
+      // Prefix items with section title
+      try { section = prefixSectionItems([section])[0]; } catch (_) {}
       const idx = doc.summary.insightSections.findIndex((s) => String(s?.title || '').toLowerCase() === sectionTitle.toLowerCase());
       if (idx === -1) doc.summary.insightSections.push(section); else doc.summary.insightSections[idx] = section;
       // Maintain a flattened top-level insights (first items) for any legacy consumers
@@ -443,6 +512,8 @@ exports.generateInsights = async (req, res, next) => {
         const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate insights';
         return res.status(500).json({ message });
       }
+      // Prefix items with section title for all sections
+      try { sections = prefixSectionItems(sections); } catch (_) {}
       doc.summary.insightSections = sections;
       doc.summary.insights = (sections[0]?.items || []).slice(0, 3);
       await doc.save();

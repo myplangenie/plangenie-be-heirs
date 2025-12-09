@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { Resend } = require('resend');
 const User = require('../models/User');
+const Collaboration = require('../models/Collaboration');
 const { effectivePlan, plans } = require('../config/entitlements');
 
 function signToken(userId) {
@@ -15,21 +16,70 @@ exports.register = async (req, res) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({ message: 'Invalid input', details: errors.array() });
   }
-  const { firstName, lastName, companyName, fullName, email, password } = req.body;
+  const { firstName, lastName, companyName, fullName, email, password, collabToken } = req.body;
 
   const existing = await User.findOne({ email });
   if (existing) {
     return res.status(409).json({ message: 'Email already in use' });
   }
-
   
+  // Check for collaborator invitation by token (preferred) or by matching email (fallback)
+  let collab = null;
+  let collabOwnerId = null;
+  if (collabToken && typeof collabToken === 'string') {
+    collab = await Collaboration.findOne({ acceptToken: String(collabToken).trim() }).exec();
+    if (!collab) return res.status(400).json({ message: 'Invalid or expired collaborator invite' });
+    if (collab.tokenExpires && collab.tokenExpires < new Date()) return res.status(400).json({ message: 'Invite token expired' });
+    if (String(collab.email || '').toLowerCase() !== String(email || '').toLowerCase()) {
+      return res.status(400).json({ message: 'This invite was sent to a different email address' });
+    }
+    collabOwnerId = String(collab.owner);
+  } else {
+    // Fallback: If there is an active collab invite for this email, use it
+    collab = await Collaboration.findOne({ email: String(email || '').toLowerCase(), status: { $in: ['pending', 'accepted'] } })
+      .sort({ createdAt: -1 })
+      .exec();
+    if (collab) collabOwnerId = String(collab.owner);
+  }
 
   const hashed = await User.hashPassword(password);
-  // Generate email verification OTP code
+  const combinedFullName = (fullName && String(fullName).trim()) || [firstName, lastName].filter(Boolean).join(' ').trim() || undefined;
+
+  // If collaborator invite is present, auto-verify and skip onboarding
+  if (collab) {
+    const user = await User.create({
+      firstName: firstName || '',
+      lastName: lastName || '',
+      fullName: combinedFullName,
+      companyName: companyName || '',
+      email,
+      password: hashed,
+      isVerified: true,
+      onboardingDone: true,
+      onboardingDetailCompleted: true,
+      isCollaborator: true,
+    });
+    try {
+      // Link collaboration to this user and accept
+      collab.status = 'accepted';
+      collab.acceptedAt = new Date();
+      collab.viewer = user._id;
+      collab.acceptToken = null;
+      collab.tokenExpires = null;
+      await collab.save();
+    } catch (err) {
+      // Non-fatal
+      console.error('[collab] Failed to link collaboration on signup:', err?.message || err);
+    }
+    const token = signToken(user._id);
+    const safe = user.toSafeJSON();
+    return res.status(201).json({ token, user: safe, ownerId: collabOwnerId });
+  }
+
+  // Default path: create user and send OTP for verification
   const otp = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
   const otpHash = await bcrypt.hash(otp, 10);
   const vexp = new Date(Date.now() + 1000 * 60 * 60 * 24); // 24h
-  const combinedFullName = (fullName && String(fullName).trim()) || [firstName, lastName].filter(Boolean).join(' ').trim() || undefined;
   const user = await User.create({
     firstName: firstName || '',
     lastName: lastName || '',
@@ -41,9 +91,8 @@ exports.register = async (req, res) => {
     verificationExpires: vexp,
   });
   // Send verification email (best-effort)
-  
   try {
-  const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = new Resend(process.env.RESEND_API_KEY);
     const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
     const result = await resend.emails.send({
       from,
@@ -123,7 +172,18 @@ exports.login = async (req, res) => {
     : (!safe.onboardingDetailCompleted ? '/onboarding-detail' : '/dashboard');
   const planSlug = effectivePlan(user);
   const planName = plans[planSlug]?.name || planSlug;
-  return res.json({ token, user: safe, nextRoute, plan: { slug: planSlug, name: planName } });
+  // If user is a viewer for any accepted collaboration, include default owner to view-as
+  let viewAsOwnerId = undefined;
+  try {
+    const email = (user.email || '').toLowerCase();
+    const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: user._id }, { email } ] })
+      .select('owner')
+      .limit(1)
+      .lean()
+      .exec();
+    if (rows && rows.length) viewAsOwnerId = String(rows[0].owner);
+  } catch {}
+  return res.json({ token, user: safe, nextRoute, plan: { slug: planSlug, name: planName }, viewAsOwnerId });
 };
 
 exports.me = async (req, res) => {
@@ -136,7 +196,18 @@ exports.me = async (req, res) => {
     : (!safe.onboardingDetailCompleted ? '/onboarding-detail' : '/dashboard');
   const planSlug = effectivePlan(user);
   const planName = plans[planSlug]?.name || planSlug;
-  return res.json({ user: safe, nextRoute, plan: { slug: planSlug, name: planName } });
+  // Provide default owner to view-as for collaborators
+  let viewAsOwnerId = undefined;
+  try {
+    const email = (user.email || '').toLowerCase();
+    const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: user._id }, { email } ] })
+      .select('owner')
+      .limit(1)
+      .lean()
+      .exec();
+    if (rows && rows.length) viewAsOwnerId = String(rows[0].owner);
+  } catch {}
+  return res.json({ user: safe, nextRoute, plan: { slug: planSlug, name: planName }, viewAsOwnerId });
 };
 
 exports.markOnboarded = async (req, res) => {

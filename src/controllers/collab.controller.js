@@ -2,6 +2,7 @@ const Collaboration = require('../models/Collaboration');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const crypto = require('crypto');
+const { effectivePlan, plans } = require('../config/entitlements');
 const { Resend } = require('resend');
 
 function isValidEmail(email) {
@@ -48,6 +49,13 @@ exports.invite = async (req, res) => {
     const emailRaw = String(req.body?.email || '').trim().toLowerCase();
     if (!isValidEmail(emailRaw)) return res.status(400).json({ message: 'Valid email is required' });
 
+    // If the email already belongs to an existing user account,
+    // do not allow adding as a collaborator per product requirement.
+    const existingUser = await User.findOne({ email: emailRaw }).select('_id').lean().exec();
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already exists and can't be added as a collaborator" });
+    }
+
     let collab = await Collaboration.findOne({ owner: userId, email: emailRaw });
     if (!collab) {
       collab = await Collaboration.create({ owner: userId, email: emailRaw, status: 'pending' });
@@ -62,7 +70,7 @@ exports.invite = async (req, res) => {
     const owner = await User.findById(userId).lean().exec();
     const ownerName = owner ? ((owner.firstName || owner.lastName) ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim() : (owner.fullName || owner.email)) : 'A PlanGenie user';
     const base = appBaseUrl();
-    const acceptUrl = `${base}/api/collab/accept?token=${encodeURIComponent(token)}`;
+    const acceptUrl = `${base}/signup?collabToken=${encodeURIComponent(token)}&email=${encodeURIComponent(emailRaw)}`;
     await sendInviteEmail({ to: emailRaw, ownerName, acceptUrl });
     // If invitee already has an account, create an in-app notification
     const invitee = await User.findOne({ email: emailRaw }).lean().exec();
@@ -108,7 +116,17 @@ exports.viewables = async (req, res) => {
     const ownerIds = Array.from(new Set(rows.map((r) => String(r.owner))));
     if (ownerIds.length === 0) return res.json({ owners: [] });
     const owners = await User.find({ _id: { $in: ownerIds } }).lean().exec();
-    const out = owners.map((o) => ({ id: String(o._id), name: (o.firstName || o.lastName) ? `${o.firstName || ''} ${o.lastName || ''}`.trim() : (o.fullName || o.email), email: o.email, companyName: o.companyName || '' }));
+    const out = owners.map((o) => {
+      const slug = effectivePlan(o);
+      return {
+        id: String(o._id),
+        name: (o.firstName || o.lastName) ? `${o.firstName || ''} ${o.lastName || ''}`.trim() : (o.fullName || o.email),
+        email: o.email,
+        companyName: o.companyName || '',
+        plan: { slug, name: plans[slug]?.name || slug },
+        hasActiveSubscription: !!o.hasActiveSubscription,
+      };
+    });
     return res.json({ owners: out });
   } catch (err) {
     return res.status(500).json({ message: err?.message || 'Failed to load collaborators' });
@@ -203,6 +221,13 @@ exports.accept = async (req, res) => {
     collab.acceptToken = null;
     collab.tokenExpires = null;
     await collab.save();
+    // Mark the accepting user as a collaborator
+    try {
+      const viewerId2 = req.user?.id;
+      if (viewerId2 && String(viewerId2) !== String(collab.owner)) {
+        await User.findByIdAndUpdate(viewerId2, { isCollaborator: true }).exec();
+      }
+    } catch {}
 
     return res.json({ ok: true, collaboration: { id: String(collab._id), owner: String(collab.owner), email: collab.email, status: collab.status } });
   } catch (err) {
@@ -231,6 +256,8 @@ exports.acceptLogged = async (req, res) => {
     collab.acceptToken = null;
     collab.tokenExpires = null;
     await collab.save();
+    // Mark viewer as collaborator
+    try { await User.findByIdAndUpdate(viewerId, { isCollaborator: true }).exec(); } catch {}
     // Mark related notification as read
     await Notification.updateMany({ user: viewerId, nid: `collab-${String(collab._id)}` }, { $set: { read: true } }).exec();
     return res.json({ ok: true, collaboration: { id: String(collab._id), owner: String(collab.owner), status: collab.status } });
@@ -304,7 +331,7 @@ exports.resend = async (req, res) => {
     const owner = await User.findById(ownerId).lean().exec();
     const ownerName = owner ? ((owner.firstName || owner.lastName) ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim() : (owner.fullName || owner.email)) : 'A PlanGenie user';
     const base = appBaseUrl();
-    const acceptUrl = `${base}/api/collab/accept?token=${encodeURIComponent(token)}`;
+    const acceptUrl = `${base}/signup?collabToken=${encodeURIComponent(token)}&email=${encodeURIComponent(collab.email)}`;
     await sendInviteEmail({ to: collab.email, ownerName, acceptUrl });
 
     // Refresh in-app notification for existing invitee

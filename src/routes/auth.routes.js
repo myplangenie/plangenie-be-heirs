@@ -14,6 +14,7 @@ router.post(
     body('companyName').optional().isString().trim(),
     body('email').isEmail().normalizeEmail(),
     body('password').isString().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+    body('collabToken').optional().isString().trim(),
   ],
   ctrl.register
 );
