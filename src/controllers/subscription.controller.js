@@ -76,7 +76,15 @@ exports.createCheckoutSession = async (req, res) => {
 
     // Normal Stripe flow
     const stripe = getStripe();
-    const priceId = requireEnv('STRIPE_PRICE_ID');
+    // Choose price by interval with backward compatibility to STRIPE_PRICE_ID
+    const priceId =
+      interval === 'year'
+        ? (process.env.STRIPE_PRICE_ID_YEAR || process.env.STRIPE_PRICE_ID)
+        : (process.env.STRIPE_PRICE_ID_MONTH || process.env.STRIPE_PRICE_ID);
+    if (!priceId) {
+      console.error('Stripe price ID not configured for interval:', interval);
+      return res.status(500).json({ message: 'Price configuration missing' });
+    }
 
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
@@ -165,7 +173,8 @@ exports.createPortalSession = async (req, res) => {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: user.stripeCustomerId,
-      return_url: `${appWebUrl}/settings/billing`,
+      // Return to the app's billing return flow which already handles status/redirects
+      return_url: `${appWebUrl}/billing/return`,
     });
 
     const subscription = await ensureSubscriptionForUser(user);

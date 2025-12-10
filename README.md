@@ -123,7 +123,9 @@ Models
 Notes
 - CORS is controlled via `CORS_ORIGINS`. Add your frontend origin (e.g., http://localhost:3000).
 - Passwords are hashed (bcryptjs). JWT tokens expire in 7 days.
-- Stripe setup: set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, and `STRIPE_WEBHOOK_SECRET` in `.env`.
+- Stripe setup:
+  - Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in `.env`.
+  - Provide price IDs: `STRIPE_PRICE_ID_MONTH` and `STRIPE_PRICE_ID_YEAR` (or `STRIPE_PRICE_ID` as a fallback for both).
   - Configure your Stripe webhook to POST to `/api/subscriptions/webhook`.
   - `APP_WEB_URL` is used for success/cancel URLs and billing portal return URL.
 

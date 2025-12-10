@@ -16,6 +16,9 @@ router.get('/summary',  ctrl.getSummary);
 router.get('/insights',  ctrl.getInsights);
 router.post('/insights/generate',  requireFeature('aiActionPlans'), ctrl.generateInsights);
 router.get('/strategy-canvas',  ctrl.getStrategyCanvas);
+// Exports for Strategy Canvas
+router.get('/strategy-canvas/export/pdf', ctrl.exportStrategyCanvasPdf);
+router.get('/strategy-canvas/export/docx', ctrl.exportStrategyCanvasDocx);
 // Allow Lite users to edit Strategy Canvas (UBP, Purpose, 1y/3y, Summary)
 router.patch('/strategy-canvas',  ctrl.updateStrategyCanvas);
 
@@ -26,6 +29,9 @@ router.patch('/notifications/preferences',  ctrl.updateNotificationPrefs);
 
 // Departments
 router.get('/departments',  ctrl.getDepartments);
+// Exports for Departments
+router.get('/departments/export/pdf', ctrl.exportDepartmentsPdf);
+router.get('/departments/export/docx', ctrl.exportDepartmentsDocx);
 router.patch('/departments',  requireFeature('departmentPlans'), ctrl.updateDepartment);
 // Action plans: update the status of a single assignment item
 router.patch('/action-assignments/status',  requireFeature('departmentPlans'), ctrl.updateActionAssignmentStatus);
@@ -50,6 +56,8 @@ router.put('/products',  ctrl.saveProducts);
 // Plan
 router.get('/plan',  ctrl.getPlan);
 router.get('/plan/export/pdf',  ctrl.exportPlanPdf);
+// Export as Word (DOCX)
+router.get('/plan/export/docx',  ctrl.exportPlanDocx);
 // Upload business logo
 router.post('/logo',  [body('dataUrl').isString().withMessage('dataUrl is required')], ctrl.uploadCompanyLogo);
 router.post('/plan/sections',  requireFeature('planEdit'), ctrl.addPlanSection);

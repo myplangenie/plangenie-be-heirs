@@ -203,26 +203,7 @@ async function ensureSeedPlan(userId) {
   return plan;
 }
 
-// Ensure each insight item is prefixed with its section title, e.g., "Finance: ..."
-// Avoid double-prefixing if the text already begins with the title and a colon
-function prefixSectionItems(sections = []) {
-  try {
-    return (sections || []).map((s) => {
-      const title = String(s?.title || '').trim();
-      const items = Array.isArray(s?.items)
-        ? s.items.map((it) => {
-            const t = String(it || '').trim();
-            if (!t || !title) return t;
-            const already = t.toLowerCase().startsWith(title.toLowerCase() + ':');
-            return already ? t : `${title}: ${t}`;
-          })
-        : [];
-      return { title, items };
-    });
-  } catch (_) {
-    return sections || [];
-  }
-}
+// Note: Insight item formatting is handled by OpenAI; avoid server-side prefixing.
 
 
 // GET /api/dashboard/summary
@@ -492,8 +473,6 @@ exports.generateInsights = async (req, res, next) => {
         const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate insights';
         return res.status(500).json({ message });
       }
-      // Prefix items with section title
-      try { section = prefixSectionItems([section])[0]; } catch (_) {}
       const idx = doc.summary.insightSections.findIndex((s) => String(s?.title || '').toLowerCase() === sectionTitle.toLowerCase());
       if (idx === -1) doc.summary.insightSections.push(section); else doc.summary.insightSections[idx] = section;
       // Maintain a flattened top-level insights (first items) for any legacy consumers
@@ -512,8 +491,6 @@ exports.generateInsights = async (req, res, next) => {
         const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate insights';
         return res.status(500).json({ message });
       }
-      // Prefix items with section title for all sections
-      try { sections = prefixSectionItems(sections); } catch (_) {}
       doc.summary.insightSections = sections;
       doc.summary.insights = (sections[0]?.items || []).slice(0, 3);
       await doc.save();
@@ -810,7 +787,7 @@ exports.getCompiledPlan = async (req, res, next) => {
       userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
       businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '', ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '' },
       vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
-      values: { core: a.valuesCore || '', culture: a.cultureFeeling || '' },
+      values: { core: a.valuesCore || '', culture: a.cultureFeeling || '', traits: Array.isArray(a.valuesCoreKeywords) ? a.valuesCoreKeywords.filter((t)=> typeof t === 'string' && t.trim()).slice(0, 3) : [] },
       market: { customer: a.marketCustomer || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
       products: Array.isArray(a.products) ? a.products : [],
       org: Array.isArray(a.orgPositions) ? a.orgPositions.map((p)=>({ id: p.id, name: p.name, position: p.position, department: p.department || null, parentId: p.parentId || null })) : [],
@@ -1757,11 +1734,9 @@ exports.generatePlanProse = async (req, res, next) => {
         '3. Direct costs and gross margin — begin with a detailed intro; then detail by product/service when data allow; avoid fabricated percentages.',
         '4. Operating costs — begin with a detailed intro; then break down major categories if available (fixed operating, marketing, tools, other).',
         '5. Staffing costs — begin with a detailed intro; then include team size (if known) and average monthly salary (if derivable), roles if provided.',
-        '6. Capital expenditure — begin with a detailed intro; note purpose if user described it; otherwise state as not provided.',
-        '7. Cash flow and runway — begin with a detailed intro; provide qualitative narrative; discuss seasonality/timing if payment days provided.',
-        '8. Funding position — begin with a detailed intro; explain role of planned funding (e.g., staffing, marketing, operations, capex).',
-        '9. Tax assumptions — begin with a detailed intro; note if not provided; do not infer rates.',
-        '10. Overall financial outlook — begin with a detailed intro; then interpretation, risks/opportunities, and near‑term priorities.',
+        '6. Cash flow and runway — begin with a detailed intro; provide qualitative narrative; discuss seasonality/timing if payment days provided.',
+        '7. Funding position — begin with a detailed intro; explain role of planned funding (e.g., staffing, marketing, operations).',
+        '8. Overall financial outlook — begin with a detailed intro; then interpretation, risks/opportunities, and near‑term priorities.',
         'If sufficient numeric detail is provided for products, include a small inline summary list per product (Name — monthly units × price → approx. monthly revenue; direct cost; gross margin). Otherwise, keep qualitative.',
         'Use clear paragraphs and simple language. Summarise insights and interpret what the numbers mean for the business. Write everything as if it will appear in a professional business plan. Do NOT include methodology or prompts in the output.',
       ].join('\n');
@@ -1855,45 +1830,321 @@ exports.exportPlanPdf = async (req, res, next) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    // 1) Gather plan data (reuse compiled plan assembly)
-    // Ensure plan exists (for logo URL); then load Onboarding answers for compiled plan
-    const planDoc = await ensureSeedPlan(userId);
-    const planRecord = await Plan.findOne({ user: userId }).lean().exec();
-    let ob = await Onboarding.findOne({ user: userId }).lean().exec();
-    if (!ob) {
-      const created = await Onboarding.create({ user: userId, answers: {} });
-      ob = created.toObject();
+    // Render the actual front‑end page so the PDF matches what users see
+    const frontend = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+    const orgUrl = `${frontend}/dashboard/plan/org-only?orgOnly=1`;
+    const mainUrl = `${frontend}/dashboard/plan?print=1&noOrg=1`;
+
+    const authHeader = req.headers['authorization'] || '';
+    const m = String(authHeader).match(/Bearer\s+(.+)/i);
+    const token = m?.[1] || '';
+    const viewAs = req.headers['x-view-as'] || '';
+
+    const puppeteer = require('puppeteer');
+    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
+    try {
+      const page = await browser.newPage();
+      // Seed token (and view-as) into localStorage before any scripts run
+      await page.evaluateOnNewDocument((t, va) => {
+        try {
+          localStorage.setItem('pg_token', String(t || ''));
+          if (va) localStorage.setItem('pg_view_as', String(va));
+        } catch {}
+      }, token, viewAs);
+
+      // Pass 1: capture org-only page
+      await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: 3 });
+      await page.goto(orgUrl, { waitUntil: 'networkidle0', timeout: 60000 });
+      try { await page.emulateMediaType('screen'); } catch {}
+      try { await page.waitForFunction('window.__PG_ORG_READY === true', { timeout: 8000 }); } catch {}
+      let orgB64 = null;
+      try {
+        const elContainer = await page.$('#org-chart-print');
+        if (elContainer) {
+          let elTarget = await page.$('#org-chart-print [data-print-target="orgflow"]');
+          if (!elTarget) elTarget = await page.$('#org-chart-print .react-flow__viewport');
+          if (!elTarget) elTarget = await page.$('#org-chart-print .react-flow__renderer');
+          if (!elTarget) elTarget = await page.$('#org-chart-print svg');
+          if (!elTarget) elTarget = await page.$('#org-chart-print .react-flow');
+          if (!elTarget) elTarget = elContainer;
+          try { await elTarget.evaluate(node => node.scrollIntoView({ block: 'center' })); } catch {}
+          try { orgB64 = await elTarget.screenshot({ type: 'png', omitBackground: false, encoding: 'base64' }); } catch {}
+        }
+      } catch {}
+
+      // Pass 2: open main doc without org and inject image
+      await page.goto(mainUrl, { waitUntil: 'networkidle0', timeout: 60000 });
+      try { await page.emulateMediaType('screen'); } catch {}
+      try { await page.waitForFunction('window.__PG_PRINT_READY === true', { timeout: 4000 }); } catch {}
+      if (orgB64) {
+        try {
+          await page.evaluate((src) => {
+            const host = document.querySelector('#org-chart-image-container');
+            if (!host) return;
+            while (host.firstChild) host.removeChild(host.firstChild);
+            const img = document.createElement('img');
+            try {
+              const byteChars = atob(src);
+              const len = byteChars.length;
+              const bytes = new Uint8Array(len);
+              for (let i = 0; i < len; i++) bytes[i] = byteChars.charCodeAt(i);
+              const blob = new Blob([bytes], { type: 'image/png' });
+              const url = URL.createObjectURL(blob);
+              img.src = url;
+            } catch {
+              img.src = 'data:image/png;base64,' + src;
+            }
+            img.style.width = '100%';
+            img.style.height = 'auto';
+            img.style.display = 'block';
+            try { img.style.pageBreakInside = 'avoid'; } catch {}
+            try { img.style.breakInside = 'avoid'; } catch {}
+            host.appendChild(img);
+          }, orgB64);
+        } catch {}
+      }
+
+      const pdf = await page.pdf({
+        printBackground: true,
+        preferCSSPageSize: true,
+        displayHeaderFooter: true,
+        margin: { top: '0.4in', bottom: '0.7in', left: '0.4in', right: '0.4in' },
+        headerTemplate: `
+          <div style="font-size:8px; color:#9CA3AF; width:100%; padding:4px 16px;">
+            <!-- empty header to reserve space if needed -->
+          </div>
+        `,
+        footerTemplate: `
+          <div style="font-size:10px; color:#6B7280; width:100%; padding:6px 16px; display:flex; align-items:center; justify-content:flex-end;">
+            <div style="font-family: Arial, sans-serif;">
+              <span class="pageNumber"></span> / <span class="totalPages"></span>
+            </div>
+          </div>
+        `,
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="Business_Plan.pdf"');
+      return res.send(Buffer.from(pdf));
+    } finally {
+      try { await browser.close(); } catch {}
     }
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/strategy-canvas/export/docx
+exports.exportStrategyCanvasDocx = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const a = ob?.answers || {};
+    const ubp = (a.ubp || ob?.vision?.ubp || '').trim();
+    const purpose = String(a.purpose || '').trim();
+    const oneYear = String(a.vision1y || '').split('\n').map((s)=>s.trim()).filter(Boolean);
+    const threeYear = String(a.vision3y || '').split('\n').map((s)=>s.trim()).filter(Boolean);
+    const summary = String(a.identitySummary || '').trim();
+
+    try {
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, TableOfContents, Header, Footer, PageNumber } = require('docx');
+      const businessName = String(ob?.businessProfile?.businessName || 'Vision Board');
+      const heading = (text, level = HeadingLevel.HEADING_2) => new Paragraph({ text: text || '', heading: level, spacing: { before: 240, after: 120 } });
+      const p = (text) => new Paragraph({ children: [new TextRun({ text: String(text || ''), size: 22, color: '111111' })], spacing: { after: 120 } });
+      const bulletsDocx = (arr) => (arr || []).filter(Boolean).map((t) => new Paragraph({ children: [new TextRun(String(t))], bullet: { level: 0 } }));
+      const now = new Date().toLocaleDateString();
+      const header = new Header({ children: [ new Paragraph({ children: [new TextRun({ text: businessName, size: 18, color: '666666' })] }) ] });
+      const footer = new Footer({ children: [ new Paragraph({ alignment: AlignmentType.RIGHT, children: [ new TextRun({ text: 'Page ' }), new TextRun({ children: [PageNumber.CURRENT] }), new TextRun({ text: ' of ' }), new TextRun({ children: [PageNumber.TOTAL_PAGES] }) ] }) ] });
+      const doc = new Document({
+        features: { updateFields: true },
+        styles: {
+          default: { document: { run: { font: 'Calibri', size: 22 }, paragraph: { spacing: { line: 276 } } } },
+          paragraphStyles: [
+            { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 32, bold: true, color: '0B5394' }, paragraph: { spacing: { before: 480, after: 200 } } },
+            { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 26, bold: true, color: '0B5394' }, paragraph: { spacing: { before: 360, after: 160 } } },
+          ],
+        },
+        sections: [
+          {
+            headers: { default: header },
+            footers: { default: footer },
+            children: [
+              heading('Vision Board', HeadingLevel.HEADING_1),
+              new Paragraph({ text: `Generated ${now}`, spacing: { after: 240 } }),
+              heading('Table of Contents', HeadingLevel.HEADING_1),
+              new TableOfContents('', { hyperlink: true, headingStyleRange: '1-2' }),
+              heading('Your Business Identity', HeadingLevel.HEADING_2),
+              p('Unique Business Proposition (UBP):'),
+              p(ubp || '—'),
+              p('Purpose Statement:'),
+              p(purpose || '—'),
+              p('1-Year Goals:'),
+              ...(bulletsDocx(oneYear)),
+              p('3-Year Goals:'),
+              ...(bulletsDocx(threeYear.length ? threeYear : oneYear)),
+              p('Strategic Identity Summary:'),
+              p(summary || '—'),
+            ],
+          },
+        ],
+      });
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', 'attachment; filename="Strategy_Canvas.docx"');
+      return res.send(Buffer.from(buffer));
+    } catch (_e) {
+      // Fallback: HTML to DOCX
+      try {
+        const htmlToDocx = require('html-to-docx');
+        const esc = (s) => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#039;');
+        const bullets = (arr) => (arr||[]).map((t)=>`<div>• ${esc(t)}</div>`).join('');
+        const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Vision Board</title><style>body{font-family:Arial,Helvetica,sans-serif;color:#111}.box{border:1px solid #EAEAEA;border-radius:10px;background:#fff;padding:12px;margin:6px 0}</style></head><body><h2>Your Business Identity</h2><div class="box"><div class="label">Unique Business Proposition (UBP)</div>${esc(ubp||'—')}</div><div class="box"><div class="label">Purpose Statement</div>${esc(purpose||'—')}</div><div class="box"><div class="label">1‑Year Goals</div>${bullets(oneYear)}</div><div class="box"><div class="label">3‑Year Goals</div>${bullets(threeYear.length?threeYear:oneYear)}</div><div class="box"><div class="label">Strategic Identity Summary</div>${esc(summary||'—')}</div></body></html>`;
+        const buffer = await htmlToDocx(html);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', 'attachment; filename="Strategy_Canvas.docx"');
+        return res.send(Buffer.from(buffer));
+      } catch (e2) {
+        return res.status(500).json({ message: 'Word export unavailable' });
+      }
+    }
+  } catch (err) { next(err); }
+};
+
+// GET /api/dashboard/strategy-canvas/export/pdf
+exports.exportStrategyCanvasPdf = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const frontend = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+    const url = `${frontend}/dashboard/strategy-canvas/print?print=1`;
+    const authHeader = req.headers['authorization'] || '';
+    const m = String(authHeader).match(/Bearer\s+(.+)/i);
+    const token = m?.[1] || '';
+    const viewAs = req.headers['x-view-as'] || '';
+    const puppeteer = require('puppeteer');
+    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
+    try {
+      const page = await browser.newPage();
+      await page.evaluateOnNewDocument((t, va) => {
+        try { localStorage.setItem('pg_token', String(t || '')); if (va) localStorage.setItem('pg_view_as', String(va)); } catch {}
+      }, token, viewAs);
+      await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
+      await page.emulateMediaType('screen').catch(()=>{});
+      try { await page.waitForFunction('window.__PG_PRINT_READY === true', { timeout: 5000 }); } catch {}
+      const pdf = await page.pdf({ printBackground: true, preferCSSPageSize: true, margin: { top: '0.4in', bottom: '0.6in', left: '0.5in', right: '0.5in' } });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="Strategy_Canvas.pdf"');
+      return res.send(Buffer.from(pdf));
+    } finally { try { await browser.close(); } catch {} }
+  } catch (err) { next(err); }
+};
+
+// GET /api/dashboard/departments/export/docx
+exports.exportDepartmentsDocx = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const a = ob?.answers || {};
+    const assignments = a.actionAssignments || {};
+    const label = (k) => ({ marketing:'Marketing',sales:'Sales',operations:'Operations & Service Delivery',financeAdmin:'Finance & Admin',peopleHR:'People & Human Resources',partnerships:'Partnerships & Alliances',technology:'Technology & Infrastructure',communityImpact:'ESG & Sustainability' }[k] || k);
+    const parseDate = (s) => { const m=String(s||'').match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:''; };
+    const pctForItem = (it) => { const v = Number(it?.progress); if (isFinite(v)) return Math.max(0, Math.min(100, Math.round(v))); const st = String(it?.status || '').toLowerCase(); if (/done|complete|completed/.test(st)) return 100; if (/in[ _-]*progress/.test(st)) return 50; if (/not[ _-]*started/.test(st)) return 0; return 0; };
+    const statusFromProgress = (p) => { if (p >= 80) return 'on-track'; if (p >= 50) return 'in-progress'; return 'at-risk'; };
+    // Build department list
+    const rows = [];
+    Object.keys(assignments || {}).forEach((key) => {
+      const name = label(key);
+      const list = assignments[key] || [];
+      const owners = (list||[]).map((u)=> `${u.firstName||''} ${u.lastName||''}`.trim()).filter(Boolean);
+      const owner = owners[0] || '-';
+      const dueDate = (list||[]).map((u)=>parseDate(u?.dueWhen)).filter(Boolean).sort()[0] || '-';
+      const progVals = (list||[]).map((u)=>pctForItem(u));
+      const progress = progVals.length ? Math.round(progVals.reduce((a,b)=>a+b,0)/progVals.length) : 0;
+      const status = statusFromProgress(progress);
+      rows.push({ name, owner, dueDate, progress, status });
+    });
+    // DOCX
+    try {
+      const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, TableLayoutType, HeadingLevel, Header, Footer, AlignmentType, PageNumber } = require('docx');
+      const businessName = String(ob?.businessProfile?.businessName || 'Strategic Planning');
+      const p = (text)=> new Paragraph({ children: [new TextRun(String(text||''))] });
+      const tHead = new TableRow({ tableHeader: true, children: ['Department','Owner','Due Date','Progress','Status'].map((h)=> new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })] })] })) });
+      const tBody = rows.map((r)=> new TableRow({ children: [r.name,r.owner,r.dueDate,`${r.progress}%`,r.status].map((v)=> new TableCell({ children: [p(v)] })) }));
+      const table = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [tHead, ...tBody], layout: TableLayoutType.FIXED });
+      const header = new Header({ children: [ new Paragraph({ children: [new TextRun({ text: businessName, size: 18, color: '666666' })] }) ] });
+      const footer = new Footer({ children: [ new Paragraph({ alignment: AlignmentType.RIGHT, children: [ new TextRun({ text: 'Page ' }), new TextRun({ children: [PageNumber.CURRENT] }), new TextRun({ text: ' of ' }), new TextRun({ children: [PageNumber.TOTAL_PAGES] }) ] }) ] });
+      const doc = new Document({
+        styles: { default: { document: { run: { font: 'Calibri', size: 22 } } } },
+        sections: [{ headers: { default: header }, footers: { default: footer }, children: [ new Paragraph({ text: 'Strategic Planning', heading: HeadingLevel.HEADING_1 }), table ] }]
+      });
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', 'attachment; filename="Departments.docx"');
+      return res.send(Buffer.from(buffer));
+    } catch (_e) {
+      const htmlToDocx = require('html-to-docx');
+      const esc = (s)=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      const rowsHtml = rows.map((r)=>`<tr><td>${esc(r.name)}</td><td>${esc(r.owner)}</td><td>${esc(r.dueDate)}</td><td>${r.progress}%</td><td>${esc(r.status)}</td></tr>`).join('');
+      const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Departments</title><style>body{font-family:Arial,Helvetica,sans-serif;color:#111}table{border-collapse:collapse;width:100%}td,th{border:1px solid #EAEAEA;padding:8px;text-align:left}</style></head><body><h2>Strategic Planning</h2><table><thead><tr><th>Department</th><th>Owner</th><th>Due Date</th><th>Progress</th><th>Status</th></tr></thead><tbody>${rowsHtml}</tbody></table></body></html>`;
+      const buffer = await htmlToDocx(html);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', 'attachment; filename="Departments.docx"');
+      return res.send(Buffer.from(buffer));
+    }
+  } catch (err) { next(err); }
+};
+
+// GET /api/dashboard/departments/export/pdf
+exports.exportDepartmentsPdf = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const frontend = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+    const url = `${frontend}/dashboard/departments/print?print=1`;
+    const authHeader = req.headers['authorization'] || '';
+    const m = String(authHeader).match(/Bearer\s+(.+)/i);
+    const token = m?.[1] || '';
+    const viewAs = req.headers['x-view-as'] || '';
+    const puppeteer = require('puppeteer');
+    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
+    try {
+      const page = await browser.newPage();
+      await page.evaluateOnNewDocument((t, va) => { try { localStorage.setItem('pg_token', String(t||'')); if (va) localStorage.setItem('pg_view_as', String(va)); } catch {} }, token, viewAs);
+      await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
+      await page.emulateMediaType('screen').catch(()=>{});
+      try { await page.waitForFunction('window.__PG_PRINT_READY === true', { timeout: 5000 }); } catch {}
+      const pdf = await page.pdf({ printBackground: true, preferCSSPageSize: true, margin: { top: '0.4in', bottom: '0.6in', left: '0.5in', right: '0.5in' } });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="Departments.pdf"');
+      return res.send(Buffer.from(pdf));
+    } finally { try { await browser.close(); } catch {} }
+  } catch (err) { next(err); }
+};
+
+// GET /api/dashboard/plan/export/docx
+exports.exportPlanDocx = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    // Load logo URL if any
+    let logoUrl = '';
+    try {
+      const planDoc = await Plan.findOne({ user: userId }).lean().exec();
+      logoUrl = String(planDoc?.companyLogoUrl || '');
+    } catch {}
+
+    // Build plan data (same structure as getCompiledPlan)
+    const ob = (await Onboarding.findOne({ user: userId }).lean().exec()) || {};
     const a = ob.answers || {};
-    const compiled = {
-      userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
-      businessProfile: {
-        businessName: (ob.businessProfile && ob.businessProfile.businessName) || '',
-        ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '',
-      },
-      vision: {
-        ubp: a.ubp || (ob.vision && ob.vision.ubp) || '',
-        purpose: a.purpose || '',
-        oneYear: (a.vision1y || '').split('\n').filter(Boolean),
-        threeYear: (a.vision3y || '').split('\n').filter(Boolean),
-      },
+    const plan = {
+      businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '' },
+      vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
       values: { core: a.valuesCore || '', culture: a.cultureFeeling || '' },
-      market: {
-        customer: a.marketCustomer || '',
-        partners: a.partnersDesc || '',
-        competitors: a.compNotes || '',
-        competitorNames: a.competitorNames || [],
-      },
+      market: { customer: a.marketCustomer || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
       products: Array.isArray(a.products) ? a.products : [],
-      org: Array.isArray(a.orgPositions)
-        ? a.orgPositions.map((p) => ({
-            id: p.id,
-            name: p.name,
-            position: p.position,
-            department: p.department || null,
-            parentId: p.parentId || null,
-          }))
-        : [],
+      org: Array.isArray(a.orgPositions) ? a.orgPositions.map((p)=>({ id: p.id, name: p.name, position: p.position, department: p.department || null, parentId: p.parentId || null })) : [],
       financial: {
         salesVolume: a.finSalesVolume || '',
         salesGrowthPct: a.finSalesGrowthPct || '',
@@ -1907,128 +2158,411 @@ exports.exportPlanPdf = async (req, res, next) => {
         paymentCollectionDays: a.finPaymentCollectionDays || '',
         targetProfitMarginPct: a.finTargetProfitMarginPct || '',
       },
-      prose: a.planProse || {},
+      actionPlans: a.actionAssignments || {},
     };
 
-    // Optional: refresh prose when requested (best-effort)
-    const refresh = String(req.query.refreshProse || '').toLowerCase();
-    if (refresh === '1' || refresh === 'true') {
-      try {
-        // Call the existing generation logic through module without refactor
-        const ai = require('./ai.controller');
-        // Build minimal contexts like generatePlanProse does
-        const contextBase = (() => {
-          const bp = ob.businessProfile || {};
-          const parts = [
-            bp.businessName && `Business Name: ${bp.businessName}`,
-            bp.industry && `Industry: ${bp.industry}`,
-            bp.ventureType && `Venture Type: ${bp.ventureType}`,
-            bp.city && bp.country && `Location: ${bp.city}, ${bp.country}`,
-            a.ubp && `UBP: ${a.ubp}`,
-            a.purpose && `Purpose: ${a.purpose}`,
-          ].filter(Boolean);
-          return parts.length ? parts.join('\n') : '';
-        })();
-        // Market study
-        let marketStatement = null;
-        try {
-          const products = Array.isArray(a.products) ? a.products : [];
-          const prodLines = products.filter((p) => String(p?.product || '').trim()).map((p) => `- ${String(p.product).trim()} — ${String(p.description || '').trim()}`).join('\n');
-          const oneYearGoals = String(a.vision1y || '')
-            .split('\n').map((s) => s.trim()).filter(Boolean).map((s) => `- ${s}`).join('\n');
-          const competitorNames = Array.isArray(a.competitorNames) && a.competitorNames.length ? a.competitorNames.map((n) => `- ${n}`).join('\n') : '';
-          const partnerPrefs = Array.isArray(a.partnerPrefs) && a.partnerPrefs.length ? a.partnerPrefs.map((n) => `- ${n}`).join('\n') : '';
-          const marketCtx = [
-            'BUSINESS PROFILE INPUTS',
-            contextBase,
-            oneYearGoals && `1-year goals:\n${oneYearGoals}`,
-            prodLines && `Products and services:\n${prodLines}`,
-            '',
-            'MARKET STUDY INPUTS',
-            a.marketCustomer && `Market/Customer overview (free text): ${a.marketCustomer}`,
-            competitorNames && `Direct competitors:\n${competitorNames}`,
-            a.compNotes && `Competitive landscape notes: ${a.compNotes}`,
-            partnerPrefs && `Desired future partners:\n${partnerPrefs}`,
-          ].filter(Boolean).join('\n');
-          const studyInstruction = [
-            'Using the structured information provided, produce a Market and Opportunity Study with clear sections.',
-            'Write in a clear, confident tone. Use only user-supplied facts.',
-            'Use numbered section headings and second-level subheadings where relevant; include short bullet lists (3–6 items) where natural.',
-          ].join('\n');
-          marketStatement = await ai.callOpenAIProse({ type: 'Market and Opportunity Study', input: studyInstruction, contextText: marketCtx, maxTokens: 1200 });
-        } catch {}
-        // Financial narrative
-        let financialStatement = null;
-        try {
-          const finCtx = [
-            contextBase,
-            'FINANCIAL INPUTS (user-supplied):',
-            a.finFixedOperatingCosts && `Monthly operating expenses (total): ${a.finFixedOperatingCosts}`,
-            a.finMarketingSalesSpend && `Monthly marketing & sales spend: ${a.finMarketingSalesSpend}`,
-            a.finPayrollCost && `Monthly staffing costs (total): ${a.finPayrollCost}`,
-            a.finStartingCash && `Opening cash balance: ${a.finStartingCash}`,
-          ].filter(Boolean).join('\n');
-          const financialInstruction = [
-            'Using the financial inputs provided by the user, generate a clear and comprehensive Financial Section.',
-            'Use only the data supplied. Do not invent external statistics. Keep the narrative professional and concise.',
-          ].join('\n');
-          financialStatement = await ai.callOpenAIProse({ type: 'Financial Section', input: financialInstruction, contextText: finCtx, maxTokens: 900 });
-        } catch {}
-        const prose = {
-          ...(compiled.prose || {}),
-          ...(typeof marketStatement === 'string' ? { marketStatement } : {}),
-          ...(typeof financialStatement === 'string' ? { financialStatement } : {}),
-          generatedAt: new Date().toISOString(),
-        };
-        // Persist back to onboarding answers for reuse
-        await Onboarding.updateOne({ user: userId }, { $set: { 'answers.planProse': prose } }).exec();
-        compiled.prose = prose;
-      } catch {}
-    }
-
-    // 2) Render template to HTML
-    const templatePath = path.join(__dirname, '..', 'views', 'plan-export.ejs');
-    const html = await ejs.renderFile(templatePath, {
-      title: 'Business Plan',
-      businessName: (ob.businessProfile && ob.businessProfile.businessName) || '',
-      preparedBy: (compiled.userProfile && compiled.userProfile.fullName) || '',
-      logoUrl: (planRecord && planRecord.companyLogoUrl) || '',
-      ubp: compiled.vision.ubp,
-      purpose: compiled.vision.purpose,
-      oneYearGoals: compiled.vision.oneYear,
-      threeYearGoals: compiled.vision.threeYear,
-      valuesCore: compiled.values.core,
-      valuesCulture: compiled.values.culture,
-      marketCustomer: compiled.market.customer,
-      marketPartners: compiled.market.partners,
-      marketCompetitors: compiled.market.competitors,
-      competitorNames: compiled.market.competitorNames,
-      products: compiled.products,
-      org: compiled.org,
-      fin: compiled.financial,
-      prose: compiled.prose,
-    });
-
-    // 3) Generate PDF via Puppeteer
-    const puppeteer = require('puppeteer');
-    const browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    // Optionally capture Org Chart as an image using the same approach as PDF
+    let orgB64 = null;
     try {
-      const page = await browser.newPage();
-      await page.setContent(html, { waitUntil: 'networkidle0' });
-      const pdf = await page.pdf({
-        format: 'A4',
-        printBackground: true,
-        margin: { top: '20mm', bottom: '20mm', left: '15mm', right: '15mm' },
+      const frontend = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+      const orgUrl = `${frontend}/dashboard/plan/org-only?orgOnly=1`;
+      const authHeader = req.headers['authorization'] || '';
+      const m = String(authHeader).match(/Bearer\s+(.+)/i);
+      const token = m?.[1] || '';
+      const viewAs = req.headers['x-view-as'] || '';
+      const puppeteer = require('puppeteer');
+      const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
+      try {
+        const page = await browser.newPage();
+        await page.evaluateOnNewDocument((t, va) => {
+          try { localStorage.setItem('pg_token', String(t || '')); if (va) localStorage.setItem('pg_view_as', String(va)); } catch {}
+        }, token, viewAs);
+        await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: 3 });
+        await page.goto(orgUrl, { waitUntil: 'networkidle0', timeout: 60000 });
+        try { await page.emulateMediaType('screen'); } catch {}
+        try { await page.waitForFunction('window.__PG_ORG_READY === true', { timeout: 8000 }); } catch {}
+        try {
+          const elContainer = await page.$('#org-chart-print');
+          if (elContainer) {
+            let elTarget = await page.$('#org-chart-print [data-print-target="orgflow"]');
+            if (!elTarget) elTarget = await page.$('#org-chart-print .react-flow__viewport');
+            if (!elTarget) elTarget = await page.$('#org-chart-print .react-flow__renderer');
+            if (!elTarget) elTarget = await page.$('#org-chart-print svg');
+            if (!elTarget) elTarget = await page.$('#org-chart-print .react-flow');
+            if (!elTarget) elTarget = elContainer;
+            try { await elTarget.evaluate(node => node.scrollIntoView({ block: 'center' })); } catch {}
+            try { orgB64 = await elTarget.screenshot({ type: 'png', omitBackground: false, encoding: 'base64' }); } catch {}
+          }
+        } catch {}
+      } finally {
+        try { await browser.close(); } catch {}
+      }
+    } catch {}
+
+    // First attempt: generate a well-formatted DOCX using the 'docx' library
+    try {
+      const {
+        Document,
+        Packer,
+        Paragraph,
+        TextRun,
+        HeadingLevel,
+        AlignmentType,
+        Table,
+        TableRow,
+        TableCell,
+        WidthType,
+        Footer,
+        Header,
+        PageNumber,
+        ImageRun,
+        TableOfContents,
+        convertInchesToTwip,
+        TableLayoutType,
+      } = require('docx');
+
+      const businessName = String(plan.businessProfile?.businessName || 'Business Plan');
+      const today = new Date();
+      const dateStr = today.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+
+      const heading = (text, level = HeadingLevel.HEADING_2) => new Paragraph({ text: text || '', heading: level, spacing: { before: 240, after: 120 } });
+      const p = (text, opts = {}) => new Paragraph({ children: [new TextRun({ text: String(text || ''), size: 22, color: '111111' })], spacing: { after: 120 }, ...opts });
+      const bulletsDocx = (arr) => (arr || []).filter(Boolean).map((t) => new Paragraph({ children: [new TextRun(String(t))], bullet: { level: 0 } }));
+
+      // Try to fetch the logo image for embedding on the cover
+      let logoBuf = null;
+      if (logoUrl) {
+        try {
+          const resp = await fetch(logoUrl);
+          if (resp && resp.ok) {
+            const ab = await resp.arrayBuffer();
+            logoBuf = Buffer.from(ab);
+          }
+        } catch {}
+      }
+
+      const coverChildren = [];
+      if (logoBuf) {
+        coverChildren.push(new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new ImageRun({ data: logoBuf, transformation: { width: 300, height: 100 } })],
+        }));
+      } else if (logoUrl) {
+        coverChildren.push(new Paragraph({ children: [new TextRun({ text: 'Logo: ' + logoUrl, italics: true, color: '666666' })], alignment: AlignmentType.CENTER }));
+      }
+      coverChildren.unshift(new Paragraph({
+        children: [
+          new TextRun({ text: businessName, size: 48, bold: true, color: '0B5394' }),
+          new TextRun({ text: '\nBusiness Plan', size: 32, color: '0B5394' }),
+          new TextRun({ text: `\n${dateStr}`, size: 22, color: '666666' }),
+        ],
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 720, after: 720 },
+      }));
+
+      const header = new Header({ children: [ new Paragraph({ children: [new TextRun({ text: businessName, size: 18, color: '666666' })] }) ] });
+      const footer = new Footer({ children: [ new Paragraph({ alignment: AlignmentType.RIGHT, children: [ new TextRun({ text: 'Page ' }), new TextRun({ children: [PageNumber.CURRENT] }), new TextRun({ text: ' of ' }), new TextRun({ children: [PageNumber.TOTAL_PAGES] }) ] }) ] });
+
+      // Compute full content width (~page width minus margins)
+      const margin = 1080; // 0.75in
+      const contentWidth = convertInchesToTwip(8.5) - (margin * 2);
+
+      // Products table
+      const productRows = [];
+      productRows.push(new TableRow({ tableHeader: true, children: ['Product/Service','Description','Unit Cost','Price','Monthly Volume'].map((h)=> new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })] })] })) }));
+      (plan.products || []).forEach((pItem) => {
+        productRows.push(new TableRow({ children: [ pItem.product || '—', pItem.description || '—', pItem.unitCost || pItem.pricing || '—', pItem.price || pItem.pricing || '—', pItem.monthlyVolume || '—' ].map((v)=> new TableCell({ children: [p(String(v))] })) }));
       });
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'attachment; filename="Business_Plan.pdf"');
-      return res.send(Buffer.from(pdf));
-    } finally {
-      try { await browser.close(); } catch {}
+      if (productRows.length === 1) productRows.push(new TableRow({ children: [new TableCell({ children: [p('—')], columnSpan: 5 })] }));
+      const pW1 = Math.floor(contentWidth * 0.18);
+      const pW2 = Math.floor(contentWidth * 0.34);
+      const pW3 = Math.floor(contentWidth * 0.16);
+      const pW4 = Math.floor(contentWidth * 0.16);
+      const pW5 = Math.max(0, contentWidth - (pW1 + pW2 + pW3 + pW4));
+      const productsTable = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: productRows,
+        layout: TableLayoutType.FIXED,
+      });
+
+      // Financials table (2 columns)
+      const finPairs = [
+        ['Projected Monthly Sales Volume', plan.financial?.salesVolume || '—'],
+        ['Monthly Sales Growth (%)', plan.financial?.salesGrowthPct || '—'],
+        ['Average Unit Cost', plan.financial?.avgUnitCost || '—'],
+        ['Fixed Operating Costs', plan.financial?.fixedOperatingCosts || '—'],
+        ['Marketing and Sales Spend', plan.financial?.marketingSalesSpend || '—'],
+        ['Payroll Cost', plan.financial?.payrollCost || '—'],
+        ['Starting Cash', plan.financial?.startingCash || '—'],
+        ['Additional Funding Amount', plan.financial?.additionalFundingAmount || '—'],
+        ['Additional Funding Month', plan.financial?.additionalFundingMonth || '—'],
+        ['Payment Collection Days', plan.financial?.paymentCollectionDays || '—'],
+        ['Target Profit Margin (%)', plan.financial?.targetProfitMarginPct || '—'],
+      ];
+      const finRows = finPairs.map(([k,v]) => new TableRow({ children: [ new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: k, bold: true })] })] }), new TableCell({ children: [p(v)] }) ] }));
+      const finW1 = Math.floor(contentWidth * 0.45);
+      const finW2 = contentWidth - finW1;
+      const financialsTable = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: finRows,
+        layout: TableLayoutType.FIXED,
+      });
+
+      // Org content
+      let orgContent = [];
+      if (orgB64) {
+        try { const buf = Buffer.from(orgB64, 'base64'); orgContent.push(new Paragraph({ children: [new ImageRun({ data: buf, transformation: { width: 600, height: 400 } })] })); } catch { orgContent.push(p('Organizational Chart image could not be embedded.')); }
+      } else if ((plan.org || []).length) {
+        orgContent = (plan.org || []).map((n) => new Paragraph({ children: [new TextRun(`${n.name || ''} — ${n.position || ''}${n.department ? ` (${n.department})` : ''}`)], bullet: { level: 0 } }));
+      } else { orgContent = [p('—')]; }
+
+      // Departmental projects
+      const order = ['marketing','sales','operations','financeAdmin','peopleHR','partnerships','technology','communityImpact'];
+      const labelFor = (key) => {
+        const map = {
+          marketing: 'Marketing',
+          sales: 'Sales',
+          operations: 'Operations and Service Delivery',
+          financeAdmin: 'Finance and Admin',
+          peopleHR: 'People and Human Resources',
+          partnerships: 'Partnerships and Alliances',
+          technology: 'Technology and Infrastructure',
+          communityImpact: 'ESG and Sustainability',
+        };
+        if (map[key]) return map[key];
+        return String(key || '')
+          .replace(/[-_]+/g, ' ')
+          .replace(/\b\w/g, (m) => m.toUpperCase());
+      };
+      const assignments = plan.actionPlans || {};
+      const sections = [...order, ...Object.keys(assignments).filter((k)=> !order.includes(k))];
+      const projectsContent = [];
+      sections.forEach((dept) => {
+        const items = assignments[dept] || [];
+        if (!items.length) return;
+        projectsContent.push(heading(String(labelFor(dept) || 'Department'), HeadingLevel.HEADING_3));
+        items.forEach((u, idx) => {
+          const owner = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
+          projectsContent.push(new Paragraph({ children: [ new TextRun({ text: `${idx+1}. ${u.goal || '—'}`, bold: true }) ] }));
+          projectsContent.push(p(`Owner: ${owner}`));
+          if (u.milestone) projectsContent.push(p(`Milestone: ${u.milestone}`));
+          if (u.resources) projectsContent.push(p(`Resources: ${u.resources}`));
+          if (u.kpi) projectsContent.push(p(`KPI: ${u.kpi}`));
+          if (u.dueWhen) projectsContent.push(p(`Due: ${u.dueWhen}`));
+        });
+      });
+
+      const doc = new Document({
+        features: { updateFields: true },
+        styles: {
+          default: { document: { run: { font: 'Calibri', size: 22 }, paragraph: { spacing: { line: 276 } } } },
+          paragraphStyles: [
+            { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 32, bold: true, color: '0B5394' }, paragraph: { spacing: { before: 480, after: 200 } } },
+            { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 26, bold: true, color: '0B5394' }, paragraph: { spacing: { before: 360, after: 160 } } },
+            { id: 'Heading3', name: 'Heading 3', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 24, bold: true, color: '1F4E79' }, paragraph: { spacing: { before: 240, after: 120 } } },
+          ],
+        },
+        sections: [
+          {
+            properties: { page: { size: { width: convertInchesToTwip(8.5), height: convertInchesToTwip(11) }, margin: { top: 1080, right: 1080, bottom: 1080, left: 1080 } } },
+            headers: { default: header },
+            footers: { default: footer },
+            children: [
+              ...coverChildren,
+              new Paragraph({ children: [new TextRun({ break: 1 })] }),
+              heading('Table of Contents', HeadingLevel.HEADING_1),
+              new TableOfContents('', { hyperlink: true, headingStyleRange: '1-3' }),
+              new Paragraph({ children: [new TextRun({ break: 1 })] }),
+              heading('Business Plan', HeadingLevel.HEADING_1),
+              heading('Vision'),
+              p('Unique Business Proposition (UBP):'),
+              p(plan.vision?.ubp || '—'),
+              p('Purpose Statement:'),
+              p(plan.vision?.purpose || '—'),
+              p('1-Year Goals:'),
+              ...(bulletsDocx(plan.vision?.oneYear)),
+              p('3-Year Goals:'),
+              ...(bulletsDocx(plan.vision?.threeYear)),
+
+              new Paragraph({ children: [new TextRun({ text: '', break: 1 })], pageBreakBefore: true }),
+              heading('Values and Culture'),
+              p('Core Values:'),
+              p(plan.values?.core || '—'),
+              ...((Array.isArray(plan.values?.traits) && plan.values?.traits.length)
+                ? [p('Character Traits:'), ...bulletsDocx(plan.values?.traits)]
+                : []),
+              p('Culture and Behaviors:'),
+              p(plan.values?.culture || '—'),
+
+              new Paragraph({ children: [new TextRun({ text: '', break: 1 })], pageBreakBefore: true }),
+              heading('Market Study'),
+              p('Ideal Customer Profile:'),
+              p(plan.market?.customer || '—'),
+              p('Partners and Ecosystem:'),
+              p(plan.market?.partners || '—'),
+              p('Competitors and Positioning:'),
+              p(plan.market?.competitors || '—'),
+              ...((plan.market?.competitorNames || []).length ? [p('Competitor Names:'), ...bulletsDocx(plan.market?.competitorNames)] : []),
+
+              new Paragraph({ children: [new TextRun({ text: '', break: 1 })], pageBreakBefore: true }),
+      heading('Products and Services'),
+      productsTable,
+
+      new Paragraph({ children: [new TextRun({ text: '', break: 1 })], pageBreakBefore: true }),
+      heading('Organizational Structure'),
+      ...orgContent,
+
+      new Paragraph({ children: [new TextRun({ text: '', break: 1 })], pageBreakBefore: true }),
+      heading('Financial Forecasting Inputs'),
+      financialsTable,
+
+      new Paragraph({ children: [new TextRun({ text: '', break: 1 })], pageBreakBefore: true }),
+      heading('Core Strategic Projects'),
+      ...(() => {
+        const details = Array.isArray(plan.coreProjectDetails) ? plan.coreProjectDetails : [];
+        const titles = Array.isArray(plan.coreProjects) ? plan.coreProjects : [];
+        const list = details.length ? details : titles.map((t)=>({ title: t, deliverables: [] }));
+        if (!list.length) return [p('No core strategic projects captured.')];
+        const paras = [] as any[];
+        list.forEach((pr: any, i: number) => {
+          paras.push(new Paragraph({ children: [ new TextRun({ text: `${i+1}. ${pr.title || '—'}`, bold: true }) ] }));
+          if (pr.dueWhen) paras.push(p(`Due: ${pr.dueWhen}`));
+          if (pr.ownerName) paras.push(p(`Owner: ${pr.ownerName}`));
+          if (Array.isArray(pr.deliverables) && pr.deliverables.length) {
+            pr.deliverables.forEach((d: any)=> paras.push(new Paragraph({ children: [new TextRun(String(d?.text||'—'))], bullet: { level: 0 } })));
+          }
+        });
+        return paras;
+      })(),
+
+      new Paragraph({ children: [new TextRun({ text: '', break: 1 })], pageBreakBefore: true }),
+      heading('Departmental Projects'),
+      ...(projectsContent.length ? projectsContent : [p('—')]),
+            ],
+          },
+        ],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', 'attachment; filename=\"Business_Plan.docx\"');
+      return res.send(Buffer.from(buffer));
+    } catch (_docxErr) {
+      // If docx generator is unavailable, fall through to the HTML-based fallback below
     }
+
+    // Helpers mirroring the frontend export utils
+    const escapeHtml = (s) => String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+    const wrapBasicHtml = (title, bodyInnerHtml, extraStyle) => `<!doctype html><html><head><meta charset="utf-8"/><title>${escapeHtml(title)}</title><style>body{font-family:Arial, Helvetica, sans-serif;color:#111}h2{font-size:20px;margin:24px 0 12px}h3{font-size:16px;margin:16px 0 8px}.box{border:1px solid #EAEAEA;border-radius:10px;background:#fff;padding:12px;margin:6px 0}.label{font-weight:700;margin-bottom:6px}.pill{display:inline-block;border:1px solid #BDE7CB;background:#E9F9EF;color:#2F8C4C;border-radius:12px;font-size:10px;padding:2px 6px}ul{margin:0;padding-left:20px}li{margin:4px 0}table{border-collapse:collapse;width:100%}td,th{border:1px solid #EAEAEA;padding:8px;text-align:left}${extraStyle || ''}</style></head><body>${bodyInnerHtml}</body></html>`;
+
+    const bullets = (arr) => (arr || [])
+      .filter((t) => typeof t === 'string' && t.trim())
+      .map((t) => `<div style="margin:4px 0">• ${escapeHtml(t)}</div>`) 
+      .join('');
+    const list = (arr) => (arr || [])
+      .filter((t) => typeof t === 'string' && t.trim())
+      .map((t) => `<li>${escapeHtml(t)}</li>`) 
+      .join('');
+    const products = (plan.products || [])
+      .map((p) => `<tr><td>${escapeHtml(p.product || 'Unnamed')}</td><td>${escapeHtml(p.description || '—')}</td><td>${escapeHtml(p.unitCost || p.pricing || '—')}</td><td>${escapeHtml(p.price || p.pricing || '—')}</td><td>${escapeHtml(p.monthlyVolume || '—')}</td></tr>`)
+      .join('');
+    const orgList = (plan.org || [])
+      .map((n) => `<li>${escapeHtml(n.name || '')} — ${escapeHtml(n.position || '')}${n.department ? ` (${escapeHtml(n.department)})` : ''}</li>`) 
+      .join('');
+    const order = [ 'marketing','sales','operations','financeAdmin','peopleHR','partnerships','technology','communityImpact' ];
+    const labelFor = (key) => {
+      const map = {
+        marketing: 'Marketing',
+        sales: 'Sales',
+        operations: 'Operations and Service Delivery',
+        financeAdmin: 'Finance and Admin',
+        peopleHR: 'People and Human Resources',
+        partnerships: 'Partnerships and Alliances',
+        technology: 'Technology and Infrastructure',
+        communityImpact: 'ESG and Sustainability',
+      };
+      if (map[key]) return map[key];
+      return String(key || '')
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, (m) => m.toUpperCase());
+    };
+    const assignments = plan.actionPlans || {};
+    const sections = [...order, ...Object.keys(assignments).filter((k)=> !order.includes(k))];
+    const plansHtml = sections.map((key) => {
+      const users = assignments[key] || [];
+      const items = users.map((u) => {
+        const owner = `${u.firstName || ''} ${u.lastName || ''}`.trim() || '—';
+        return `<div class="box"><div style="font-weight:600">${escapeHtml(owner)}</div><div style="font-size:12px;border-top:1px solid #eee;padding-top:6px;margin-top:6px">${escapeHtml(u.goal || '—')}</div><div style="font-size:12px;color:#333;margin-top:6px"><b>Milestone:</b> ${escapeHtml(u.milestone || '—')}</div><div style="font-size:12px;color:#333"><b>Resources:</b> ${escapeHtml(u.resources || '—')}</div><div style="font-size:12px;color:#333"><b>KPI:</b> ${escapeHtml(u.kpi || '—')}</div><div style="font-size:12px;color:#333"><b>Due:</b> ${escapeHtml(u.dueWhen || '—')}</div></div>`;
+      }).join('');
+      return `<div class="box"><div style="font-weight:700">${escapeHtml(labelFor(key))}</div>${items || '<div style="font-size:12px;color:#666">No actions captured.</div>'}</div>`;
+    }).join('');
+
+    const logoBlock = logoUrl 
+      ? `<div style="text-align:center;margin:12px 0"><img src="${escapeHtml(logoUrl)}" style="max-height:60px;max-width:260px;object-fit:contain" alt="Business Logo"/></div>`
+      : '';
+    const orgBlock = orgB64
+      ? `<div><img src="data:image/png;base64,${orgB64}" style="width:100%;height:auto;display:block" alt="Org Chart"/></div>`
+      : (orgList ? `<ul>${orgList}</ul>` : '—');
+
+    const html = wrapBasicHtml(
+      'Business Plan',
+      `
+      <h2>Business Plan</h2>
+      ${logoBlock}
+      <div class="box"><div class="label">Unique Business Proposition (UBP)</div>${escapeHtml(plan.vision?.ubp || '')}</div>
+      <div class="box"><div class="label">Purpose Statement</div>${escapeHtml(plan.vision?.purpose || '')}</div>
+      <div class="box"><div class="label">1‑Year Goals</div>${bullets(plan.vision?.oneYear)}</div>
+      <div class="box"><div class="label">3‑Year Goals</div>${bullets(plan.vision?.threeYear)}</div>
+      <h3>Values and Culture</h3>
+      <div class="box"><div class="label">Core Values</div>${escapeHtml(plan.values?.core || '')}</div>
+      ${Array.isArray(plan.values?.traits) && plan.values?.traits.length ? `<div class="box"><div class="label">Character Traits</div><ul>${(plan.values?.traits || []).map((t)=>`<li>${escapeHtml(t)}</li>`).join('')}</ul></div>` : ''}
+      <div class="box"><div class="label">Culture and Behaviors</div>${escapeHtml(plan.values?.culture || '')}</div>
+      <h3>Market Study</h3>
+      <div class="box"><div class="label">Ideal Customer Profile</div>${escapeHtml(plan.market?.customer || '')}</div>
+      <div class="box"><div class="label">Partners and Ecosystem</div>${escapeHtml(plan.market?.partners || '')}</div>
+      <div class="box"><div class="label">Competitors and Positioning</div>${escapeHtml(plan.market?.competitors || '')}</div>
+      ${(plan.market?.competitorNames || []).length ? `<div class="box"><div class="label">Competitor Names</div><ul>${list(plan.market?.competitorNames)}</ul></div>` : ''}
+      <h3>Products and Services</h3>
+      <div class="box"><table><thead><tr><th>Product/Service</th><th>Description</th><th>Unit Cost</th><th>Price</th><th>Monthly Volume</th></tr></thead><tbody>${products || '<tr><td colspan="5">—</td></tr>'}</tbody></table></div>
+      <h3>Organizational Structure</h3>
+      <div class="box">${orgBlock}</div>
+      <h3>Financial Forecasting Inputs</h3>
+      <div class="box"><div class="label">Projected Monthly Sales Volume</div>${escapeHtml(plan.financial?.salesVolume || '')}</div>
+      <div class="box"><div class="label">Monthly Sales Growth (%)</div>${escapeHtml(plan.financial?.salesGrowthPct || '')}</div>
+      <div class="box"><div class="label">Average Unit Cost</div>${escapeHtml(plan.financial?.avgUnitCost || '')}</div>
+      <div class="box"><div class="label">Fixed Operating Costs</div>${escapeHtml(plan.financial?.fixedOperatingCosts || '')}</div>
+      <div class="box"><div class="label">Marketing and Sales Spend</div>${escapeHtml(plan.financial?.marketingSalesSpend || '')}</div>
+      <div class="box"><div class="label">Payroll Cost</div>${escapeHtml(plan.financial?.payrollCost || '')}</div>
+      <div class="box"><div class="label">Starting Cash</div>${escapeHtml(plan.financial?.startingCash || '')}</div>
+      <div class="box"><div class="label">Additional Funding Amount</div>${escapeHtml(plan.financial?.additionalFundingAmount || '')}</div>
+      <div class="box"><div class="label">Additional Funding Month</div>${escapeHtml(plan.financial?.additionalFundingMonth || '')}</div>
+      <div class="box"><div class="label">Payment Collection Days</div>${escapeHtml(plan.financial?.paymentCollectionDays || '')}</div>
+      <div class="box"><div class="label">Target Profit Margin (%)</div>${escapeHtml(plan.financial?.targetProfitMarginPct || '')}</div>
+      <h3>Departmental Projects</h3>
+      ${plansHtml}
+      `
+    );
+
+    // Convert HTML to .docx
+    let buffer = null;
+    try {
+      const htmlToDocx = require('html-to-docx');
+      buffer = await htmlToDocx(html, null, {
+        page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } }, // ~0.5in margins (in twips)
+      });
+    } catch (e) {
+      // Dependency missing or conversion failed
+      return res.status(500).json({ message: 'Word export unavailable. Please install html-to-docx on the server.' });
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', 'attachment; filename="Business_Plan.docx"');
+    return res.send(Buffer.from(buffer));
   } catch (err) {
     next(err);
   }

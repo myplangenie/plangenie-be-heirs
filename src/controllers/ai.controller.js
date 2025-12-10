@@ -581,19 +581,27 @@ exports.generateActionInsightSectionsForUser = async function generateActionInsi
     'You are a helpful business planning assistant. ' +
     'Group actionable next steps into short, meaningful sections. ' +
     'Each section should be focused (e.g., "Pre-launch", "Execution", "KPI & Review"). ' +
-    'Each item is 1–2 sentences, concrete, and ties back to the provided plans.';
+    'Each item is 1–2 sentences, concrete, and ties back to the provided plans. ' +
+    'Each item MUST begin with the relevant Department name followed by a colon and a space (e.g., "Finance: …"). ' +
+    'Do NOT include the section title or any phase name at the start of items.';
 
+  const deptNames = Object.keys(assignments || {});
   const userPrompt = [
     contextText,
     'Task: Create exactly 2 sections of insights summarizing immediate next steps for the action plans.',
     'Guidance:',
     '- The first section title must reflect the CURRENT operational phase based on the plans (e.g., "Pre-launch" if planning scaffolding dominates; "Execution" if tasks are underway; "KPI & Review" if focus is on measurement).',
     '- The second section title should reflect the NEXT logical phase.',
+    ...(deptNames && deptNames.length ? [
+      `Valid departments: ${deptNames.join(', ')}`,
+    ] : []),
     'Output format (strict JSON): { "sections": [ { "title": string, "items": string[] }, { "title": string, "items": string[] } ] }',
     'Rules:',
     '- Each section must have 2 or 3 items.',
     '- Titles must be short (1–3 words), examples: "Pre-launch", "Execution", "KPI & Review", "Scale-Up".',
     '- Items must be specific and not generic. Tie to goals, milestones, KPIs, and due dates.',
+    '- Each item MUST begin with the Department name followed by a colon and a space (e.g., "Sales: …").',
+    '- Do NOT prefix items with section titles such as "Pre-launch:"; only use the Department name prefix.',
     '- Do NOT include any text before or after the JSON.',
   ].join('\n');
 
@@ -718,13 +726,19 @@ exports.generateSingleInsightSectionForUser = async function generateSingleInsig
   const contextText = [baseCtx, answersCtx, lines.length ? `Current action plans:\n${lines.join('\n')}` : '', ragText, webLinksText].filter(Boolean).join('\n\n');
 
   const client = getOpenAI();
-  const system = 'You are a helpful business planning assistant. Write crisp, concrete steps under a single section.';
+  const system = 'You are a helpful business planning assistant. Write crisp, concrete steps under a single section. Each item MUST begin with the relevant Department name followed by a colon and a space (e.g., "Finance: …"). Do NOT include the section title at the start of items.';
+  const deptNames = Object.keys(assignments || {});
   const userPrompt = [
     contextText,
     `Task: Regenerate a single section titled "${title}" with 2–3 highly specific items (1–2 sentences each).`,
     'Output format (strict JSON): { "title": string, "items": string[] }',
     'Rules:',
     '- Items must tie back to the provided plans and due dates/KPIs where possible.',
+    ...(deptNames && deptNames.length ? [
+      `Valid departments: ${deptNames.join(', ')}`,
+    ] : []),
+    '- Each item MUST begin with the Department name followed by a colon and a space (e.g., "Operations: …").',
+    '- Do NOT prefix items with section titles such as "Pre-launch:"; only use the Department name prefix.',
     '- Do NOT include any text before or after the JSON.',
   ].join('\n');
 
