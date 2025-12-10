@@ -2423,13 +2423,13 @@ exports.exportPlanDocx = async (req, res, next) => {
         const titles = Array.isArray(plan.coreProjects) ? plan.coreProjects : [];
         const list = details.length ? details : titles.map((t)=>({ title: t, deliverables: [] }));
         if (!list.length) return [p('No core strategic projects captured.')];
-        const paras = [] as any[];
-        list.forEach((pr: any, i: number) => {
+        const paras = [];
+        list.forEach((pr, i) => {
           paras.push(new Paragraph({ children: [ new TextRun({ text: `${i+1}. ${pr.title || '—'}`, bold: true }) ] }));
           if (pr.dueWhen) paras.push(p(`Due: ${pr.dueWhen}`));
           if (pr.ownerName) paras.push(p(`Owner: ${pr.ownerName}`));
           if (Array.isArray(pr.deliverables) && pr.deliverables.length) {
-            pr.deliverables.forEach((d: any)=> paras.push(new Paragraph({ children: [new TextRun(String(d?.text||'—'))], bullet: { level: 0 } })));
+            pr.deliverables.forEach((d)=> paras.push(new Paragraph({ children: [new TextRun(String(d?.text||'—'))], bullet: { level: 0 } })));
           }
         });
         return paras;
