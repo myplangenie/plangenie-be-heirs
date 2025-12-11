@@ -965,7 +965,7 @@ exports.getDepartments = async (req, res, next) => {
     const a = ob?.answers || {};
     const assignments = a.actionAssignments || {};
     const label = (k) => ({
-      marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'ESG & Sustainability'
+      marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability'
     }[k] || k);
     const parseDate = (s) => { const m=String(s||'').match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:''; };
     // Helper: compute completion percent for an assignment item
@@ -1133,7 +1133,7 @@ exports.updateDepartment = async (req, res, next) => {
     // Derive progress from action assignments for this department
     const ab = ob?.answers || {};
     const assignments = ab.actionAssignments || {};
-    const deptKey = Object.keys(assignments || {}).find((k) => canon(({ marketing: 'Marketing', sales: 'Sales', operations:'Operations & Service Delivery', financeAdmin:'Finance & Admin', peopleHR:'People & Human Resources', partnerships:'Partnerships & Alliances', technology:'Technology & Infrastructure', communityImpact:'ESG & Sustainability' }[k] || k)) === canon(name));
+    const deptKey = Object.keys(assignments || {}).find((k) => canon(({ marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability' }[k] || k)) === canon(name));
     let progress = 0;
     if (deptKey && Array.isArray(assignments[deptKey])) {
       const arr = assignments[deptKey];
@@ -1198,22 +1198,22 @@ exports.updateActionAssignmentStatus = async (req, res, next) => {
     const labelFromKey = (k) => ({
       marketing: 'Marketing',
       sales: 'Sales',
-      operations: 'Operations & Service Delivery',
-      financeAdmin: 'Finance & Admin',
-      peopleHR: 'People & Human Resources',
-      partnerships: 'Partnerships & Alliances',
-      technology: 'Technology & Infrastructure',
-      communityImpact: 'ESG & Sustainability',
+      operations: 'Operations and Service Delivery',
+      financeAdmin: 'Finance and Admin',
+      peopleHR: 'People and Human Resources',
+      partnerships: 'Partnerships and Alliances',
+      technology: 'Technology and Infrastructure',
+      communityImpact: 'ESG and Sustainability',
     }[k] || k);
     const keyFromLabel = (lab) => ({
       Marketing: 'marketing',
       Sales: 'sales',
-      'Operations & Service Delivery': 'operations',
-      'Finance & Admin': 'financeAdmin',
-      'People & Human Resources': 'peopleHR',
-      'Partnerships & Alliances': 'partnerships',
-      'Technology & Infrastructure': 'technology',
-      'ESG & Sustainability': 'communityImpact',
+      'Operations and Service Delivery': 'operations',
+      'Finance and Admin': 'financeAdmin',
+      'People and Human Resources': 'peopleHR',
+      'Partnerships and Alliances': 'partnerships',
+      'Technology and Infrastructure': 'technology',
+      'ESG and Sustainability': 'communityImpact',
     }[lab] || null);
     // Resolve the correct key robustly (accept canonical key, label-as-key, or department label)
     const resolveDeptKey = () => {
@@ -1274,12 +1274,12 @@ exports.updateActionAssignmentItem = async (req, res, next) => {
     const keyFromLabel = {
       Marketing: 'marketing',
       Sales: 'sales',
-      'Operations & Service Delivery': 'operations',
-      'Finance & Admin': 'financeAdmin',
-      'People & Human Resources': 'peopleHR',
-      'Partnerships & Alliances': 'partnerships',
-      'Technology & Infrastructure': 'technology',
-      'ESG & Sustainability': 'communityImpact',
+      'Operations and Service Delivery': 'operations',
+      'Finance and Admin': 'financeAdmin',
+      'People and Human Resources': 'peopleHR',
+      'Partnerships and Alliances': 'partnerships',
+      'Technology and Infrastructure': 'technology',
+      'ESG and Sustainability': 'communityImpact',
     };
 
     const ob = await Onboarding.findOne({ user: userId });
@@ -1290,12 +1290,12 @@ exports.updateActionAssignmentItem = async (req, res, next) => {
     const labelFromKey = (k) => ({
       marketing: 'Marketing',
       sales: 'Sales',
-      operations: 'Operations & Service Delivery',
-      financeAdmin: 'Finance & Admin',
-      peopleHR: 'People & Human Resources',
-      partnerships: 'Partnerships & Alliances',
-      technology: 'Technology & Infrastructure',
-      communityImpact: 'ESG & Sustainability',
+      operations: 'Operations and Service Delivery',
+      financeAdmin: 'Finance and Admin',
+      peopleHR: 'People and Human Resources',
+      partnerships: 'Partnerships and Alliances',
+      technology: 'Technology and Infrastructure',
+      communityImpact: 'ESG and Sustainability',
     }[k] || k);
     const resolveKey = () => {
       // 1) Direct key match
@@ -1852,10 +1852,33 @@ exports.exportPlanPdf = async (req, res, next) => {
     const viewAs = req.headers['x-view-as'] || '';
 
     const puppeteer = require('puppeteer');
+    const fs = require('fs');
+    const path = require('path');
+    const resolveChromeExecutable = () => {
+      const candidates = [];
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) candidates.push(process.env.PUPPETEER_EXECUTABLE_PATH);
+      try { candidates.push(puppeteer.executablePath()); } catch {}
+      const cacheHints = [process.env.PUPPETEER_CACHE_DIR, path.join(process.cwd(), '.cache', 'puppeteer'), '/opt/render/.cache/puppeteer'];
+      for (const base of cacheHints.filter(Boolean)) {
+        try {
+          const chromeRoot = path.join(base, 'chrome');
+          const versions = fs.readdirSync(chromeRoot);
+          for (const v of versions) {
+            const bin = path.join(chromeRoot, v, 'chrome-linux64', 'chrome');
+            candidates.push(bin);
+          }
+        } catch {}
+      }
+      for (const p of candidates) {
+        try { if (p && fs.existsSync(p)) return p; } catch {}
+      }
+      return undefined;
+    };
+    const executablePath = resolveChromeExecutable();
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox','--disable-setuid-sandbox'],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+      executablePath,
     });
     try {
       const page = await browser.newPage();
@@ -2036,10 +2059,33 @@ exports.exportStrategyCanvasPdf = async (req, res, next) => {
     const token = m?.[1] || '';
     const viewAs = req.headers['x-view-as'] || '';
     const puppeteer = require('puppeteer');
+    const fs = require('fs');
+    const path = require('path');
+    const resolveChromeExecutable = () => {
+      const candidates = [];
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) candidates.push(process.env.PUPPETEER_EXECUTABLE_PATH);
+      try { candidates.push(puppeteer.executablePath()); } catch {}
+      const cacheHints = [process.env.PUPPETEER_CACHE_DIR, path.join(process.cwd(), '.cache', 'puppeteer'), '/opt/render/.cache/puppeteer'];
+      for (const base of cacheHints.filter(Boolean)) {
+        try {
+          const chromeRoot = path.join(base, 'chrome');
+          const versions = fs.readdirSync(chromeRoot);
+          for (const v of versions) {
+            const bin = path.join(chromeRoot, v, 'chrome-linux64', 'chrome');
+            candidates.push(bin);
+          }
+        } catch {}
+      }
+      for (const p of candidates) {
+        try { if (p && fs.existsSync(p)) return p; } catch {}
+      }
+      return undefined;
+    };
+    const executablePath = resolveChromeExecutable();
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox','--disable-setuid-sandbox'],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+      executablePath,
     });
     try {
       const page = await browser.newPage();
@@ -2065,7 +2111,7 @@ exports.exportDepartmentsDocx = async (req, res, next) => {
     const ob = await Onboarding.findOne({ user: userId }).lean().exec();
     const a = ob?.answers || {};
     const assignments = a.actionAssignments || {};
-    const label = (k) => ({ marketing:'Marketing',sales:'Sales',operations:'Operations & Service Delivery',financeAdmin:'Finance & Admin',peopleHR:'People & Human Resources',partnerships:'Partnerships & Alliances',technology:'Technology & Infrastructure',communityImpact:'ESG & Sustainability' }[k] || k);
+    const label = (k) => ({ marketing:'Marketing',sales:'Sales',operations:'Operations and Service Delivery',financeAdmin:'Finance and Admin',peopleHR:'People and Human Resources',partnerships:'Partnerships and Alliances',technology:'Technology and Infrastructure',communityImpact:'ESG and Sustainability' }[k] || k);
     const parseDate = (s) => { const m=String(s||'').match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:''; };
     const pctForItem = (it) => { const v = Number(it?.progress); if (isFinite(v)) return Math.max(0, Math.min(100, Math.round(v))); const st = String(it?.status || '').toLowerCase(); if (/done|complete|completed/.test(st)) return 100; if (/in[ _-]*progress/.test(st)) return 50; if (/not[ _-]*started/.test(st)) return 0; return 0; };
     const statusFromProgress = (p) => { if (p >= 80) return 'on-track'; if (p >= 50) return 'in-progress'; return 'at-risk'; };
@@ -2125,10 +2171,33 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
     const token = m?.[1] || '';
     const viewAs = req.headers['x-view-as'] || '';
     const puppeteer = require('puppeteer');
+    const fs = require('fs');
+    const path = require('path');
+    const resolveChromeExecutable = () => {
+      const candidates = [];
+      if (process.env.PUPPETEER_EXECUTABLE_PATH) candidates.push(process.env.PUPPETEER_EXECUTABLE_PATH);
+      try { candidates.push(puppeteer.executablePath()); } catch {}
+      const cacheHints = [process.env.PUPPETEER_CACHE_DIR, path.join(process.cwd(), '.cache', 'puppeteer'), '/opt/render/.cache/puppeteer'];
+      for (const base of cacheHints.filter(Boolean)) {
+        try {
+          const chromeRoot = path.join(base, 'chrome');
+          const versions = fs.readdirSync(chromeRoot);
+          for (const v of versions) {
+            const bin = path.join(chromeRoot, v, 'chrome-linux64', 'chrome');
+            candidates.push(bin);
+          }
+        } catch {}
+      }
+      for (const p of candidates) {
+        try { if (p && fs.existsSync(p)) return p; } catch {}
+      }
+      return undefined;
+    };
+    const executablePath = resolveChromeExecutable();
     const browser = await puppeteer.launch({
       headless: true,
       args: ['--no-sandbox','--disable-setuid-sandbox'],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+      executablePath,
     });
     try {
       const page = await browser.newPage();
@@ -2193,10 +2262,33 @@ exports.exportPlanDocx = async (req, res, next) => {
       const token = m?.[1] || '';
       const viewAs = req.headers['x-view-as'] || '';
       const puppeteer = require('puppeteer');
+      const fs = require('fs');
+      const path = require('path');
+      const resolveChromeExecutable = () => {
+        const candidates = [];
+        if (process.env.PUPPETEER_EXECUTABLE_PATH) candidates.push(process.env.PUPPETEER_EXECUTABLE_PATH);
+        try { candidates.push(puppeteer.executablePath()); } catch {}
+        const cacheHints = [process.env.PUPPETEER_CACHE_DIR, path.join(process.cwd(), '.cache', 'puppeteer'), '/opt/render/.cache/puppeteer'];
+        for (const base of cacheHints.filter(Boolean)) {
+          try {
+            const chromeRoot = path.join(base, 'chrome');
+            const versions = fs.readdirSync(chromeRoot);
+            for (const v of versions) {
+              const bin = path.join(chromeRoot, v, 'chrome-linux64', 'chrome');
+              candidates.push(bin);
+            }
+          } catch {}
+        }
+        for (const p of candidates) {
+          try { if (p && fs.existsSync(p)) return p; } catch {}
+        }
+        return undefined;
+      };
+      const executablePath = resolveChromeExecutable();
       const browser = await puppeteer.launch({
         headless: true,
         args: ['--no-sandbox','--disable-setuid-sandbox'],
-        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+        executablePath,
       });
       try {
         const page = await browser.newPage();
