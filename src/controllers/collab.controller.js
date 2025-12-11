@@ -112,7 +112,8 @@ exports.viewables = async (req, res) => {
     const me = await User.findById(viewerId).lean().exec();
     if (!me) return res.status(401).json({ message: 'Unauthorized' });
     const email = (me.email || '').toLowerCase();
-    const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: viewerId }, { email } ] }).lean().exec();
+  // Only consider explicit, id-based relationships (viewer/collaborator). Avoid email fallback for viewables.
+  const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: viewerId }, { collaborator: viewerId } ] }).lean().exec();
     const ownerIds = Array.from(new Set(rows.map((r) => String(r.owner))));
     if (ownerIds.length === 0) return res.json({ owners: [] });
     const owners = await User.find({ _id: { $in: ownerIds } }).lean().exec();
@@ -216,6 +217,7 @@ exports.accept = async (req, res) => {
     const viewerId = req.user?.id;
     if (viewerId && String(viewerId) !== String(collab.owner)) {
       collab.viewer = collab.viewer || viewerId;
+      collab.collaborator = collab.collaborator || viewerId;
     }
     // Invalidate token
     collab.acceptToken = null;
@@ -248,11 +250,12 @@ exports.acceptLogged = async (req, res) => {
     const me = await User.findById(viewerId).lean().exec();
     if (!me) return res.status(401).json({ message: 'Unauthorized' });
     const email = (me.email || '').toLowerCase();
-    const allowed = String(collab.owner) !== String(viewerId) && (String(collab.viewer || '') === String(viewerId) || String(collab.email || '') === email);
+    const allowed = String(collab.owner) !== String(viewerId) && (String(collab.viewer || '') === String(viewerId) || String(collab.collaborator || '') === String(viewerId) || String(collab.email || '') === email);
     if (!allowed) return res.status(403).json({ message: 'Not authorized to accept this invite' });
     collab.status = 'accepted';
     collab.acceptedAt = new Date();
     collab.viewer = collab.viewer || viewerId;
+    collab.collaborator = collab.collaborator || viewerId;
     collab.acceptToken = null;
     collab.tokenExpires = null;
     await collab.save();

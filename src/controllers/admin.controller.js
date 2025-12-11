@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Subscription = require('../models/Subscription');
+const Collaboration = require('../models/Collaboration');
 const SystemLog = require('../models/SystemLog');
 
 function toName(u) {
@@ -122,10 +123,25 @@ exports.updateUserStatus = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
   const id = req.params.id;
-  const user = await User.findByIdAndDelete(id);
-  if (!user) return res.status(404).json({ message: 'Not found' });
-  await log('User deleted', 'warning', user.email, { userId: String(user._id) });
-  return res.json({ ok: true });
+  // Perform cascading cleanup in a best-effort manner
+  const session = await User.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const user = await User.findById(id).session(session);
+      if (!user) return res.status(404).json({ message: 'Not found' });
+      // Delete collaborations where this user is the owner, or the collaborator/viewer
+      try {
+        await Collaboration.deleteMany({ $or: [ { owner: id }, { viewer: id }, { collaborator: id } ] }).session(session);
+      } catch {}
+      await User.deleteOne({ _id: id }).session(session);
+      await log('User deleted', 'warning', user.email, { userId: String(user._id) });
+      return res.json({ ok: true });
+    });
+  } catch (e) {
+    return res.status(500).json({ message: e?.message || 'Failed to delete user' });
+  } finally {
+    session.endSession();
+  }
 };
 
 exports.subscriptions = async (_req, res) => {

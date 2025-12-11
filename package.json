@@ -8,6 +8,7 @@
     "dev": "nodemon src/server.js",
     "lint": "echo 'No linter configured'",
     "promote-admin": "node scripts/promote-admin.js",
+    "migrate:collabs": "node scripts/migrate-collaborations-to-ids.js",
     "send:test-email": "node scripts/send-test-email.js --to eadelekeife@plangenie.com"
   },
   "dependencies": {

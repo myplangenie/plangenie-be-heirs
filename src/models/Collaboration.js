@@ -3,9 +3,13 @@ const mongoose = require('mongoose');
   const CollaborationSchema = new mongoose.Schema(
   {
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    // Invitee email (for pending invites and audit). For accepted collaborations, prefer collaborator id.
     email: { type: String, required: true, lowercase: true, trim: true, index: true },
     status: { type: String, enum: ['pending', 'accepted', 'declined'], default: 'pending' },
+    // Legacy accepted-link: viewer id (kept for backward compatibility)
     viewer: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
+    // New canonical collaborator id for accepted collaborations
+    collaborator: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null, index: true },
     invitedAt: { type: Date, default: Date.now },
     acceptedAt: { type: Date, default: null },
     acceptToken: { type: String, default: null, index: true },
@@ -14,6 +18,14 @@ const mongoose = require('mongoose');
   { timestamps: true }
 );
 
+// Prevent duplicate invites per owner/email
 CollaborationSchema.index({ owner: 1, email: 1 }, { unique: true });
+// Ensure at most one accepted link per owner-collaborator
+try {
+  CollaborationSchema.index(
+    { owner: 1, collaborator: 1 },
+    { unique: true, partialFilterExpression: { collaborator: { $type: 'objectId' } } }
+  );
+} catch (_) {}
 
 module.exports = mongoose.model('Collaboration', CollaborationSchema);

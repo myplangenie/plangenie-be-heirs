@@ -65,6 +65,7 @@ exports.register = async (req, res) => {
       collab.status = 'accepted';
       collab.acceptedAt = new Date();
       collab.viewer = user._id;
+      collab.collaborator = user._id;
       collab.acceptToken = null;
       collab.tokenExpires = null;
       await collab.save();
@@ -173,16 +174,19 @@ exports.login = async (req, res) => {
     : (!safe.onboardingDetailCompleted ? '/onboarding-detail' : '/dashboard');
   const planSlug = effectivePlan(user);
   const planName = plans[planSlug]?.name || planSlug;
-  // If user is a viewer for any accepted collaboration, include default owner to view-as
+  // If user is a viewer/collaborator for any accepted collaboration, include default owner to view-as
   let viewAsOwnerId = undefined;
   try {
-    const email = (user.email || '').toLowerCase();
-    const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: user._id }, { email } ] })
+    const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: user._id }, { collaborator: user._id } ] })
       .select('owner')
-      .limit(1)
+      .limit(5)
       .lean()
       .exec();
-    if (rows && rows.length) viewAsOwnerId = String(rows[0].owner);
+    if (rows && rows.length) {
+      const ids = Array.from(new Set(rows.map((r) => String(r.owner))));
+      const owners = await User.find({ _id: { $in: ids } }).select('_id').lean().exec();
+      if (owners && owners.length) viewAsOwnerId = String(owners[0]._id);
+    }
   } catch {}
   return res.json({ token, user: safe, nextRoute, plan: { slug: planSlug, name: planName }, viewAsOwnerId });
 };
@@ -200,13 +204,16 @@ exports.me = async (req, res) => {
   // Provide default owner to view-as for collaborators
   let viewAsOwnerId = undefined;
   try {
-    const email = (user.email || '').toLowerCase();
-    const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: user._id }, { email } ] })
+    const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: user._id }, { collaborator: user._id } ] })
       .select('owner')
-      .limit(1)
+      .limit(5)
       .lean()
       .exec();
-    if (rows && rows.length) viewAsOwnerId = String(rows[0].owner);
+    if (rows && rows.length) {
+      const ids = Array.from(new Set(rows.map((r) => String(r.owner))));
+      const owners = await User.find({ _id: { $in: ids } }).select('_id').lean().exec();
+      if (owners && owners.length) viewAsOwnerId = String(owners[0]._id);
+    }
   } catch {}
   return res.json({ user: safe, nextRoute, plan: { slug: planSlug, name: planName }, viewAsOwnerId });
 };

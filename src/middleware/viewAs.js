@@ -19,10 +19,7 @@ module.exports = async function viewAs(req, res, next) {
     if (!READ.has(method)) return res.status(403).json({ message: 'Read-only access for collaborators' });
 
     // Verify viewer is invited to owner
-    const me = await User.findById(req.user.id).lean().exec();
-    if (!me) return res.status(401).json({ message: 'Unauthorized' });
-    const email = (me.email || '').toLowerCase();
-    const row = await Collaboration.findOne({ owner: asId, $or: [{ viewer: req.user.id }, { email }] }).exec();
+    const row = await Collaboration.findOne({ owner: asId, $or: [{ viewer: req.user.id }, { collaborator: req.user.id }] }).exec();
     if (!row) return res.status(403).json({ message: 'No access to requested dashboard' });
     if (row.status !== 'accepted') {
       return res.status(403).json({ message: row.status === 'declined' ? 'Invite declined' : 'Invite pending – please accept' });
