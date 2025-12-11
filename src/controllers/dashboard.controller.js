@@ -1971,8 +1971,7 @@ exports.exportStrategyCanvasDocx = async (req, res, next) => {
             children: [
               heading('Vision Board', HeadingLevel.HEADING_1),
               new Paragraph({ text: `Generated ${now}`, spacing: { after: 240 } }),
-              heading('Table of Contents', HeadingLevel.HEADING_1),
-              new TableOfContents('', { hyperlink: true, headingStyleRange: '1-2' }),
+              
               heading('Your Business Identity', HeadingLevel.HEADING_2),
               p('Unique Business Proposition (UBP):'),
               p(ubp || '—'),
@@ -2370,8 +2369,7 @@ exports.exportPlanDocx = async (req, res, next) => {
             children: [
               ...coverChildren,
               new Paragraph({ children: [new TextRun({ break: 1 })] }),
-              heading('Table of Contents', HeadingLevel.HEADING_1),
-              new TableOfContents('', { hyperlink: true, headingStyleRange: '1-3' }),
+              
               new Paragraph({ children: [new TextRun({ break: 1 })] }),
               heading('Business Plan', HeadingLevel.HEADING_1),
               heading('Vision'),
