@@ -31,11 +31,37 @@ async function ensureSubscriptionForUser(user, opts = {}) {
   return sub;
 }
 
+// Resolve Stripe price ID by plan and interval, with backward-compatible fallbacks
+function resolvePriceId(plan, interval) {
+  const p = String(plan || 'pro').toLowerCase();
+  const i = interval === 'year' ? 'year' : 'month';
+  if (p === 'lite') {
+    const env = i === 'year' ? process.env.STRIPE_PRICE_ID_LITE_YEAR : process.env.STRIPE_PRICE_ID_LITE_MONTH;
+    return env || '';
+  }
+  // default to pro
+  if (i === 'year') {
+    return (
+      process.env.STRIPE_PRICE_ID_PRO_YEAR ||
+      process.env.STRIPE_PRICE_ID_YEAR ||
+      process.env.STRIPE_PRICE_ID ||
+      ''
+    );
+  }
+  return (
+    process.env.STRIPE_PRICE_ID_PRO_MONTH ||
+    process.env.STRIPE_PRICE_ID_MONTH ||
+    process.env.STRIPE_PRICE_ID ||
+    ''
+  );
+}
+
 exports.createCheckoutSession = async (req, res) => {
   try {
     // Always prefer explicit app base URL from environment for billing return pages
     const appWebUrl = process.env.APP_WEB_URL || 'http://localhost:3000';
     const interval = (req.body && req.body.interval) || 'month';
+    const plan = String((req.body && req.body.plan) || 'pro').toLowerCase();
     const requestedPromo = String(req.body?.promoCode || '').trim();
 
     // Bypass Stripe flow for testing when a configured promo code is used.
@@ -52,7 +78,7 @@ exports.createCheckoutSession = async (req, res) => {
       const sub = await ensureSubscriptionForUser(user);
       // Simulate activation
       sub.status = 'active';
-      sub.planType = 'Pro';
+      sub.planType = plan === 'lite' ? 'Lite' : 'Pro';
       sub.amountCents = 0;
       const now = new Date();
       sub.currentPeriodStart = now;
@@ -60,7 +86,8 @@ exports.createCheckoutSession = async (req, res) => {
       sub.currentPeriodEnd = new Date(now.getTime() + addDays * 24 * 60 * 60 * 1000);
       sub.renewalDate = sub.currentPeriodEnd;
       await sub.save();
-      user.hasActiveSubscription = true;
+      // Only Pro unlocks premium features
+      user.hasActiveSubscription = (sub.planType === 'Pro');
       await user.save();
       await SubscriptionHistory.create({
         user: user._id,
@@ -76,11 +103,8 @@ exports.createCheckoutSession = async (req, res) => {
 
     // Normal Stripe flow
     const stripe = getStripe();
-    // Choose price by interval with backward compatibility to STRIPE_PRICE_ID
-    const priceId =
-      interval === 'year'
-        ? (process.env.STRIPE_PRICE_ID_YEAR || process.env.STRIPE_PRICE_ID)
-        : (process.env.STRIPE_PRICE_ID_MONTH || process.env.STRIPE_PRICE_ID);
+    // Choose price by plan + interval
+    const priceId = resolvePriceId(plan, interval);
     if (!priceId) {
       console.error('Stripe price ID not configured for interval:', interval);
       return res.status(500).json({ message: 'Price configuration missing' });
@@ -139,6 +163,7 @@ exports.createCheckoutSession = async (req, res) => {
       metadata: {
         userId: String(user._id),
         subscriptionId: String(subscription._id),
+        plan: plan,
       },
     });
 
@@ -153,7 +178,7 @@ exports.createCheckoutSession = async (req, res) => {
 
     await Subscription.updateOne(
       { _id: subscription._id },
-      { $set: { status: 'initialized', stripeCustomerId: customerId, stripePriceId: priceId } }
+      { $set: { status: 'initialized', stripeCustomerId: customerId, stripePriceId: priceId, planType: plan === 'lite' ? 'Lite' : 'Pro' } }
     );
 
     res.json({ url: session.url, sessionId: session.id });
@@ -330,7 +355,11 @@ exports.webhook = async (req, res) => {
           await subscriptionDoc.save();
 
           if (user) {
-            user.hasActiveSubscription = ['active', 'trialing'].includes(subscriptionDoc.status);
+            // Only Pro unlocks premium features
+            user.hasActiveSubscription = (
+              ['active', 'trialing'].includes(subscriptionDoc.status) &&
+              String(subscriptionDoc.planType || '') === 'Pro'
+            );
             await user.save();
           }
 
@@ -370,7 +399,10 @@ exports.webhook = async (req, res) => {
             await sub.save();
             const user = await User.findById(sub.user);
             if (user) {
-              user.hasActiveSubscription = true;
+              user.hasActiveSubscription = (
+                ['active', 'trialing'].includes(sub.status) &&
+                String(sub.planType || '') === 'Pro'
+              );
               await user.save();
             }
             await SubscriptionHistory.create({
@@ -424,7 +456,10 @@ exports.webhook = async (req, res) => {
 
           const user = await User.findById(sub.user);
           if (user) {
-            user.hasActiveSubscription = ['active', 'trialing'].includes(sub.status);
+            user.hasActiveSubscription = (
+              ['active', 'trialing'].includes(sub.status) &&
+              String(sub.planType || '') === 'Pro'
+            );
             await user.save();
           }
 

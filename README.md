@@ -57,7 +57,8 @@ User
 Subscriptions
 - POST `/api/subscriptions/checkout`
   - headers: `Authorization: Bearer <token>`
-  - creates a Stripe Checkout Session for a monthly plan; returns `{ url, sessionId }`
+  - body (optional): `{ plan?: 'lite'|'pro', interval?: 'month'|'year', promoCode?: string, next?: string }`
+  - creates a Stripe Checkout Session for the selected plan/interval; returns `{ url, sessionId }`
 - POST `/api/subscriptions/portal`
   - headers: `Authorization: Bearer <token>`
   - returns a Stripe Billing Portal URL: `{ url }`
@@ -125,12 +126,17 @@ Notes
 - Passwords are hashed (bcryptjs). JWT tokens expire in 7 days.
 - Stripe setup:
   - Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in `.env`.
-  - Provide price IDs: `STRIPE_PRICE_ID_MONTH` and `STRIPE_PRICE_ID_YEAR` (or `STRIPE_PRICE_ID` as a fallback for both).
+  - Provide price IDs:
+    - Pro: `STRIPE_PRICE_ID_PRO_MONTH` and `STRIPE_PRICE_ID_PRO_YEAR` (falls back to `STRIPE_PRICE_ID_MONTH`/`STRIPE_PRICE_ID_YEAR` or `STRIPE_PRICE_ID`).
+    - Lite: `STRIPE_PRICE_ID_LITE_MONTH` and `STRIPE_PRICE_ID_LITE_YEAR`.
   - Configure your Stripe webhook to POST to `/api/subscriptions/webhook`.
   - `APP_WEB_URL` is used for success/cancel URLs and billing portal return URL.
 
 Plans and Entitlements
-- Plan slugs: `lite` (free), `premium` (paid).
+- Plan slugs: `lite` and `pro`.
 - Lite removes: Financials (all endpoints), AI competitor discovery, AI customer analysis, AI-generated action plans, automatic financial linkage from Products/Services, departmental action plans, My Plan editing (view-only), multi-user collaboration.
 - Lite limits: maxGoals=3, maxCoreProjects=3.
-- Effective plan is derived from `user.hasActiveSubscription` and enforced via middleware in `src/middleware/plan.js` and config in `src/config/entitlements.js`.
+- Effective plan is derived from subscription status and plan type:
+  - Only active/trialing `Pro` subscriptions set `user.hasActiveSubscription = true` (unlocks Pro features).
+  - Paid `Lite` subscriptions keep `hasActiveSubscription = false` so entitlements remain Lite.
+  - Enforced via middleware in `src/middleware/plan.js` and config in `src/config/entitlements.js`.

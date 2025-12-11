@@ -7,7 +7,8 @@ const SubscriptionSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
     // Plan info (assume monthly Pro by default)
-    planType: { type: String, enum: ['Free', 'Trial', 'Pro', 'Enterprise'], default: 'Pro', index: true },
+    // Note: 'Lite' is a paid tier with reduced entitlements
+    planType: { type: String, enum: ['Free', 'Lite', 'Trial', 'Pro', 'Enterprise'], default: 'Pro', index: true },
     currency: { type: String, default: 'usd' },
     amountCents: { type: Number, default: 0 },
 
