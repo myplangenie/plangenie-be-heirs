@@ -122,6 +122,12 @@ router.post('/actions/core/project/suggest', auth(false), requireFeature('aiCore
 router.post('/actions/sections/goals', auth(false), ai.suggestDeptGoalsBulk);
 router.post('/financial/forecast/rewrite', auth(false), requireFeature('financials'), ai.rewriteFinancialForecast);
 
+// 1-Year Goals CRUD
+router.get('/vision/destination/1y/goals', auth(false), ctrl.getVision1yGoals);
+router.post('/vision/destination/1y/goals', auth(false), ctrl.addVision1yGoal);
+router.patch('/vision/destination/1y/goals/:index', auth(false), ctrl.updateVision1yGoal);
+router.delete('/vision/destination/1y/goals/:index', auth(false), ctrl.deleteVision1yGoal);
+
 // Save/load all onboarding answers (optional server persistence)
 router.get('/all', auth(false), ctrl.getAllAnswers);
 router.post('/all', auth(false), ctrl.saveAllAnswers);

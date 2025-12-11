@@ -185,6 +185,94 @@ exports.saveVision = async (req, res) => {
   return res.json({ onboarding: ob });
 };
 
+// --- 1-Year Goals CRUD (stored in onboarding.answers.vision1y as newline-separated text) ---
+
+function parseGoals(str) {
+  return String(str || '')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function joinGoals(arr) {
+  const list = Array.isArray(arr) ? arr : [];
+  return list.map((s) => String(s || '').trim()).filter(Boolean).join('\n');
+}
+
+// GET /api/onboarding/vision/destination/1y/goals
+exports.getVision1yGoals = async (req, res) => {
+  const userId = req.user?.id;
+  if (!userId) return res.json({ goals: [] });
+  const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+  const a = ob?.answers || {};
+  const goals = parseGoals(a.vision1y);
+  return res.json({ goals });
+};
+
+// POST /api/onboarding/vision/destination/1y/goals
+// Body: { goal: string, index?: number }
+exports.addVision1yGoal = async (req, res) => {
+  const userId = req.user?.id;
+  const text = String(req.body?.goal || '').trim();
+  const indexRaw = req.body?.index;
+  if (!text) return res.status(400).json({ message: 'Goal text is required' });
+  if (!userId) {
+    // Ephemeral add when unauthenticated
+    return res.json({ goals: [text] });
+  }
+  const ob = await getOrCreate(userId);
+  const a = ob.answers || {};
+  const goals = parseGoals(a.vision1y);
+  const idx = Number(indexRaw);
+  if (Number.isFinite(idx) && idx >= 0 && idx <= goals.length) goals.splice(idx, 0, text);
+  else goals.push(text);
+  a.vision1y = joinGoals(goals);
+  ob.answers = a;
+  try { ob.markModified('answers'); } catch {}
+  await ob.save();
+  return res.status(201).json({ goals });
+};
+
+// PATCH /api/onboarding/vision/destination/1y/goals/:index
+// Body: { goal: string }
+exports.updateVision1yGoal = async (req, res) => {
+  const userId = req.user?.id;
+  const index = Number(req.params?.index);
+  const text = String(req.body?.goal || '').trim();
+  if (!Number.isFinite(index) || index < 0) return res.status(400).json({ message: 'Valid index is required' });
+  if (!text) return res.status(400).json({ message: 'Goal text is required' });
+  if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+  const ob = await Onboarding.findOne({ user: userId });
+  if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
+  const a = ob.answers || {};
+  const goals = parseGoals(a.vision1y);
+  if (index >= goals.length) return res.status(404).json({ message: 'Goal not found' });
+  goals[index] = text;
+  a.vision1y = joinGoals(goals);
+  ob.answers = a;
+  try { ob.markModified('answers'); } catch {}
+  await ob.save();
+  return res.json({ goals });
+};
+
+// DELETE /api/onboarding/vision/destination/1y/goals/:index
+exports.deleteVision1yGoal = async (req, res) => {
+  const userId = req.user?.id;
+  const index = Number(req.params?.index);
+  if (!Number.isFinite(index) || index < 0) return res.status(400).json({ message: 'Valid index is required' });
+  if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+  const ob = await Onboarding.findOne({ user: userId });
+  if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
+  const a = ob.answers || {};
+  const goals = parseGoals(a.vision1y);
+  if (index >= goals.length) return res.status(404).json({ message: 'Goal not found' });
+  const next = goals.filter((_, i) => i !== index);
+  a.vision1y = joinGoals(next);
+  ob.answers = a;
+  try { ob.markModified('answers'); } catch {}
+  await ob.save();
+  return res.json({ goals: next });
+};
 // Optional: save full onboarding answers snapshot
 exports.saveAllAnswers = async (req, res) => {
   const userId = req.user?.id;
