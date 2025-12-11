@@ -1846,7 +1846,7 @@ exports.exportPlanPdf = async (req, res, next) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     // Render the actual front‑end page so the PDF matches what users see
-    const frontend = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+    const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
     const orgUrl = `${frontend}/dashboard/plan/org-only?orgOnly=1`;
     const mainUrl = `${frontend}/dashboard/plan?print=1&noOrg=1`;
 
@@ -2056,7 +2056,7 @@ exports.exportStrategyCanvasPdf = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const frontend = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+    const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
     const url = `${frontend}/dashboard/strategy-canvas/print?print=1`;
     const authHeader = req.headers['authorization'] || '';
     const m = String(authHeader).match(/Bearer\s+(.+)/i);
@@ -2168,7 +2168,7 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const frontend = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+    const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
     const url = `${frontend}/dashboard/departments/print?print=1`;
     const authHeader = req.headers['authorization'] || '';
     const m = String(authHeader).match(/Bearer\s+(.+)/i);
@@ -2259,7 +2259,7 @@ exports.exportPlanDocx = async (req, res, next) => {
     // Optionally capture Org Chart as an image using the same approach as PDF
     let orgB64 = null;
     try {
-      const frontend = process.env.FRONTEND_ORIGIN || 'http://localhost:3000';
+      const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
       const orgUrl = `${frontend}/dashboard/plan/org-only?orgOnly=1`;
       const authHeader = req.headers['authorization'] || '';
       const m = String(authHeader).match(/Bearer\s+(.+)/i);
@@ -2365,9 +2365,10 @@ exports.exportPlanDocx = async (req, res, next) => {
 
       const coverChildren = [];
       if (logoBuf) {
+        // Render logo at a modest size to keep proportions consistent with the app preview
         coverChildren.push(new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [new ImageRun({ data: logoBuf, transformation: { width: 300, height: 100 } })],
+          children: [new ImageRun({ data: logoBuf, transformation: { width: 260, height: 60 } })],
         }));
       } else if (logoUrl) {
         coverChildren.push(new Paragraph({ children: [new TextRun({ text: 'Logo: ' + logoUrl, italics: true, color: '666666' })], alignment: AlignmentType.CENTER }));
@@ -2547,10 +2548,18 @@ exports.exportPlanDocx = async (req, res, next) => {
         const paras = [];
         list.forEach((pr, i) => {
           paras.push(new Paragraph({ children: [ new TextRun({ text: `${i+1}. ${pr.title || '—'}`, bold: true }) ] }));
-          if (pr.dueWhen) paras.push(p(`Due: ${pr.dueWhen}`));
+          if (pr.goal) paras.push(p(`Goal: ${pr.goal}`));
           if (pr.ownerName) paras.push(p(`Owner: ${pr.ownerName}`));
+          if (pr.priority) paras.push(p(`Priority: ${pr.priority}`));
+          if (pr.cost) paras.push(p(`Cost: ${pr.cost}`));
+          if (pr.dueWhen) paras.push(p(`Due: ${pr.dueWhen}`));
           if (Array.isArray(pr.deliverables) && pr.deliverables.length) {
-            pr.deliverables.forEach((d)=> paras.push(new Paragraph({ children: [new TextRun(String(d?.text||'—'))], bullet: { level: 0 } })));
+            pr.deliverables.forEach((d)=> {
+              const bits = [String(d?.text||'—')];
+              if (d?.kpi) bits.push(`(KPI: ${String(d.kpi)})`);
+              if (d?.dueWhen) bits.push(`(Due: ${String(d.dueWhen)})`);
+              paras.push(new Paragraph({ children: [new TextRun(bits.join(' '))], bullet: { level: 0 } }));
+            });
           }
         });
         return paras;
