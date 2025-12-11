@@ -2254,6 +2254,8 @@ exports.exportPlanDocx = async (req, res, next) => {
         targetProfitMarginPct: a.finTargetProfitMarginPct || '',
       },
       actionPlans: a.actionAssignments || {},
+      coreProjects: Array.isArray(a.coreProjects) ? a.coreProjects : [],
+      coreProjectDetails: Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [],
     };
 
     // Optionally capture Org Chart as an image using the same approach as PDF

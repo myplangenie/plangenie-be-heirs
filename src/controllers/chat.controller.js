@@ -448,6 +448,25 @@ exports.respond = async (req, res) => {
             teamMembersCount = teamMembers.length;
           }
         } catch {}
+        // Derive departments from compiled plan if DB collection has none (use saved customizable sections or assignment keys)
+        try {
+          const canon = (s) => String(s || '').trim().toLowerCase();
+          if (!Array.isArray(departments) || departments.length === 0) {
+            const label = (k) => ({
+              marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability'
+            }[k] || k);
+            const list = [];
+            if (Array.isArray(a.actionSections) && a.actionSections.length) {
+              a.actionSections.forEach((s)=>{ const nm = String(s?.label || '').trim() || label(String(s?.key||'')); if (nm) list.push({ name: nm }); });
+            } else {
+              Object.keys(a.actionAssignments || {}).forEach((k)=> { const nm = label(k); if (nm) list.push({ name: nm }); });
+            }
+            // Deduplicate by name
+            const uniq = Array.from(new Map(list.map((d)=> [canon(d.name), d])).values());
+            departments = uniq;
+          }
+        } catch {}
+
         const coreProjectsCount = Array.isArray(a?.coreProjectDetails) && a.coreProjectDetails.length
           ? a.coreProjectDetails.length
           : (Array.isArray(a?.coreProjects) ? a.coreProjects.length : 0);
