@@ -986,32 +986,36 @@ exports.getDepartments = async (req, res, next) => {
     };
     const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
     const canon = (s) => String(s || '').trim().toLowerCase();
-    // Build a unified list of department names from assignments and org chart entries
-    const deptMap = new Map(); // key: canonical name -> { name, dueDate? }
-    // From assignments: prefer human label mapping
-    for (const k of Object.keys(assignments || {})) {
-      const name = label(k);
-      const arr = assignments[k] || [];
-      // Use the nearest due date among INCOMPLETE items (skip 100% complete)
-      const dates = (arr || [])
-        .filter((u) => pctForItem(u) < 100)
-        .map((u)=>parseDate(u?.dueWhen))
-        .filter(Boolean)
-        .sort();
-      const dueDate = dates[0] || '-';
-      const ck = canon(name);
-      if (!deptMap.has(ck)) deptMap.set(ck, { name, dueDate });
-      else {
-        const curr = deptMap.get(ck);
-        if (!curr.dueDate && dueDate) curr.dueDate = dueDate;
+    // Determine the department universe from saved customizable sections if present;
+    // otherwise derive only from assignments (do NOT expand from org positions to avoid noisy panels)
+    const deptMap = new Map(); // key: canonical name -> { key?, name, dueDate? }
+    const sections = Array.isArray(a.actionSections) && a.actionSections.length
+      ? a.actionSections.map((s)=>({ key: String(s?.key||'').trim(), name: String(s?.label||'').trim() || label(String(s?.key||'')) })).filter((s)=>s.key)
+      : null;
+    if (sections && sections.length) {
+      for (const s of sections) {
+        const name = s.name || label(s.key);
+        const arr = assignments[s.key] || [];
+        const dates = (arr || [])
+          .filter((u) => pctForItem(u) < 100)
+          .map((u)=>parseDate(u?.dueWhen))
+          .filter(Boolean)
+          .sort();
+        const dueDate = dates[0] || '-';
+        deptMap.set(canon(name), { key: s.key, name, dueDate });
       }
-    }
-    // From org chart: any typed department names
-    for (const p of org) {
-      const name = String(p.department || '').trim();
-      if (!name) continue;
-      const ck = canon(name);
-      if (!deptMap.has(ck)) deptMap.set(ck, { name, dueDate: '-' });
+    } else {
+      for (const k of Object.keys(assignments || {})) {
+        const name = label(k);
+        const arr = assignments[k] || [];
+        const dates = (arr || [])
+          .filter((u) => pctForItem(u) < 100)
+          .map((u)=>parseDate(u?.dueWhen))
+          .filter(Boolean)
+          .sort();
+        const dueDate = dates[0] || '-';
+        deptMap.set(canon(name), { key: k, name, dueDate });
+      }
     }
 
     // Determine department heads from org chart
@@ -1053,7 +1057,7 @@ exports.getDepartments = async (req, res, next) => {
     const departments = Array.from(deptMap.values()).map((r) => {
       const s = byName.get(r.name);
       // Derive progress from action assignment item progress (or fallback to status mapping)
-      const deptKey = Object.keys(assignments || {}).find((k) => canon(label(k)) === canon(r.name));
+      const deptKey = r.key || Object.keys(assignments || {}).find((k) => canon(label(k)) === canon(r.name));
       let progress = 0;
       if (deptKey && Array.isArray(assignments[deptKey])) {
         const arr = assignments[deptKey];
@@ -2619,6 +2623,23 @@ exports.exportPlanDocx = async (req, res, next) => {
       return `<div class="box"><div style="font-weight:700">${escapeHtml(labelFor(key))}</div>${items || '<div style="font-size:12px;color:#666">No actions captured.</div>'}</div>`;
     }).join('');
 
+    // Core Strategic Projects HTML
+    const coreList = (Array.isArray(plan.coreProjectDetails) && plan.coreProjectDetails.length)
+      ? plan.coreProjectDetails
+      : (Array.isArray(plan.coreProjects) ? plan.coreProjects.map((t)=>({ title: String(t||'').trim(), deliverables: [] })) : []);
+    const coreHtml = coreList.length
+      ? coreList.map((p, i) => {
+          const del = (Array.isArray(p?.deliverables) ? p.deliverables : [])
+            .map((d) => `<li>${escapeHtml(String(d?.text || '—'))}${d?.kpi ? ` <span style=\"color:#666\">(KPI: ${escapeHtml(String(d.kpi))})</span>` : ''}${d?.dueWhen ? ` <span style=\"color:#666\">(Due: ${escapeHtml(String(d.dueWhen))})</span>` : ''}</li>`)
+            .join('');
+          const goal = p?.goal ? `<div style=\"font-size:12px;color:#333\"><b>Goal:</b> ${escapeHtml(String(p.goal))}</div>` : '';
+          const owner = p?.ownerName ? `<div style=\"font-size:12px;color:#333\"><b>Owner:</b> ${escapeHtml(String(p.ownerName))}</div>` : '';
+          const due = p?.dueWhen ? `<div style=\"font-size:12px;color:#333\"><b>Due:</b> ${escapeHtml(String(p.dueWhen))}</div>` : '';
+          const cost = p?.cost ? `<div style=\"font-size:12px;color:#333\"><b>Cost:</b> ${escapeHtml(String(p.cost))}</div>` : '';
+          return `<div class=\"box\"><div style=\"font-weight:600\">${i+1}. ${escapeHtml(String(p?.title || '—'))}</div>${goal}${owner}${due}${cost}${del ? `<ul>${del}</ul>` : ''}</div>`;
+        }).join('')
+      : '<div class=\"box\">No core strategic projects captured.</div>';
+
     const logoBlock = logoUrl 
       ? `<div style="text-align:center;margin:12px 0"><img src="${escapeHtml(logoUrl)}" style="max-height:60px;max-width:260px;object-fit:contain" alt="Business Logo"/></div>`
       : '';
@@ -2648,6 +2669,8 @@ exports.exportPlanDocx = async (req, res, next) => {
       <div class="box"><table><thead><tr><th>Product/Service</th><th>Description</th><th>Unit Cost</th><th>Price</th><th>Monthly Volume</th></tr></thead><tbody>${products || '<tr><td colspan="5">—</td></tr>'}</tbody></table></div>
       <h3>Organizational Structure</h3>
       <div class="box">${orgBlock}</div>
+      <h3>Core Strategic Projects</h3>
+      ${coreHtml}
       <h3>Financial Forecasting Inputs</h3>
       <div class="box"><div class="label">Projected Monthly Sales Volume</div>${escapeHtml(plan.financial?.salesVolume || '')}</div>
       <div class="box"><div class="label">Monthly Sales Growth (%)</div>${escapeHtml(plan.financial?.salesGrowthPct || '')}</div>
