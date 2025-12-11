@@ -733,6 +733,16 @@ exports.saveCompiledPlan = async (req, res, next) => {
         // ignore malformed payloads
       }
     }
+    // Persist customizable action plan sections (user-defined department list with labels)
+    if (Array.isArray(cp.actionSections)) {
+      try {
+        const norm = (cp.actionSections || []).map((s) => ({
+          key: String(s && s.key || '').trim(),
+          label: String(s && s.label || '').trim(),
+        })).filter((s) => s.key);
+        a.actionSections = norm;
+      } catch {}
+    }
     // Action plans (departmental)
     if (cp.actionPlans && typeof cp.actionPlans === 'object') {
       if (!require('../config/entitlements').hasFeature(user, 'departmentPlans')) {
@@ -806,6 +816,7 @@ exports.getCompiledPlan = async (req, res, next) => {
         isNonprofit: a.finIsNonprofit || '',
       },
       actionPlans: a.actionAssignments || {},
+      actionSections: Array.isArray(a.actionSections) ? a.actionSections.map((s)=>({ key: String(s && s.key || '').trim(), label: String(s && s.label || '').trim() })) : undefined,
       coreProjects: Array.isArray(a.coreProjects) ? a.coreProjects : [],
       coreProjectDetails: Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [],
       generatedAt: new Date().toISOString(),
@@ -1841,7 +1852,11 @@ exports.exportPlanPdf = async (req, res, next) => {
     const viewAs = req.headers['x-view-as'] || '';
 
     const puppeteer = require('puppeteer');
-    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox','--disable-setuid-sandbox'],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+    });
     try {
       const page = await browser.newPage();
       // Seed token (and view-as) into localStorage before any scripts run
@@ -2021,7 +2036,11 @@ exports.exportStrategyCanvasPdf = async (req, res, next) => {
     const token = m?.[1] || '';
     const viewAs = req.headers['x-view-as'] || '';
     const puppeteer = require('puppeteer');
-    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox','--disable-setuid-sandbox'],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+    });
     try {
       const page = await browser.newPage();
       await page.evaluateOnNewDocument((t, va) => {
@@ -2106,7 +2125,11 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
     const token = m?.[1] || '';
     const viewAs = req.headers['x-view-as'] || '';
     const puppeteer = require('puppeteer');
-    const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox','--disable-setuid-sandbox'],
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+    });
     try {
       const page = await browser.newPage();
       await page.evaluateOnNewDocument((t, va) => { try { localStorage.setItem('pg_token', String(t||'')); if (va) localStorage.setItem('pg_view_as', String(va)); } catch {} }, token, viewAs);
@@ -2170,7 +2193,11 @@ exports.exportPlanDocx = async (req, res, next) => {
       const token = m?.[1] || '';
       const viewAs = req.headers['x-view-as'] || '';
       const puppeteer = require('puppeteer');
-      const browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox','--disable-setuid-sandbox'] });
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox','--disable-setuid-sandbox'],
+        executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+      });
       try {
         const page = await browser.newPage();
         await page.evaluateOnNewDocument((t, va) => {
