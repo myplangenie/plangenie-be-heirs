@@ -34,13 +34,14 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'This invite was sent to a different email address' });
     }
     collabOwnerId = String(collab.owner);
-  } else {
-    // Fallback: If there is an active collab invite for this email, use it
-    collab = await Collaboration.findOne({ email: String(email || '').toLowerCase(), status: { $in: ['pending', 'accepted'] } })
-      .sort({ createdAt: -1 })
-      .exec();
-    if (collab) collabOwnerId = String(collab.owner);
   }
+  // else {
+  //   // Fallback: If there is an active collab invite for this email, use it
+  //   collab = await Collaboration.findOne({ email: String(email || '').toLowerCase(), status: { $in: ['pending', 'accepted'] } })
+  //     .sort({ createdAt: -1 })
+  //     .exec();
+  //   if (collab) collabOwnerId = String(collab.owner);
+  // }
 
   const hashed = await User.hashPassword(password);
   const combinedFullName = (fullName && String(fullName).trim()) || [firstName, lastName].filter(Boolean).join(' ').trim() || undefined;
