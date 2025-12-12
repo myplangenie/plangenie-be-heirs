@@ -2258,6 +2258,11 @@ exports.exportPlanDocx = async (req, res, next) => {
       coreProjectDetails: Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [],
     };
 
+    // Load generated prose sections (Market Study and Financials) for richer content parity with UI/PDF
+    const prose = (a && a.planProse) || {};
+    const marketProse = typeof prose.marketStatement === 'string' ? prose.marketStatement : '';
+    const financialProse = typeof prose.financialStatement === 'string' ? prose.financialStatement : '';
+
     // Optionally capture Org Chart as an image using the same approach as PDF
     let orgB64 = null;
     try {
@@ -2352,6 +2357,32 @@ exports.exportPlanDocx = async (req, res, next) => {
       const heading = (text, level = HeadingLevel.HEADING_2) => new Paragraph({ text: text || '', heading: level, spacing: { before: 240, after: 120 } });
       const p = (text, opts = {}) => new Paragraph({ children: [new TextRun({ text: String(text || ''), size: 22, color: '111111' })], spacing: { after: 120 }, ...opts });
       const bulletsDocx = (arr) => (arr || []).filter(Boolean).map((t) => new Paragraph({ children: [new TextRun(String(t))], bullet: { level: 0 } }));
+      // Convert plain-text prose into paragraphs + bullets (lines starting with '-', '*', or '•')
+      const proseToDocx = (text) => {
+        const paras = [];
+        if (!text || typeof text !== 'string') return paras;
+        const lines = String(text).replace(/\r\n/g, '\n').split('\n');
+        let buffer = [];
+        const flushBuffer = () => {
+          if (!buffer.length) return;
+          const t = buffer.join(' ').trim();
+          if (t) paras.push(p(t));
+          buffer = [];
+        };
+        for (const raw of lines) {
+          const line = String(raw || '').trimEnd();
+          if (!line.trim()) { flushBuffer(); continue; }
+          if (/^[\-\*•]\s+/.test(line)) {
+            flushBuffer();
+            paras.push(new Paragraph({ children: [new TextRun(line.replace(/^[\-\*•]\s+/, ''))], bullet: { level: 0 } }));
+          } else {
+            // Paragraph text; preserve soft line-breaks by buffering consecutive lines
+            buffer.push(line.trim());
+          }
+        }
+        flushBuffer();
+        return paras;
+      };
 
       // Try to fetch the logo image for embedding on the cover
       let logoBuf = null;
@@ -2367,10 +2398,23 @@ exports.exportPlanDocx = async (req, res, next) => {
 
       const coverChildren = [];
       if (logoBuf) {
-        // Render logo at a modest size to keep proportions consistent with the app preview
+        // Preserve aspect ratio while fitting within a reasonable max box
+        let wPx = 260, hPx = 60;
+        try {
+          const sizeOf = require('image-size');
+          const dim = sizeOf(logoBuf);
+          const naturalW = Math.max(1, Number(dim?.width || 1));
+          const naturalH = Math.max(1, Number(dim?.height || 1));
+          // Rough content width in px (~672px for 8.5in page with 0.75in margins)
+          const maxW = 600;
+          const maxH = 150;
+          const scale = Math.min(maxW / naturalW, maxH / naturalH, 1);
+          wPx = Math.max(1, Math.round(naturalW * scale));
+          hPx = Math.max(1, Math.round(naturalH * scale));
+        } catch {}
         coverChildren.push(new Paragraph({
           alignment: AlignmentType.CENTER,
-          children: [new ImageRun({ data: logoBuf, transformation: { width: 260, height: 60 } })],
+          children: [new ImageRun({ data: logoBuf, transformation: { width: wPx, height: hPx } })],
         }));
       } else if (logoUrl) {
         coverChildren.push(new Paragraph({ children: [new TextRun({ text: 'Logo: ' + logoUrl, italics: true, color: '666666' })], alignment: AlignmentType.CENTER }));
@@ -2520,6 +2564,7 @@ exports.exportPlanDocx = async (req, res, next) => {
 
               new Paragraph({ children: [new TextRun({ text: '', break: 1 })], pageBreakBefore: true }),
               heading('Market Study'),
+              ...(marketProse ? proseToDocx(marketProse) : []),
               p('Ideal Customer Profile:'),
               p(plan.market?.customer || '—'),
               p('Partners and Ecosystem:'),
@@ -2537,6 +2582,7 @@ exports.exportPlanDocx = async (req, res, next) => {
       ...orgContent,
 
       new Paragraph({ children: [new TextRun({ text: '', break: 1 })], pageBreakBefore: true }),
+      ...(financialProse ? [heading('Financials'), ...proseToDocx(financialProse)] : []),
       heading('Financial Forecasting Inputs'),
       financialsTable,
 
@@ -2652,7 +2698,7 @@ exports.exportPlanDocx = async (req, res, next) => {
       : '<div class=\"box\">No core strategic projects captured.</div>';
 
     const logoBlock = logoUrl 
-      ? `<div style="text-align:center;margin:12px 0"><img src="${escapeHtml(logoUrl)}" style="max-height:60px;max-width:260px;object-fit:contain" alt="Business Logo"/></div>`
+      ? `<div style="text-align:center;margin:12px 0"><img src="${escapeHtml(logoUrl)}" style="max-height:120px;max-width:600px;object-fit:contain" alt="Business Logo"/></div>`
       : '';
     const orgBlock = orgB64
       ? `<div><img src="data:image/png;base64,${orgB64}" style="width:100%;height:auto;display:block" alt="Org Chart"/></div>`
@@ -2672,6 +2718,7 @@ exports.exportPlanDocx = async (req, res, next) => {
       ${Array.isArray(plan.values?.traits) && plan.values?.traits.length ? `<div class="box"><div class="label">Character Traits</div><ul>${(plan.values?.traits || []).map((t)=>`<li>${escapeHtml(t)}</li>`).join('')}</ul></div>` : ''}
       <div class="box"><div class="label">Culture and Behaviors</div>${escapeHtml(plan.values?.culture || '')}</div>
       <h3>Market Study</h3>
+      ${marketProse ? `<div class="box"><div class="label">Market and Opportunity Study</div><div>${escapeHtml(marketProse).replace(/\n/g,'<br/>')}</div></div>` : ''}
       <div class="box"><div class="label">Ideal Customer Profile</div>${escapeHtml(plan.market?.customer || '')}</div>
       <div class="box"><div class="label">Partners and Ecosystem</div>${escapeHtml(plan.market?.partners || '')}</div>
       <div class="box"><div class="label">Competitors and Positioning</div>${escapeHtml(plan.market?.competitors || '')}</div>
@@ -2682,6 +2729,7 @@ exports.exportPlanDocx = async (req, res, next) => {
       <div class="box">${orgBlock}</div>
       <h3>Core Strategic Projects</h3>
       ${coreHtml}
+      ${financialProse ? `<h3>Financials</h3><div class="box"><div class="label">Financial Section</div><div>${escapeHtml(financialProse).replace(/\n/g,'<br/>')}</div></div>` : ''}
       <h3>Financial Forecasting Inputs</h3>
       <div class="box"><div class="label">Projected Monthly Sales Volume</div>${escapeHtml(plan.financial?.salesVolume || '')}</div>
       <div class="box"><div class="label">Monthly Sales Growth (%)</div>${escapeHtml(plan.financial?.salesGrowthPct || '')}</div>
