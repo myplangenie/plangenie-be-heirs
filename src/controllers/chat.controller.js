@@ -11,6 +11,8 @@ try {
   rag = { initRag: async () => ({ ready: false, error: e }), retrieve: async () => [] };
 }
 
+
+
 // Local helper copied to avoid tight coupling to ai.controller internals
 let openaiClient = null;
 function getOpenAI() {
