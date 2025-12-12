@@ -92,6 +92,7 @@ exports.register = async (req, res) => {
     verificationCode: otpHash,
     verificationExpires: vexp,
   });
+  
   // Send verification email (best-effort)
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
