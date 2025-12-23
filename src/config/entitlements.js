@@ -16,11 +16,15 @@ const plans = {
       planEdit: false,
       departmentPlans: false,
       multiUserTeam: false,
+      assumptionScenarios: false,
     },
     limits: {
       maxPlans: 1,
+      maxJourneys: 1,
       maxGoals: 3,
       maxCoreProjects: 3,
+      reviewsPerMonth: 2,
+      decisionsPerMonth: 10,
     },
   },
   pro: {
@@ -36,11 +40,15 @@ const plans = {
       planEdit: true,
       departmentPlans: true,
       multiUserTeam: true,
+      assumptionScenarios: true,
     },
     limits: {
       maxPlans: 1000,
+      maxJourneys: 1000,
       maxGoals: 1000,
       maxCoreProjects: 1000,
+      reviewsPerMonth: 100000,
+      decisionsPerMonth: 100000,
     },
   },
 };

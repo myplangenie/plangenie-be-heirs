@@ -33,174 +33,12 @@ function parseDataUrl(dataUrl) {
   }
 }
 
-function buildSeed(userId, ob) {
-  const ubp = ob?.vision?.ubp || 'Simplifying business strategy through intelligent automation';
-  const vision = 'To become a leading business in…';
-  return {
-    user: userId,
-    summary: {
-      kpis: { overdueTasks: 4, activeTeamMembers: 4 },
-      milestones: [
-        { label: 'Q1 Product Launch', due: 'Mar 12, 2025' },
-        { label: 'Budget review', due: 'Apr 21, 2025' },
-        { label: 'Team retro', due: 'Apr 30, 2025' },
-      ],
-      departmentProgress: [
-        { name: 'Engineering', percent: 87 },
-        { name: 'Marketing', percent: 69 },
-        { name: 'Sales', percent: 62 },
-      ],
-      financeChart: [
-        { name: 'Jan', Revenue: 10, Cost: 7 },
-        { name: 'Feb', Revenue: 10, Cost: 7 },
-        { name: 'Mar', Revenue: 10, Cost: 7 },
-        { name: 'Apr', Revenue: 19, Cost: 15 },
-        { name: 'May', Revenue: 10, Cost: 7 },
-        { name: 'Jun', Revenue: 19, Cost: 15 },
-      ],
-      activePlans: [
-        { title: 'Increase qualified inbound leads by 25%', status: 'In progress', owner: 'Sarah Fredrick' },
-        { title: 'Launch revised website by October 1', status: 'Completed', owner: 'Sarah Fredrick' },
-        { title: 'Reduce churn to < 3%', status: 'On track', owner: 'Sarah Fredrick' },
-        { title: 'Improve NPS to 45', status: 'In progress', owner: 'Sarah Fredrick' },
-      ],
-      insights: [
-        '35% increase in demand for AI business tools',
-        '30% increase in demand for AI business tools',
-        'Lower CPC across performance channels this week',
-      ],
-      snapshot: { vision, ubp },
-      team: [
-        { name: 'Gabriel Thompson', role: 'CEO', note: 'In charge of marketing and everything that has to do…' },
-        { name: 'Gabriel Thompson', role: 'COO', note: 'In charge of marketing and everything that has to do…' },
-        { name: 'Gabriel Thompson', role: 'CTO', note: 'In charge of marketing and everything that has to do…' },
-        { name: 'Gabriel Thompson', role: 'CFO', note: 'In charge of marketing and everything that has to do…' },
-      ],
-    },
-  };
-}
-
-async function seedDefaults(userId) {
-  const ob = await Onboarding.findOne({ user: userId }).lean().exec();
-  const seed = buildSeed(userId, ob);
-  const doc = await Dashboard.create(seed);
-  return doc;
-}
-
+// Minimal dashboard doc helper: create empty doc only as needed, no seeded content
 async function getOrCreate(userId) {
-  const existing = await Dashboard.findOne({ user: userId });
-  if (existing) return existing;
-  // Upsert to avoid race conditions across concurrent requests
-  const ob = await Onboarding.findOne({ user: userId }).lean().exec();
-  const seed = buildSeed(userId, ob);
-  const doc = await Dashboard.findOneAndUpdate(
-    { user: userId },
-    { $setOnInsert: seed },
-    { new: true, upsert: true }
-  );
+  let doc = await Dashboard.findOne({ user: userId });
+  if (doc) return doc;
+  doc = await Dashboard.create({ user: userId, summary: {} });
   return doc;
-}
-
-// Seed helpers for new domain collections (run on first access)
-async function ensureSeedNotifications(userId) {
-  const count = await Notification.countDocuments({ user: userId });
-  if (count > 0) return;
-  await Notification.insertMany([
-    {
-      user: userId,
-      nid: ensureId('n_'),
-      title: 'Overdue: Update Q2 Marketing Strategy',
-      description: 'This task was due yesterday. Department: Marketing | Owner: Emily Davis',
-      type: 'task',
-      severity: 'danger',
-      time: '2 hours ago',
-      actions: [{ label: 'View task', kind: 'primary' }],
-      read: false,
-    },
-    {
-      user: userId,
-      nid: ensureId('n_'),
-      title: 'Task Due in 2 Days: Financial Report Q1',
-      description: 'Department: Finance | Progress: 75% | Owner: Mike Chen',
-      type: 'task',
-      severity: 'warning',
-      time: '2 hours ago',
-      actions: [{ label: 'View progress', kind: 'primary' }],
-      read: false,
-    },
-    {
-      user: userId,
-      nid: ensureId('n_'),
-      title: 'Sarah Johnson commented on Marketing Plan',
-      description: "Great progress on the social media strategy! Let's discuss the influencer partnerships in tomorrow's meeting.",
-      type: 'collaboration',
-      severity: 'success',
-      time: '2 hours ago',
-      read: false,
-    },
-  ]);
-  await NotificationSettings.findOneAndUpdate(
-    { user: userId },
-    { $setOnInsert: { user: userId, frequency: 'Real-time', tone: 'Professional' } },
-    { upsert: true }
-  );
-}
-
-async function ensureSeedDepartments(userId) {
-  const count = await Department.countDocuments({ user: userId });
-  if (count > 0) return;
-  await Department.insertMany([
-    { user: userId, name: 'Marketing', owner: 'Emily Davis', dueDate: 'March 31, 2025', progress: 75, status: 'on-track' },
-    { user: userId, name: 'Sales', owner: 'Emily Davis', dueDate: 'March 31, 2025', progress: 75, status: 'in-progress' },
-    { user: userId, name: 'Technology', owner: 'Emily Davis', dueDate: 'March 31, 2025', progress: 75, status: 'at-risk' },
-  ]);
-}
-
-async function ensureSeedFinancials(userId) {
-  const existing = await Financials.findOne({ user: userId });
-  if (existing) return existing;
-  return Financials.create({
-    user: userId,
-    metrics: {
-      monthlyRevenue: '$120,540',
-      monthlyCosts: '$74,320',
-      netProfit: '$46,220',
-      burnRate: '14 months',
-    },
-    chart: [
-      { name: 'Jan', Revenue: 10, Cost: 7, Profit: 8 },
-      { name: 'Feb', Revenue: 10, Cost: 7, Profit: 8 },
-      { name: 'Mar', Revenue: 10, Cost: 7, Profit: 8 },
-      { name: 'Apr', Revenue: 19, Cost: 15, Profit: 16 },
-      { name: 'May', Revenue: 10, Cost: 7, Profit: 8 },
-      { name: 'Jun', Revenue: 19, Cost: 15, Profit: 16 },
-    ],
-    revenueBars: [42, 48, 55, 61, 58, 66, 74, 80, 78, 85, 92, 96],
-    cashflowBars: [12, 22, 16, 28, 24, 36, 40, 32, 44, 48, 38, 52],
-    assumptions: [
-      { key: 'growth', assumption: 'Monthly Growth Rate', control: 'input', placeholder: 'e.g 10%', ai: '12%', aiClass: 'text-emerald-600 font-semibold', rationale: 'Based on current market momentum and product-market fit' },
-      { key: 'churn', assumption: 'Customer Churn Rate', control: 'input', placeholder: 'e.g 10%', ai: '3%', aiClass: 'text-amber-600 font-semibold', rationale: 'Based on current market momentum and product-market fit' },
-      { key: 'acv', assumption: 'Average Contract Value', control: 'input', placeholder: 'e.g $1200', ai: '$1,450', aiClass: 'text-primary font-semibold', rationale: 'Based on current market momentum and product-market fit' },
-      { key: 'margin', assumption: 'Operating Margin Target', control: 'input', placeholder: 'e.g 30%', ai: '30%', aiClass: 'text-primary font-semibold', rationale: 'Based on current market momentum and product-market fit' },
-      { key: 'recognition', assumption: 'Revenue Recognition', control: 'select', placeholder: '', ai: 'Monthly', aiClass: 'text-primary font-semibold', rationale: 'Based on current market momentum and product-market fit' },
-    ],
-  });
-}
-
-async function ensureSeedPlan(userId) {
-  let plan = await Plan.findOne({ user: userId });
-  if (!plan) plan = await Plan.create({ user: userId, companyLogoUrl: '' });
-  const count = await PlanSection.countDocuments({ user: userId });
-  if (count === 0) {
-    await PlanSection.insertMany([
-      { user: userId, sid: ensureId('s_'), name: 'Executive Summary', complete: 90, order: 0 },
-      { user: userId, sid: ensureId('s_'), name: 'Company Overview', complete: 100, order: 1 },
-      { user: userId, sid: ensureId('s_'), name: 'Vision & Mission', complete: 100, order: 2 },
-      { user: userId, sid: ensureId('s_'), name: 'Market Analysis', complete: 100, order: 3 },
-      { user: userId, sid: ensureId('s_'), name: 'Products & Services', complete: 90, order: 4 },
-    ]);
-  }
-  return plan;
 }
 
 // Note: Insight item formatting is handled by OpenAI; avoid server-side prefixing.
@@ -1567,14 +1405,14 @@ exports.getPlanProse = async (req, res, next) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const ob = await Onboarding.findOne({ user: userId }).lean().exec();
     const prose = (ob && ob.answers && ob.answers.planProse) || {};
-    return res.json({ prose: { marketStatement: prose.marketStatement || '', financialStatement: prose.financialStatement || '', generatedAt: prose.generatedAt || null } });
+    return res.json({ prose: { executiveSummary: prose.executiveSummary || '', marketStatement: prose.marketStatement || '', financialStatement: prose.financialStatement || '', generatedAt: prose.generatedAt || null } });
   } catch (err) {
     next(err);
   }
 };
 
 // POST /api/dashboard/plan/prose/generate
-// Body: { sections?: ['market','financial'] }
+// Body: { sections?: ['executive','market','financial'] }
 exports.generatePlanProse = async (req, res, next) => {
   try {
     const userId = req.user?.id;
@@ -1582,6 +1420,7 @@ exports.generatePlanProse = async (req, res, next) => {
     const ob = await Onboarding.findOne({ user: userId }) || await Onboarding.create({ user: userId });
     const a = ob.answers || {};
     const { sections } = req.body || {};
+    const wantExecutive = !Array.isArray(sections) || sections.includes('executive');
     const wantMarket = !Array.isArray(sections) || sections.includes('market');
     const wantFinancial = !Array.isArray(sections) || sections.includes('financial');
 
@@ -1598,6 +1437,58 @@ exports.generatePlanProse = async (req, res, next) => {
       ].filter(Boolean);
       return parts.length ? parts.join('\n') : '';
     })();
+
+    // Executive Summary (Problem, Solution, Market, Opportunity)
+    let executiveSummary = undefined;
+    if (wantExecutive) {
+      const bp = ob.businessProfile || {};
+      const products = Array.isArray(a.products) ? a.products : [];
+      const productLines = products
+        .filter((p)=> String(p?.product||'').trim())
+        .map((p)=> `- ${String(p.product).trim()} — ${String(p.description||'').trim()} | Price: ${String(p.price ?? p.pricing ?? '').trim()} | Volume: ${String(p.monthlyVolume ?? '').trim()}`)
+        .join('\n');
+      const competitorNames = Array.isArray(a.competitorNames) && a.competitorNames.length
+        ? a.competitorNames.map((n)=> `- ${String(n||'').trim()}`).join('\n')
+        : '';
+
+      const execCtx = [
+        contextBase,
+        'VISION SNAPSHOT:',
+        a.ubp && `UBP: ${a.ubp}`,
+        a.purpose && `Purpose: ${a.purpose}`,
+        '',
+        'MARKET CONTEXT:',
+        a.marketCustomer && `Customer: ${a.marketCustomer}`,
+        a.compNotes && `Competition: ${a.compNotes}`,
+        competitorNames && `Competitors (names):\n${competitorNames}`,
+        '',
+        productLines && `PRODUCTS:\n${productLines}`,
+        '',
+        'FINANCIAL HINTS (optional):',
+        a.finSalesGrowthPct && `Monthly sales growth target (%): ${a.finSalesGrowthPct}`,
+        a.finSalesVolume && `Initial monthly sales volume (units): ${a.finSalesVolume}`,
+      ].filter(Boolean).join('\n');
+
+      const instruction = [
+        'Write an Executive Summary that a decision‑maker can read in under a minute.',
+        'Focus on: 1) Problem, 2) Solution, 3) Market, 4) Opportunity.',
+        'Guidelines:',
+        '- 2–4 short paragraphs; plain language; no fluff.',
+        '- Standalone summary — do not assume the reader saw any other sections.',
+        '- If numeric hints exist (e.g., revenue/volume/growth), reference them qualitatively; do not invent external stats.',
+        '- Output ONLY the final prose as plain text. No bullets or headings.',
+      ].join('\n');
+
+      try {
+        executiveSummary = await ai.callOpenAIProse({ type: 'Executive Summary of Business Plan', input: instruction, contextText: execCtx, maxTokens: 500 });
+      } catch (err) {
+        if (err && err.code === 'NO_API_KEY') {
+          // Leave undefined; downstream will fallback to simple template if necessary
+        } else {
+          throw err;
+        }
+      }
+    }
 
     // Market and Opportunity Study generation from onboarding Market & Opportunity answers
     let marketStatement = undefined;
@@ -1767,6 +1658,7 @@ exports.generatePlanProse = async (req, res, next) => {
     ob.answers = a;
     ob.answers.planProse = {
       ...(a.planProse || {}),
+      ...(typeof executiveSummary === 'string' ? { executiveSummary } : {}),
       ...(typeof marketStatement === 'string' ? { marketStatement } : {}),
       ...(typeof financialStatement === 'string' ? { financialStatement } : {}),
       generatedAt: new Date().toISOString(),
@@ -1784,9 +1676,8 @@ exports.getPlan = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const plan = await ensureSeedPlan(userId);
     const [p, sectionsRaw] = await Promise.all([
-      plan || Plan.findOne({ user: userId }).lean().exec(),
+      Plan.findOne({ user: userId }).lean().exec(),
       PlanSection.find({ user: userId }).sort({ order: 1, createdAt: 1 }).lean().exec(),
     ]);
     const sections = sectionsRaw.map((s) => ({ sid: s.sid, name: s.name, complete: s.complete }));
@@ -1826,11 +1717,10 @@ exports.uploadCompanyLogo = async (req, res, next) => {
     const url = `${base}/${key}`;
 
     // Save on the user's Plan document
-    await ensureSeedPlan(userId);
     const updated = await Plan.findOneAndUpdate(
       { user: userId },
-      { companyLogoUrl: url },
-      { new: true }
+      { $set: { companyLogoUrl: url }, $setOnInsert: { user: userId } },
+      { new: true, upsert: true }
     ).lean().exec();
 
     return res.json({ ok: true, url, plan: { companyLogoUrl: updated?.companyLogoUrl || url } });
@@ -2260,6 +2150,7 @@ exports.exportPlanDocx = async (req, res, next) => {
 
     // Load generated prose sections (Market Study and Financials) for richer content parity with UI/PDF
     const prose = (a && a.planProse) || {};
+    const execProse = typeof prose.executiveSummary === 'string' ? prose.executiveSummary : '';
     const marketProse = typeof prose.marketStatement === 'string' ? prose.marketStatement : '';
     const financialProse = typeof prose.financialStatement === 'string' ? prose.financialStatement : '';
 
@@ -2405,7 +2296,6 @@ exports.exportPlanDocx = async (req, res, next) => {
           const dim = sizeOf(logoBuf);
           const naturalW = Math.max(1, Number(dim?.width || 1));
           const naturalH = Math.max(1, Number(dim?.height || 1));
-          // Rough content width in px (~672px for 8.5in page with 0.75in margins)
           const maxW = 600;
           const maxH = 150;
           const scale = Math.min(maxW / naturalW, maxH / naturalH, 1);
@@ -2541,8 +2431,49 @@ exports.exportPlanDocx = async (req, res, next) => {
               new Paragraph({ children: [new TextRun({ break: 1 })] }),
               
               new Paragraph({ children: [new TextRun({ break: 1 })] }),
-              heading('Business Plan', HeadingLevel.HEADING_1),
-              heading('Vision'),
+      heading('Business Plan', HeadingLevel.HEADING_1),
+      // Executive Summary — prefer AI-generated prose if available
+      heading('Executive Summary'),
+      ...(() => {
+        if (execProse && execProse.trim()) {
+          const lines = String(execProse).split(/\n+/).map((s)=> s.trim()).filter(Boolean);
+          return lines.length ? proseToDocx(lines.join('\n\n')) : [p(execProse)];
+        }
+        // Fallback: minimal structured summary
+        const paras = [];
+        const company = (plan.businessProfile?.businessName || '').trim();
+        const ventureType = (plan.businessProfile?.ventureType || '').trim();
+        const ubp = (plan.vision?.ubp || '').trim();
+        const purpose = (plan.vision?.purpose || '').trim();
+        const customer = (plan.market?.customer || '').trim();
+        const competitors = Array.isArray(plan.market?.competitorNames) ? plan.market?.competitorNames.filter(Boolean) : [];
+        const products = Array.isArray(plan.products) ? plan.products : [];
+        const productNames = products.map((p)=> String(p?.name || p?.title || p?.product || p?.service || '').trim()).filter(Boolean).slice(0,3);
+        const toNum = (v) => { const n = parseFloat(String(v ?? '').replace(/[^0-9.\-]/g,'')); return Number.isFinite(n) ? n : 0; };
+        const revenue0 = products.reduce((a, p)=> a + toNum(p?.price ?? p?.pricing) * toNum(p?.monthlyVolume), 0);
+        const growthPct = toNum(plan.financial?.salesGrowthPct);
+        const problemText = (() => {
+          if (customer && purpose) return `${customer} often lack a simple, reliable way to "${purpose}"`;
+          if (customer) return `${customer} face a clear operational and planning gap`;
+          if (purpose) return `Organizations struggle to "${purpose}" efficiently`;
+          return 'The intended customers face a clear pain point that existing options do not address well';
+        })();
+        paras.push(new Paragraph({ children: [ new TextRun({ text: 'Problem: ', bold: true }), new TextRun({ text: problemText }) ] }));
+        const solCore = ubp || (productNames.length ? `We offer ${productNames.join(', ')}` : 'We provide a focused solution');
+        const solTail = ventureType ? ` as a ${ventureType.toLowerCase()} offering` : '';
+        const solutionText = `${company || 'Our business'} ${solCore.replace(/^we\s+/i,'We ')}${solTail}.`;
+        paras.push(new Paragraph({ children: [ new TextRun({ text: 'Solution: ', bold: true }), new TextRun({ text: solutionText }) ] }));
+        const compNote = competitors.length ? `${competitors.length} notable competitor${competitors.length===1?'':'s'}` : 'limited direct alternatives';
+        const marketText = customer ? `Primary market: ${customer}. Competitive context: ${compNote}.` : `Primary market defined with ${compNote}.`;
+        paras.push(new Paragraph({ children: [ new TextRun({ text: 'Market: ', bold: true }), new TextRun({ text: marketText }) ] }));
+        const oppPieces = [];
+        if (revenue0 > 0) oppPieces.push(`Initial monthly revenue potential ~$${Math.round(revenue0).toLocaleString()}`);
+        if (Number.isFinite(growthPct) && growthPct > 0) oppPieces.push(`early growth target ${Math.round(growthPct)}%/mo`);
+        const oppText = oppPieces.length ? `${oppPieces.join('; ')}. Clear path to traction via near‑term priorities and focused go‑to‑market.` : 'Clear path to traction via near‑term priorities and focused go‑to‑market.';
+        paras.push(new Paragraph({ children: [ new TextRun({ text: 'Opportunity: ', bold: true }), new TextRun({ text: oppText }) ] }));
+        return paras;
+      })(),
+      heading('Vision'),
               p('Unique Business Proposition (UBP):'),
               p(plan.vision?.ubp || '—'),
               p('Purpose Statement:'),
@@ -2662,7 +2593,7 @@ exports.exportPlanDocx = async (req, res, next) => {
         peopleHR: 'People and Human Resources',
         partnerships: 'Partnerships and Alliances',
         technology: 'Technology and Infrastructure',
-        communityImpact: 'ESG and Sustainability',
+        communityImpact: 'Sustainability',
       };
       if (map[key]) return map[key];
       return String(key || '')
@@ -2704,11 +2635,55 @@ exports.exportPlanDocx = async (req, res, next) => {
       ? `<div><img src="data:image/png;base64,${orgB64}" style="width:100%;height:auto;display:block" alt="Org Chart"/></div>`
       : (orgList ? `<ul>${orgList}</ul>` : '—');
 
+    const execSummaryHtml = (() => {
+      const esc = escapeHtml;
+      if (execProse && execProse.trim()) {
+        return `<div class="box"><div class="label">Executive Summary</div><div>${esc(execProse).replace(/\n/g,'<br/>')}</div></div>`;
+      }
+      const company = (plan.businessProfile?.businessName || '').trim();
+      const ventureType = (plan.businessProfile?.ventureType || '').trim();
+      const ubp = (plan.vision?.ubp || '').trim();
+      const purpose = (plan.vision?.purpose || '').trim();
+      const customer = (plan.market?.customer || '').trim();
+      const competitors = Array.isArray(plan.market?.competitorNames) ? plan.market?.competitorNames.filter(Boolean) : [];
+      const products = Array.isArray(plan.products) ? plan.products : [];
+      const productNames = products.map((p)=> String(p?.name || p?.title || p?.product || p?.service || '').trim()).filter(Boolean).slice(0,3);
+      const toNum = (v) => { const n = parseFloat(String(v ?? '').replace(/[^0-9.\-]/g,'')); return Number.isFinite(n) ? n : 0; };
+      const revenue0 = products.reduce((a, p)=> a + toNum(p?.price ?? p?.pricing) * toNum(p?.monthlyVolume), 0);
+      const growthPct = toNum(plan.financial?.salesGrowthPct);
+
+      const problemText = (() => {
+        if (customer && purpose) return `${esc(customer)} often lack a simple, reliable way to "${esc(purpose)}"`;
+        if (customer) return `${esc(customer)} face a clear operational and planning gap`;
+        if (purpose) return `Organizations struggle to "${esc(purpose)}" efficiently`;
+        return 'The intended customers face a clear pain point that existing options do not address well';
+      })();
+      const solCore = ubp || (productNames.length ? `We offer ${productNames.map(esc).join(', ')}` : 'We provide a focused solution');
+      const solTail = ventureType ? ` as a ${esc(ventureType.toLowerCase())} offering` : '';
+      const solutionText = `${esc(company || 'Our business')} ${esc(solCore.replace(/^we\s+/i,'We '))}${solTail}.`;
+      const compNote = competitors.length ? `${competitors.length} notable competitor${competitors.length===1?'':'s'}` : 'limited direct alternatives';
+      const marketText = customer ? `Primary market: ${esc(customer)}. Competitive context: ${esc(compNote)}.` : `Primary market defined with ${esc(compNote)}.`;
+      const oppPieces = [];
+      if (revenue0 > 0) oppPieces.push(`Initial monthly revenue potential ~$${Math.round(revenue0).toLocaleString()}`);
+      if (Number.isFinite(growthPct) && growthPct > 0) oppPieces.push(`early growth target ${Math.round(growthPct)}%/mo`);
+      const oppText = oppPieces.length ? `${oppPieces.join('; ')}. Clear path to traction via near‑term priorities and focused go‑to‑market.` : 'Clear path to traction via near‑term priorities and focused go‑to‑market.';
+
+      return `
+        <div class="box">
+          <div class="label">Executive Summary</div>
+          <div><b>Problem:</b> ${problemText}</div>
+          <div><b>Solution:</b> ${solutionText}</div>
+          <div><b>Market:</b> ${marketText}</div>
+          <div><b>Opportunity:</b> ${esc(oppText)}</div>
+        </div>
+      `;
+    })();
     const html = wrapBasicHtml(
       'Business Plan',
       `
       <h2>Business Plan</h2>
       ${logoBlock}
+      ${execSummaryHtml}
       <div class="box"><div class="label">Unique Business Proposition (UBP)</div>${escapeHtml(plan.vision?.ubp || '')}</div>
       <div class="box"><div class="label">Purpose Statement</div>${escapeHtml(plan.vision?.purpose || '')}</div>
       <div class="box"><div class="label">1‑Year Goals</div>${bullets(plan.vision?.oneYear)}</div>
@@ -2960,7 +2935,6 @@ exports.addPlanSection = async (req, res, next) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { name } = req.body || {};
     if (!name || !String(name).trim()) return res.status(400).json({ message: 'Section name is required' });
-    await ensureSeedPlan(userId);
     const count = await PlanSection.countDocuments({ user: userId });
     const section = await PlanSection.create({ user: userId, sid: ensureId('s_'), name: String(name).trim(), complete: 0, order: count });
     return res.status(201).json({ section: { sid: section.sid, name: section.name, complete: section.complete } });

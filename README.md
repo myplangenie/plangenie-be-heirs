@@ -130,7 +130,9 @@ Notes
     - Pro: `STRIPE_PRICE_ID_PRO_MONTH` and `STRIPE_PRICE_ID_PRO_YEAR` (falls back to `STRIPE_PRICE_ID_MONTH`/`STRIPE_PRICE_ID_YEAR` or `STRIPE_PRICE_ID`).
     - Lite: `STRIPE_PRICE_ID_LITE_MONTH` and `STRIPE_PRICE_ID_LITE_YEAR`.
   - Configure your Stripe webhook to POST to `/api/subscriptions/webhook`.
-  - `APP_WEB_URL` is used for success/cancel URLs and billing portal return URL.
+   - `APP_WEB_URL` is used for success/cancel URLs and billing portal return URL.
+   - Feature flags:
+     - `FEATURE_JOURNEYS` (default: off) — when not set to `true`, all Journeys-related endpoints (Journeys, This Week, Assumptions, Reviews, Decisions under `/api/journeys`) are stubbed to return safe empty payloads so the frontend does not error.
 
 Plans and Entitlements
 - Plan slugs: `lite` and `pro`.

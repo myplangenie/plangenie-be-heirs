@@ -49,7 +49,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-View-As'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-View-As', 'X-Journey-Id'],
   maxAge: 86400, // cache preflight for 24h
 };
 
@@ -75,6 +75,13 @@ app.use('/api/gamma', require('./routes/gamma.routes'));
 app.use('/api/chat', require('./routes/chat.routes'));
 // Admin
 app.use('/api/admin', require('./routes/admin.routes'));
+// Journeys (feature‑flagged)
+const enableJourneys = String(process.env.FEATURE_JOURNEYS || '').toLowerCase() === 'true';
+if (enableJourneys) {
+  app.use('/api/journeys', require('./routes/journey.routes'));
+} else {
+  app.use('/api/journeys', require('./routes/journey.stub.routes'));
+}
 
 // Error handler
 app.use(errorHandler);
