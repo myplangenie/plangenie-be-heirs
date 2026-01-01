@@ -269,18 +269,18 @@ async function runJob() {
 
 /**
  * Initialize the cron job
- * Runs every Friday at 9:00 AM server time
+ * Runs every Thursday at 3:40 PM server time
  * Cron: minute hour dayOfMonth month dayOfWeek
- * 0 9 * * 5 = At 09:00 on Friday
+ * 40 15 * * 4 = At 15:40 on Thursday
  */
 function init() {
-  cron.schedule('0 9 * * 5', () => {
+  cron.schedule('40 15 * * 4', () => {
     runJob().catch((err) => {
       console.error('[weeklyNotifications] Unhandled error:', err);
     });
   });
 
-  console.log('[weeklyNotifications] Job scheduled for Fridays at 9:00 AM');
+  console.log('[weeklyNotifications] Job scheduled for Thursdays at 3:40 PM');
 }
 
 module.exports = {
