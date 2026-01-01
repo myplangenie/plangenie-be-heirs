@@ -41,13 +41,32 @@ async function sendInviteEmail({ to, ownerName, acceptUrl }) {
   }
 }
 
-// POST /api/collab/invite { email }
+const VALID_DEPARTMENTS = [
+  'marketing', 'sales', 'operations', 'financeAdmin',
+  'peopleHR', 'partnerships', 'technology', 'communityImpact',
+];
+
+// POST /api/collab/invite { email, accessType?, departments? }
 exports.invite = async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const emailRaw = String(req.body?.email || '').trim().toLowerCase();
     if (!isValidEmail(emailRaw)) return res.status(400).json({ message: 'Valid email is required' });
+
+    // Access control fields
+    const accessType = req.body?.accessType || 'admin';
+    if (!['admin', 'department'].includes(accessType)) {
+      return res.status(400).json({ message: 'accessType must be "admin" or "department"' });
+    }
+    let departments = req.body?.departments || [];
+    if (!Array.isArray(departments)) departments = [];
+    departments = departments.filter((d) => VALID_DEPARTMENTS.includes(d));
+
+    // If department access, must have at least one department
+    if (accessType === 'department' && departments.length === 0) {
+      return res.status(400).json({ message: 'At least one department required for department access' });
+    }
 
     // If the email already belongs to an existing user account,
     // do not allow adding as a collaborator per product requirement.
@@ -58,7 +77,17 @@ exports.invite = async (req, res) => {
 
     let collab = await Collaboration.findOne({ owner: userId, email: emailRaw });
     if (!collab) {
-      collab = await Collaboration.create({ owner: userId, email: emailRaw, status: 'pending' });
+      collab = await Collaboration.create({
+        owner: userId,
+        email: emailRaw,
+        status: 'pending',
+        accessType,
+        departments,
+      });
+    } else {
+      // Update access settings if re-inviting
+      collab.accessType = accessType;
+      collab.departments = departments;
     }
     // Generate (or refresh) accept token
     const token = crypto.randomBytes(24).toString('hex');
@@ -169,6 +198,8 @@ exports.collaborators = async (req, res) => {
         invitedAt: r.invitedAt || r.createdAt || null,
         acceptedAt: r.acceptedAt || null,
         viewer: v ? { id: String(v._id || ''), name: viewerName, email: v.email || '' } : null,
+        accessType: r.accessType || 'admin',
+        departments: r.departments || [],
       };
     });
     return res.json({ collaborators: list, page: p, limit: l, total });
@@ -362,5 +393,48 @@ exports.resend = async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ message: err?.message || 'Failed to resend invite' });
+  }
+};
+
+// PATCH /api/collab/access { id, accessType, departments }
+exports.updateAccess = async (req, res) => {
+  try {
+    const ownerId = req.user?.id;
+    if (!ownerId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const id = (req.body && req.body.id) ? String(req.body.id).trim() : '';
+    if (!id) return res.status(400).json({ message: 'Missing collaboration id' });
+
+    const accessType = req.body?.accessType || 'admin';
+    if (!['admin', 'department'].includes(accessType)) {
+      return res.status(400).json({ message: 'accessType must be "admin" or "department"' });
+    }
+
+    let departments = req.body?.departments || [];
+    if (!Array.isArray(departments)) departments = [];
+    departments = departments.filter((d) => VALID_DEPARTMENTS.includes(d));
+
+    // If department access, must have at least one department
+    if (accessType === 'department' && departments.length === 0) {
+      return res.status(400).json({ message: 'At least one department required for department access' });
+    }
+
+    const collab = await Collaboration.findOne({ _id: id, owner: ownerId }).exec();
+    if (!collab) return res.status(404).json({ message: 'Collaboration not found' });
+
+    collab.accessType = accessType;
+    collab.departments = accessType === 'department' ? departments : [];
+    await collab.save();
+
+    return res.json({
+      ok: true,
+      collaboration: {
+        id: String(collab._id),
+        accessType: collab.accessType,
+        departments: collab.departments,
+      },
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err?.message || 'Failed to update access' });
   }
 };

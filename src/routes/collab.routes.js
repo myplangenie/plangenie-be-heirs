@@ -8,6 +8,7 @@ const router = express.Router();
 router.post('/invite', auth(true), requireFeature('multiUserTeam'), ctrl.invite);
 router.post('/invite/resend', auth(true), requireFeature('multiUserTeam'), ctrl.resend);
 router.delete('/invite', auth(true), requireFeature('multiUserTeam'), ctrl.revoke);
+router.patch('/access', auth(true), requireFeature('multiUserTeam'), ctrl.updateAccess);
 router.get('/viewables', auth(true), ctrl.viewables);
 router.get('/collaborators', auth(true), requireFeature('multiUserTeam'), ctrl.collaborators);
 router.get('/accept', auth(false), ctrl.accept);

@@ -90,7 +90,7 @@ if (enableWorkspaces) {
   app.use('/api/journeys', require('./routes/workspace.stub.routes'));
 }
 
-// Initialize weekly notification job (runs every Friday at 9am)
+// Initialize weekly notification job (runs every Friday at 9 AM Eastern / 14:00 UTC)
 require('./jobs/weeklyNotifications').init();
 
 // Error handler

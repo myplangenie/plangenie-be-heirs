@@ -26,7 +26,13 @@ module.exports = async function viewAs(req, res, next) {
     }
     // Stash original id and impersonate for downstream handlers
     const original = req.user.id;
-    req.user = { id: String(asId), viewerId: String(original), viewOnly: true };
+    req.user = {
+      id: String(asId),
+      viewerId: String(original),
+      viewOnly: true,
+      accessType: row.accessType || 'admin',
+      allowedDepartments: row.departments || [],
+    };
     return next();
   } catch (err) {
     return res.status(500).json({ message: err?.message || 'Failed to authorize collaborator' });

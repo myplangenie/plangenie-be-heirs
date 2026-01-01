@@ -222,10 +222,11 @@ async function runJob() {
     const fromAddress = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
     const dashboardUrl = process.env.DASHBOARD_URL || 'https://app.plangenie.com';
 
-    // Get users with weekly digest enabled
+    // Get users with weekly digest enabled (exclude collaborators - they view owner's data)
     const users = await User.find({
       isVerified: true,
       status: 'active',
+      isCollaborator: { $ne: true }, // Exclude collaborators
       'notifications.weeklyDigest': { $ne: false }, // Default is true
     })
       .select('_id email firstName fullName notifications')
@@ -269,18 +270,18 @@ async function runJob() {
 
 /**
  * Initialize the cron job
- * Runs every Thursday at 3:40 PM server time
+ * Runs every Friday at 9 AM Eastern Time (Canada)
  * Cron: minute hour dayOfMonth month dayOfWeek
- * 40 15 * * 4 = At 15:40 on Thursday
+ * 0 14 * * 5 = At 14:00 UTC on Friday = 9 AM EST / 10 AM EDT
  */
 function init() {
-  cron.schedule('40 15 * * 4', () => {
+  cron.schedule('0 14 * * 5', () => {
     runJob().catch((err) => {
       console.error('[weeklyNotifications] Unhandled error:', err);
     });
   });
 
-  console.log('[weeklyNotifications] Job scheduled for Thursdays at 3:40 PM');
+  console.log('[weeklyNotifications] Job scheduled for Fridays at 9 AM Eastern (14:00 UTC)');
 }
 
 module.exports = {

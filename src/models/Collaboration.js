@@ -14,6 +14,26 @@ const mongoose = require('mongoose');
     acceptedAt: { type: Date, default: null },
     acceptToken: { type: String, default: null, index: true },
     tokenExpires: { type: Date, default: null },
+    // Access control - determines what data collaborator can see
+    accessType: {
+      type: String,
+      enum: ['admin', 'department'],
+      default: 'admin',
+    },
+    // If accessType is 'department', which departments can they access
+    departments: [{
+      type: String,
+      enum: [
+        'marketing',
+        'sales',
+        'operations',
+        'financeAdmin',
+        'peopleHR',
+        'partnerships',
+        'technology',
+        'communityImpact',
+      ],
+    }],
   },
   { timestamps: true }
 );

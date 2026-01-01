@@ -1,6 +1,7 @@
 const Dashboard = require('../models/Dashboard');
 const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
+const { hasDepartmentRestriction, filterCompiledPlan, filterActionAssignments } = require('../utils/filterByDepartment');
 const Notification = require('../models/Notification');
 const NotificationSettings = require('../models/NotificationSettings');
 const Department = require('../models/Department');
@@ -660,6 +661,11 @@ exports.getCompiledPlan = async (req, res, next) => {
       generatedAt: new Date().toISOString(),
       version: '1.0',
     };
+    // Apply department filtering for restricted collaborators
+    if (hasDepartmentRestriction(req.user)) {
+      const filtered = filterCompiledPlan(plan, req.user.allowedDepartments);
+      return res.json({ plan: filtered });
+    }
     return res.json({ plan });
   } catch (err) {
     next(err);
@@ -674,7 +680,11 @@ exports.getNotifications = async (req, res, next) => {
     // Build dynamic task notifications from onboarding action assignments
     const ob = await Onboarding.findOne({ user: userId }).lean().exec();
     const a = ob?.answers || {};
-    const assignments = a.actionAssignments || {};
+    let assignments = a.actionAssignments || {};
+    // Filter assignments for department-restricted collaborators
+    if (hasDepartmentRestriction(req.user)) {
+      assignments = filterActionAssignments(assignments, req.user.allowedDepartments);
+    }
     const now = new Date();
     function rel(d) {
       try {
@@ -909,8 +919,13 @@ exports.getDepartments = async (req, res, next) => {
       // Due date is derived from action plan items (not editable)
       const dueDate = r.dueDate || '-';
       const status = statusFromProgress(progress);
-      return { name: r.name, owner, dueDate, progress, status };
+      return { key: r.key, name: r.name, owner, dueDate, progress, status };
     });
+    // Apply department filtering for restricted collaborators
+    if (hasDepartmentRestriction(req.user)) {
+      const filteredDepts = departments.filter((d) => req.user.allowedDepartments.includes(d.key));
+      return res.json({ departments: filteredDepts });
+    }
     return res.json({ departments });
   } catch (err) {
     next(err);
@@ -3005,7 +3020,12 @@ exports.getSettings = async (req, res, next) => {
     const parts = (profile.fullName || '').trim().split(/\s+/);
     const firstName = (user?.firstName || '').trim() || parts[0] || '';
     const lastName = (user?.lastName || '').trim() || parts.slice(1).join(' ');
-    return res.json({ profile: { ...profile, firstName, lastName }, members });
+    // Filter team members for department-restricted collaborators
+    let filteredMembers = members;
+    if (hasDepartmentRestriction(req.user)) {
+      filteredMembers = members.filter((m) => req.user.allowedDepartments.includes(m.department));
+    }
+    return res.json({ profile: { ...profile, firstName, lastName }, members: filteredMembers });
   } catch (err) {
     next(err);
   }
