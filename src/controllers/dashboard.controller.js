@@ -1185,6 +1185,12 @@ exports.updateActionAssignmentItem = async (req, res, next) => {
       ...(p.kpi !== undefined ? { kpi: String(p.kpi || '') } : {}),
       ...(p.dueWhen !== undefined ? { dueWhen: String(p.dueWhen || '') } : {}),
       ...(p.progress !== undefined ? (()=>{ const v = clampPct(p.progress); return v === undefined ? {} : { progress: v }; })() : {}),
+      ...(p.deliverables !== undefined ? { deliverables: Array.isArray(p.deliverables) ? p.deliverables.map((d) => ({
+        text: String(d?.text || ''),
+        kpi: String(d?.kpi || ''),
+        dueWhen: String(d?.dueWhen || ''),
+        done: Boolean(d?.done),
+      })) : [] } : {}),
     };
     // Derive status from progress if provided
     if (Object.prototype.hasOwnProperty.call(p, 'progress')) {
@@ -3140,6 +3146,87 @@ exports.purgeSampleMembers = async (req, res, next) => {
       ],
     }).exec();
     return res.json({ ok: true, removed: result.deletedCount || 0 });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// =============================================================================
+// FINANCIAL SNAPSHOT (Financial Clarity Feature)
+// =============================================================================
+const financialSnapshotService = require('../services/financialSnapshotService');
+
+// GET /api/dashboard/financial-snapshot
+exports.getFinancialSnapshot = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const snapshot = await financialSnapshotService.getOrCreate(userId, null);
+    return res.json({ snapshot });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/dashboard/financial-snapshot/:section
+exports.updateFinancialSection = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const { section } = req.params;
+    if (!['revenue', 'costs', 'cash'].includes(section)) {
+      return res.status(400).json({ message: 'Invalid section. Must be revenue, costs, or cash.' });
+    }
+    const snapshot = await financialSnapshotService.updateSection(userId, null, section, req.body);
+    return res.json({ snapshot });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/financial-snapshot/health-tiles
+exports.getHealthTiles = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const tiles = await financialSnapshotService.getHealthTiles(userId, null);
+    return res.json({ tiles });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/financial-snapshot/decision-support
+exports.getDecisionSupport = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const decisions = await financialSnapshotService.getDecisionSupport(userId, null);
+    return res.json({ decisions });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/financial-snapshot/complete-onboarding
+exports.completeFinancialOnboarding = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const snapshot = await financialSnapshotService.completeOnboarding(userId, null);
+    return res.json({ ok: true, snapshot });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/financial-snapshot/sync
+exports.syncFinancialFromOnboarding = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const snapshot = await financialSnapshotService.syncFromOnboarding(userId, null);
+    return res.json({ ok: true, snapshot });
   } catch (err) {
     next(err);
   }

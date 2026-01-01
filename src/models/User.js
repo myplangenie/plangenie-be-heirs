@@ -41,6 +41,12 @@ const UserSchema = new mongoose.Schema(
     // Billing/Subscription
     stripeCustomerId: { type: String, default: undefined },
     hasActiveSubscription: { type: Boolean, default: false },
+
+    // Notification preferences
+    notifications: {
+      weeklyDigest: { type: Boolean, default: true },
+      lastWeeklyDigestSent: { type: Date, default: null },
+    },
   },
   { timestamps: true }
 );

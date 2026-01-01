@@ -1745,9 +1745,9 @@ exports.suggestCoreProject = async (req, res) => {
       'Return a single JSON object with the following shape:',
       '{ "title": string, "goal": string, "dueWhen": string(YYYY-MM-DD), "ownerName"?: string, "deliverables": [{ "text": string, "kpi": string, "dueWhen": string(YYYY-MM-DD) }] }',
       'Constraints:',
-      `- Deliverables array length: ${wanted}. Each item must have a unique KPI and realistic dueWhen (YYYY-MM-DD).`,
-      '- The overall project dueWhen must be on or after the latest deliverable dueWhen.',
-      '- Use future dates within the next 4–8 months.',
+      `- Deliverables array length: ${wanted}. Each item must have a unique KPI and dueWhen (YYYY-MM-DD).`,
+      `- IMPORTANT: Distribute deliverable due dates evenly across the next 12 months. For example, if there are 4 deliverables, set them at approximately months 3, 6, 9, and 12 from today.`,
+      '- The overall project dueWhen must be at or after the latest deliverable dueWhen (approximately 12 months from today).',
       '- Keep title short (3–6 words). Keep KPIs concise (short metric phrase).',
     ].join('\n');
 
@@ -1811,10 +1811,29 @@ exports.suggestCoreProject = async (req, res) => {
       seen.add(k.toLowerCase());
       return { ...d, kpi: k };
     });
-    // If overall due missing, set to the latest deliverable due or +60 days
+
+    // Auto-distribute deliverable dates evenly across 12 months if missing
+    const delCount = out.deliverables.length;
+    if (delCount > 0) {
+      const now = new Date();
+      const monthsPerDeliverable = Math.floor(12 / delCount);
+      out.deliverables = out.deliverables.map((d, i) => {
+        if (!d.dueWhen) {
+          // Calculate month offset: distribute evenly across 12 months
+          const monthOffset = monthsPerDeliverable * (i + 1);
+          const dueDate = new Date(now);
+          dueDate.setMonth(dueDate.getMonth() + monthOffset);
+          d.dueWhen = dueDate.toISOString().slice(0, 10);
+        }
+        return d;
+      });
+    }
+
+    // Set project due date to 12 months from now if missing
     if (!out.dueWhen) {
-      const latest = out.deliverables.map((d)=> d.dueWhen).filter(Boolean).sort().slice(-1)[0];
-      out.dueWhen = latest || (()=>{ const b=new Date(); b.setDate(b.getDate()+60); return b.toISOString().slice(0,10); })();
+      const projectDue = new Date();
+      projectDue.setFullYear(projectDue.getFullYear() + 1);
+      out.dueWhen = projectDue.toISOString().slice(0, 10);
     }
     return res.json({ project: out });
   } catch (err) {

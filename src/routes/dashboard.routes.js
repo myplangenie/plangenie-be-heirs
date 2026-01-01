@@ -81,4 +81,12 @@ router.delete('/settings/members/:mid',  ctrl.deleteMember);
 // Purge seeded sample members for the current user
 router.delete('/settings/members/sample',  ctrl.purgeSampleMembers);
 
+// Financial Snapshot (Financial Clarity feature)
+router.get('/financial-snapshot', ctrl.getFinancialSnapshot);
+router.patch('/financial-snapshot/:section', ctrl.updateFinancialSection);
+router.get('/financial-snapshot/health-tiles', ctrl.getHealthTiles);
+router.get('/financial-snapshot/decision-support', ctrl.getDecisionSupport);
+router.post('/financial-snapshot/complete-onboarding', ctrl.completeFinancialOnboarding);
+router.post('/financial-snapshot/sync', ctrl.syncFinancialFromOnboarding);
+
 module.exports = router;

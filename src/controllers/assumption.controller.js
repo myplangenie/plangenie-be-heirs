@@ -1,22 +1,22 @@
-const Journey = require('../models/Journey');
+const Workspace = require('../models/Workspace');
 const Assumption = require('../models/Assumption');
 const Scenario = require('../models/Scenario');
 
 function id(prefix='a_') { return `${prefix}${Math.random().toString(36).slice(2,10)}`; }
 const NUM = (v) => { const n = parseFloat(String(v||'').replace(/[^0-9.\-]/g,'')); return isFinite(n) ? n : 0; };
 
-async function resolveJourney(userId, jid) {
-  const j = await Journey.findOne({ user: userId, jid }).lean().exec();
-  return j;
+async function resolveWorkspace(userId, wid) {
+  const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
+  return ws;
 }
 
-// GET /api/journeys/:jid/assumptions?category=
+// GET /api/workspaces/:wid/assumptions?category=
 exports.list = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const j = await resolveJourney(userId, String(req.params?.jid||'').trim());
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
-    const q = { user: userId, journey: j._id };
+    const ws = await resolveWorkspace(userId, String(req.params?.wid||'').trim());
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+    const q = { user: userId, workspace: ws._id };
     const cat = String(req.query?.category || '').trim();
     if (cat) q.category = cat;
     const items = await Assumption.find(q).sort({ createdAt: -1 }).lean().exec();
@@ -24,13 +24,13 @@ exports.list = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// POST /api/journeys/:jid/assumptions { key, label?, category?, unit?, value }
+// POST /api/workspaces/:wid/assumptions { key, label?, category?, unit?, value }
 exports.create = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const jid = String(req.params?.jid||'').trim();
-    const j = await resolveJourney(userId, jid);
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
+    const wid = String(req.params?.wid||'').trim();
+    const ws = await resolveWorkspace(userId, wid);
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
     const key = String(req.body?.key || '').trim();
     const value = String(req.body?.value || '').trim();
     if (!key) return res.status(400).json({ message: 'Key is required' });
@@ -38,32 +38,32 @@ exports.create = async (req, res, next) => {
     const category = ['revenue','cost','headcount','pricing','other'].includes(req.body?.category) ? req.body.category : 'other';
     const unit = String(req.body?.unit || '').trim();
     const aid = id();
-    const doc = await Assumption.create({ user: userId, journey: j._id, aid, key, label, category, unit, currentValue: value, history: [{ version: 1, value, changedBy: String(userId) }] });
+    const doc = await Assumption.create({ user: userId, workspace: ws._id, aid, key, label, category, unit, currentValue: value, history: [{ version: 1, value, changedBy: String(userId) }] });
     return res.status(201).json({ assumption: doc });
   } catch (err) { next(err); }
 };
 
-// GET /api/journeys/:jid/assumptions/:aid
+// GET /api/workspaces/:wid/assumptions/:aid
 exports.get = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const j = await resolveJourney(userId, String(req.params?.jid||'').trim());
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
+    const ws = await resolveWorkspace(userId, String(req.params?.wid||'').trim());
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
     const aid = String(req.params?.aid||'').trim();
-    const doc = await Assumption.findOne({ user: userId, journey: j._id, aid }).lean().exec();
+    const doc = await Assumption.findOne({ user: userId, workspace: ws._id, aid }).lean().exec();
     if (!doc) return res.status(404).json({ message: 'Assumption not found' });
     return res.json({ assumption: doc });
   } catch (err) { next(err); }
 };
 
-// PATCH /api/journeys/:jid/assumptions/:aid { value?, label?, unit?, category? }
+// PATCH /api/workspaces/:wid/assumptions/:aid { value?, label?, unit?, category? }
 exports.patch = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const j = await resolveJourney(userId, String(req.params?.jid||'').trim());
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
+    const ws = await resolveWorkspace(userId, String(req.params?.wid||'').trim());
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
     const aid = String(req.params?.aid||'').trim();
-    const doc = await Assumption.findOne({ user: userId, journey: j._id, aid });
+    const doc = await Assumption.findOne({ user: userId, workspace: ws._id, aid });
     if (!doc) return res.status(404).json({ message: 'Assumption not found' });
     const p = req.body || {};
     if (typeof p.label !== 'undefined') doc.label = String(p.label||'');
@@ -80,29 +80,29 @@ exports.patch = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// GET /api/journeys/:jid/assumptions/:aid/history
+// GET /api/workspaces/:wid/assumptions/:aid/history
 exports.history = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const j = await resolveJourney(userId, String(req.params?.jid||'').trim());
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
+    const ws = await resolveWorkspace(userId, String(req.params?.wid||'').trim());
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
     const aid = String(req.params?.aid||'').trim();
-    const doc = await Assumption.findOne({ user: userId, journey: j._id, aid }).lean().exec();
+    const doc = await Assumption.findOne({ user: userId, workspace: ws._id, aid }).lean().exec();
     if (!doc) return res.status(404).json({ message: 'Assumption not found' });
     return res.json({ history: Array.isArray(doc.history) ? doc.history : [] });
   } catch (err) { next(err); }
 };
 
-// GET /api/journeys/:jid/assumptions/summary?sid=
+// GET /api/workspaces/:wid/assumptions/summary?sid=
 exports.summary = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const j = await resolveJourney(userId, String(req.params?.jid||'').trim());
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
+    const ws = await resolveWorkspace(userId, String(req.params?.wid||'').trim());
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
     const sid = String(req.query?.sid || '').trim();
     const [assumptions, scenario] = await Promise.all([
-      Assumption.find({ user: userId, journey: j._id }).lean().exec(),
-      sid ? Scenario.findOne({ user: userId, journey: j._id, sid }).lean().exec() : null,
+      Assumption.find({ user: userId, workspace: ws._id }).lean().exec(),
+      sid ? Scenario.findOne({ user: userId, workspace: ws._id, sid }).lean().exec() : null,
     ]);
     const map = new Map((assumptions||[]).map((a)=> [String(a.key), a]));
     const override = new Map();
@@ -155,23 +155,23 @@ exports.summary = async (req, res, next) => {
 };
 
 // Scenarios
-// GET /api/journeys/:jid/scenarios
+// GET /api/workspaces/:wid/scenarios
 exports.listScenarios = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const j = await resolveJourney(userId, String(req.params?.jid||'').trim());
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
-    const items = await Scenario.find({ user: userId, journey: j._id }).lean().exec();
+    const ws = await resolveWorkspace(userId, String(req.params?.wid||'').trim());
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+    const items = await Scenario.find({ user: userId, workspace: ws._id }).lean().exec();
     return res.json({ items });
   } catch (err) { next(err); }
 };
 
-// POST /api/journeys/:jid/scenarios { name, overrides? }
+// POST /api/workspaces/:wid/scenarios { name, overrides? }
 exports.createScenario = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const j = await resolveJourney(userId, String(req.params?.jid||'').trim());
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
+    const ws = await resolveWorkspace(userId, String(req.params?.wid||'').trim());
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
     // Gating
     try {
       const ent = require('../config/entitlements');
@@ -185,19 +185,19 @@ exports.createScenario = async (req, res, next) => {
     if (!name) return res.status(400).json({ message: 'Name is required' });
     const sid = `s_${Math.random().toString(36).slice(2,10)}`;
     const overrides = Array.isArray(req.body?.overrides) ? req.body.overrides.map((o)=> ({ assumptionKey: String(o?.assumptionKey||'').trim(), value: String(o?.value||'').trim() })).filter((o)=> o.assumptionKey) : [];
-    const doc = await Scenario.create({ user: userId, journey: j._id, sid, name, isBaseline: false, overrides });
+    const doc = await Scenario.create({ user: userId, workspace: ws._id, sid, name, isBaseline: false, overrides });
     return res.status(201).json({ scenario: doc });
   } catch (err) { next(err); }
 };
 
-// PATCH /api/journeys/:jid/scenarios/:sid { name?, isBaseline?, overrides? }
+// PATCH /api/workspaces/:wid/scenarios/:sid { name?, isBaseline?, overrides? }
 exports.patchScenario = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const j = await resolveJourney(userId, String(req.params?.jid||'').trim());
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
+    const ws = await resolveWorkspace(userId, String(req.params?.wid||'').trim());
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
     const sid = String(req.params?.sid||'').trim();
-    const doc = await Scenario.findOne({ user: userId, journey: j._id, sid });
+    const doc = await Scenario.findOne({ user: userId, workspace: ws._id, sid });
     if (!doc) return res.status(404).json({ message: 'Scenario not found' });
     const p = req.body || {};
     if (typeof p.name !== 'undefined') doc.name = String(p.name||'');
@@ -205,7 +205,7 @@ exports.patchScenario = async (req, res, next) => {
     if (typeof p.isBaseline !== 'undefined') {
       const v = !!p.isBaseline;
       doc.isBaseline = v;
-      if (v) await Scenario.updateMany({ user: userId, journey: j._id, _id: { $ne: doc._id } }, { $set: { isBaseline: false } });
+      if (v) await Scenario.updateMany({ user: userId, workspace: ws._id, _id: { $ne: doc._id } }, { $set: { isBaseline: false } });
     }
     await doc.save();
     return res.json({ scenario: doc });

@@ -22,7 +22,7 @@ const ImpactSchema = new mongoose.Schema(
 const DecisionSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    journey: { type: mongoose.Schema.Types.ObjectId, ref: 'Journey', required: true, index: true },
+    workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true, index: true },
     did: { type: String, required: true, unique: true },
     title: { type: String, required: true },
     context: { type: String, default: '' },
@@ -37,8 +37,8 @@ const DecisionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-DecisionSchema.index({ user: 1, journey: 1, decidedAt: -1 });
-DecisionSchema.index({ user: 1, journey: 1, status: 1 });
+DecisionSchema.index({ user: 1, workspace: 1, decidedAt: -1 });
+DecisionSchema.index({ user: 1, workspace: 1, status: 1 });
 
 module.exports = mongoose.model('Decision', DecisionSchema);
 

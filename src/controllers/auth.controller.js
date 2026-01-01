@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const { Resend } = require('resend');
 const User = require('../models/User');
 const Collaboration = require('../models/Collaboration');
+const Workspace = require('../models/Workspace');
 const { effectivePlan, plans } = require('../config/entitlements');
 
 function signToken(userId) {
@@ -92,7 +93,21 @@ exports.register = async (req, res) => {
     verificationCode: otpHash,
     verificationExpires: vexp,
   });
-  
+
+  // Auto-create default workspace for the user
+  try {
+    const workspaceName = companyName || `${firstName || 'My'}'s Workspace`;
+    const wid = `ws_${crypto.randomBytes(6).toString('hex')}`;
+    await Workspace.create({
+      user: user._id,
+      wid,
+      name: workspaceName,
+      defaultWorkspace: true,
+    });
+  } catch (wsErr) {
+    console.error('[auth] Failed to auto-create workspace:', wsErr?.message || wsErr);
+  }
+
   // Send verification email (best-effort)
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);

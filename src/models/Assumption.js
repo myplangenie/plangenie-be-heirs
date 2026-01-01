@@ -14,7 +14,7 @@ const AssumptionHistorySchema = new mongoose.Schema(
 const AssumptionSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    journey: { type: mongoose.Schema.Types.ObjectId, ref: 'Journey', required: true, index: true },
+    workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true, index: true },
     aid: { type: String, required: true, unique: true },
     key: { type: String, required: true }, // unique per journey
     label: { type: String, default: '' },
@@ -27,7 +27,7 @@ const AssumptionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-AssumptionSchema.index({ user: 1, journey: 1, key: 1 }, { unique: true });
+AssumptionSchema.index({ user: 1, workspace: 1, key: 1 }, { unique: true });
 
 module.exports = mongoose.model('Assumption', AssumptionSchema);
 

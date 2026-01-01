@@ -1,6 +1,8 @@
 const { validationResult } = require('express-validator');
 const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
+const Workspace = require('../models/Workspace');
+const crypto = require('crypto');
 
 function ynToBool(v) {
   if (typeof v === 'boolean') return v;
@@ -159,6 +161,33 @@ exports.saveBusinessProfile = async (req, res) => {
   if (Object.prototype.hasOwnProperty.call(req.body, 'description')) bp.description = description;
   ob.businessProfile = bp;
   await ob.save();
+
+  // Sync workspace with business name (create if doesn't exist, update if it does)
+  if (businessName) {
+    try {
+      const enableWorkspaces = String(process.env.FEATURE_WORKSPACES || process.env.FEATURE_JOURNEYS || '').toLowerCase() === 'true';
+      if (enableWorkspaces) {
+        let workspace = await Workspace.findOne({ user: userId, defaultWorkspace: true });
+        if (!workspace) {
+          // Create default workspace with business name
+          const wid = `ws_${crypto.randomBytes(6).toString('hex')}`;
+          workspace = await Workspace.create({
+            user: userId,
+            wid,
+            name: businessName,
+            defaultWorkspace: true,
+          });
+        } else if (workspace.name !== businessName) {
+          // Update workspace name to match business name
+          workspace.name = businessName;
+          await workspace.save();
+        }
+      }
+    } catch (wsErr) {
+      console.error('[onboarding] Failed to sync workspace:', wsErr?.message || wsErr);
+    }
+  }
+
   return res.json({ onboarding: ob });
 };
 

@@ -1,27 +1,27 @@
-const Journey = require('../models/Journey');
+const Workspace = require('../models/Workspace');
 const ReviewSession = require('../models/ReviewSession');
 
 function id(prefix='r_') { return `${prefix}${Math.random().toString(36).slice(2, 10)}`; }
 
-// GET /api/journeys/:jid/reviews
+// GET /api/workspaces/:wid/reviews
 exports.list = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const jid = String(req.params?.jid||'').trim();
-    const j = await Journey.findOne({ user: userId, jid }).lean().exec();
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
-    const items = await ReviewSession.find({ user: userId, journey: j._id }).sort({ startedAt: -1 }).lean().exec();
+    const wid = String(req.params?.wid||'').trim();
+    const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+    const items = await ReviewSession.find({ user: userId, workspace: ws._id }).sort({ startedAt: -1 }).lean().exec();
     return res.json({ items });
   } catch (err) { next(err); }
 };
 
-// POST /api/journeys/:jid/reviews  { cadence?, notes? }
+// POST /api/workspaces/:wid/reviews  { cadence?, notes? }
 exports.create = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const jid = String(req.params?.jid||'').trim();
-    const j = await Journey.findOne({ user: userId, jid }).lean().exec();
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
+    const wid = String(req.params?.wid||'').trim();
+    const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
     // Enforce plan limits per calendar month (UTC)
     try {
       const ent = require('../config/entitlements');
@@ -31,14 +31,14 @@ exports.create = async (req, res, next) => {
       if (limit && limit > 0) {
         const start = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
         const end = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth()+1, 1));
-        const count = await ReviewSession.countDocuments({ user: userId, journey: j._id, createdAt: { $gte: start, $lt: end } });
+        const count = await ReviewSession.countDocuments({ user: userId, workspace: ws._id, createdAt: { $gte: start, $lt: end } });
         if (count >= limit) return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Monthly review limit reached', limitKey: 'reviewsPerMonth', limit, plan: ent.effectivePlan(user) });
       }
     } catch {}
     const payload = req.body || {};
     const doc = await ReviewSession.create({
       user: userId,
-      journey: j._id,
+      workspace: ws._id,
       rid: id(),
       cadence: ['weekly','monthly','quarterly'].includes(String(payload.cadence)) ? String(payload.cadence) : 'weekly',
       notes: String(payload.notes || ''),
@@ -49,29 +49,29 @@ exports.create = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-// GET /api/journeys/:jid/reviews/:rid
+// GET /api/workspaces/:wid/reviews/:rid
 exports.get = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const jid = String(req.params?.jid||'').trim();
+    const wid = String(req.params?.wid||'').trim();
     const rid = String(req.params?.rid||'').trim();
-    const j = await Journey.findOne({ user: userId, jid }).lean().exec();
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
-    const doc = await ReviewSession.findOne({ user: userId, journey: j._id, rid }).lean().exec();
+    const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+    const doc = await ReviewSession.findOne({ user: userId, workspace: ws._id, rid }).lean().exec();
     if (!doc) return res.status(404).json({ message: 'Review not found' });
     return res.json({ review: doc });
   } catch (err) { next(err); }
 };
 
-// PATCH /api/journeys/:jid/reviews/:rid  { notes?, actionItems?, status? }
+// PATCH /api/workspaces/:wid/reviews/:rid  { notes?, actionItems?, status? }
 exports.patch = async (req, res, next) => {
   try {
     const userId = req.user?.id; if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const jid = String(req.params?.jid||'').trim();
+    const wid = String(req.params?.wid||'').trim();
     const rid = String(req.params?.rid||'').trim();
-    const j = await Journey.findOne({ user: userId, jid }).lean().exec();
-    if (!j) return res.status(404).json({ message: 'Journey not found' });
-    const doc = await ReviewSession.findOne({ user: userId, journey: j._id, rid });
+    const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+    const doc = await ReviewSession.findOne({ user: userId, workspace: ws._id, rid });
     if (!doc) return res.status(404).json({ message: 'Review not found' });
     const payload = req.body || {};
     if (typeof payload.notes !== 'undefined') doc.notes = String(payload.notes || '');

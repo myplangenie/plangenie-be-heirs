@@ -49,7 +49,7 @@ const corsOptions = {
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-View-As', 'X-Journey-Id'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-View-As', 'X-Workspace-Id', 'X-Journey-Id'],
   maxAge: 86400, // cache preflight for 24h
 };
 
@@ -75,13 +75,23 @@ app.use('/api/gamma', require('./routes/gamma.routes'));
 app.use('/api/chat', require('./routes/chat.routes'));
 // Admin
 app.use('/api/admin', require('./routes/admin.routes'));
-// Journeys (feature‑flagged)
-const enableJourneys = String(process.env.FEATURE_JOURNEYS || '').toLowerCase() === 'true';
-if (enableJourneys) {
-  app.use('/api/journeys', require('./routes/journey.routes'));
+// AI Agents
+app.use('/api/agents', require('./routes/agents.routes'));
+// Workspaces (feature-flagged) - replaces Journeys
+const enableWorkspaces = String(process.env.FEATURE_WORKSPACES || process.env.FEATURE_JOURNEYS || '').toLowerCase() === 'true';
+if (enableWorkspaces) {
+  app.use('/api/workspaces', require('./routes/workspace.routes'));
+  // Keep /api/journeys as alias for backward compatibility during migration
+  app.use('/api/journeys', require('./routes/workspace.routes'));
+  // Initialize priority recalculation background job
+  require('./jobs/recalculatePriorities').init();
 } else {
-  app.use('/api/journeys', require('./routes/journey.stub.routes'));
+  app.use('/api/workspaces', require('./routes/workspace.stub.routes'));
+  app.use('/api/journeys', require('./routes/workspace.stub.routes'));
 }
+
+// Initialize weekly notification job (runs every Friday at 9am)
+require('./jobs/weeklyNotifications').init();
 
 // Error handler
 app.use(errorHandler);

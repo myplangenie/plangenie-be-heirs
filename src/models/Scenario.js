@@ -11,7 +11,7 @@ const ScenarioOverrideSchema = new mongoose.Schema(
 const ScenarioSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    journey: { type: mongoose.Schema.Types.ObjectId, ref: 'Journey', required: true, index: true },
+    workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true, index: true },
     sid: { type: String, required: true, unique: true },
     name: { type: String, required: true },
     isBaseline: { type: Boolean, default: false },
@@ -20,7 +20,7 @@ const ScenarioSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-ScenarioSchema.index({ user: 1, journey: 1, name: 1 });
+ScenarioSchema.index({ user: 1, workspace: 1, name: 1 });
 
 module.exports = mongoose.model('Scenario', ScenarioSchema);
 
