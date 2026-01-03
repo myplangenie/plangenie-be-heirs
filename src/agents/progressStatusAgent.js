@@ -183,14 +183,14 @@ function determineNextSteps(sections) {
 /**
  * Generate progress status report
  * @param {string} userId - User ID
- * @param {Object} options - Optional parameters
+ * @param {Object} options - Optional parameters (workspaceId, forceRefresh, includeAIFeedback)
  * @returns {Object} Progress report with sections and recommendations
  */
 async function getProgressStatus(userId, options = {}) {
-  const { forceRefresh = false, includeAIFeedback = true } = options;
+  const { forceRefresh = false, includeAIFeedback = true, workspaceId = null } = options;
 
   // Build context
-  const context = await buildAgentContext(userId);
+  const context = await buildAgentContext(userId, workspaceId);
 
   // Create cache key
   const inputHash = hashInput({
@@ -202,7 +202,7 @@ async function getProgressStatus(userId, options = {}) {
 
   // Check cache
   if (!forceRefresh) {
-    const cached = await getFromCache(userId, 'progress-status', inputHash);
+    const cached = await getFromCache(userId, 'progress-status', inputHash, workspaceId);
     if (cached) {
       return { ...cached, fromCache: true };
     }
@@ -305,7 +305,7 @@ Provide brief feedback in JSON format:
   };
 
   // Cache the response
-  await setCache(userId, 'progress-status', inputHash, response, generationTimeMs);
+  await setCache(userId, 'progress-status', inputHash, response, generationTimeMs, workspaceId);
 
   return { ...response, fromCache: false, generationTimeMs };
 }

@@ -3,6 +3,7 @@ const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
 const Workspace = require('../models/Workspace');
 const crypto = require('crypto');
+const { getWorkspaceFilter, getWorkspaceId, addWorkspaceToDoc } = require('../utils/workspaceQuery');
 
 function ynToBool(v) {
   if (typeof v === 'boolean') return v;
@@ -14,9 +15,32 @@ function ynToBool(v) {
   return undefined;
 }
 
-async function getOrCreate(userId) {
-  let ob = await Onboarding.findOne({ user: userId });
-  if (!ob) ob = await Onboarding.create({ user: userId });
+// Workspace-aware getOrCreate for onboarding
+async function getOrCreate(userId, workspaceId = null) {
+  // If no workspaceId provided, get or create default workspace
+  let wsId = workspaceId;
+  if (!wsId) {
+    let defaultWs = await Workspace.findOne({ user: userId, defaultWorkspace: true });
+    if (!defaultWs) {
+      // Auto-create default workspace
+      const wid = `ws_${crypto.randomBytes(6).toString('hex')}`;
+      defaultWs = await Workspace.create({
+        user: userId,
+        wid,
+        name: 'My Business',
+        defaultWorkspace: true,
+      });
+    }
+    wsId = defaultWs._id;
+  }
+
+  // Always include workspace in filter
+  const filter = { user: userId, workspace: wsId };
+  let ob = await Onboarding.findOne(filter);
+  if (!ob) {
+    const createData = { user: userId, workspace: wsId };
+    ob = await Onboarding.create(createData);
+  }
   return ob;
 }
 
@@ -25,8 +49,9 @@ exports.get = async (req, res) => {
   if (!userId) {
     return res.json({ onboarding: null });
   }
+  const wsFilter = getWorkspaceFilter(req);
   const [ob, user] = await Promise.all([
-    Onboarding.findOne({ user: userId }),
+    Onboarding.findOne(wsFilter),
     User.findById(userId),
   ]);
   if (!ob) {
@@ -76,7 +101,8 @@ exports.saveUserProfile = async (req, res) => {
     });
   }
 
-  const ob = await getOrCreate(userId);
+  const workspaceId = getWorkspaceId(req);
+  const ob = await getOrCreate(userId, workspaceId);
   // Patch only provided fields; do not clear others
   const up = ob.userProfile || {};
   if (Object.prototype.hasOwnProperty.call(req.body, 'fullName')) up.fullName = fullName;
@@ -140,7 +166,8 @@ exports.saveBusinessProfile = async (req, res) => {
     });
   }
 
-  const ob = await getOrCreate(userId);
+  const workspaceId = getWorkspaceId(req);
+  const ob = await getOrCreate(userId, workspaceId);
   // Progression enforcement: require user profile to be completed first
   if (!ob.userProfile || (!ob.userProfile.role && !ob.userProfile.planningGoal && !ob.userProfile.fullName)) {
     return res.status(409).json({ message: 'Complete the user profile step before business profile.' });
@@ -182,6 +209,11 @@ exports.saveBusinessProfile = async (req, res) => {
           workspace.name = businessName;
           await workspace.save();
         }
+        // Link onboarding to workspace if not already linked
+        if (!ob.workspace) {
+          ob.workspace = workspace._id;
+          await ob.save();
+        }
       }
     } catch (wsErr) {
       console.error('[onboarding] Failed to sync workspace:', wsErr?.message || wsErr);
@@ -201,7 +233,8 @@ exports.saveVision = async (req, res) => {
   if (!userId) {
     return res.json({ onboarding: { vision: { ubp } } });
   }
-  const ob = await getOrCreate(userId);
+  const workspaceId = getWorkspaceId(req);
+  const ob = await getOrCreate(userId, workspaceId);
   // Progression enforcement: require business profile to be completed first
   if (!ob.businessProfile || (!ob.businessProfile.businessName && !ob.businessProfile.ventureType && !ob.businessProfile.industry)) {
     return res.status(409).json({ message: 'Complete the business profile step before vision & purpose.' });
@@ -232,7 +265,8 @@ function joinGoals(arr) {
 exports.getVision1yGoals = async (req, res) => {
   const userId = req.user?.id;
   if (!userId) return res.json({ goals: [] });
-  const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+  const wsFilter = getWorkspaceFilter(req);
+  const ob = await Onboarding.findOne(wsFilter).lean().exec();
   const a = ob?.answers || {};
   const goals = parseGoals(a.vision1y);
   return res.json({ goals });
@@ -249,7 +283,8 @@ exports.addVision1yGoal = async (req, res) => {
     // Ephemeral add when unauthenticated
     return res.json({ goals: [text] });
   }
-  const ob = await getOrCreate(userId);
+  const workspaceId = getWorkspaceId(req);
+  const ob = await getOrCreate(userId, workspaceId);
   const a = ob.answers || {};
   const goals = parseGoals(a.vision1y);
   const idx = Number(indexRaw);
@@ -271,7 +306,8 @@ exports.updateVision1yGoal = async (req, res) => {
   if (!Number.isFinite(index) || index < 0) return res.status(400).json({ message: 'Valid index is required' });
   if (!text) return res.status(400).json({ message: 'Goal text is required' });
   if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-  const ob = await Onboarding.findOne({ user: userId });
+  const wsFilter = getWorkspaceFilter(req);
+  const ob = await Onboarding.findOne(wsFilter);
   if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
   const a = ob.answers || {};
   const goals = parseGoals(a.vision1y);
@@ -290,7 +326,8 @@ exports.deleteVision1yGoal = async (req, res) => {
   const index = Number(req.params?.index);
   if (!Number.isFinite(index) || index < 0) return res.status(400).json({ message: 'Valid index is required' });
   if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-  const ob = await Onboarding.findOne({ user: userId });
+  const wsFilter = getWorkspaceFilter(req);
+  const ob = await Onboarding.findOne(wsFilter);
   if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
   const a = ob.answers || {};
   const goals = parseGoals(a.vision1y);
@@ -311,7 +348,8 @@ exports.saveAllAnswers = async (req, res) => {
     // No auth: return ephemeral; do NOT auto-link financials for Lite
     return res.json({ answers });
   }
-  const ob = await getOrCreate(userId);
+  const workspaceId = getWorkspaceId(req);
+  const ob = await getOrCreate(userId, workspaceId);
   ob.answers = { ...(ob.answers || {}), ...(answers || {}) };
   // Auto-populate forecasting fields in DB when products are present (Pro only)
   try {
@@ -349,6 +387,7 @@ exports.saveAllAnswers = async (req, res) => {
 exports.getAllAnswers = async (req, res) => {
   const userId = req.user?.id;
   if (!userId) return res.json({ answers: null });
-  const ob = await Onboarding.findOne({ user: userId });
+  const wsFilter = getWorkspaceFilter(req);
+  const ob = await Onboarding.findOne(wsFilter);
   return res.json({ answers: ob?.answers || null });
 };

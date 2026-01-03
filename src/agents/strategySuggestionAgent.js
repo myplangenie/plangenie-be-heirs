@@ -69,14 +69,14 @@ function assessStrategyCompleteness(context) {
 /**
  * Generate strategy suggestions
  * @param {string} userId - User ID
- * @param {Object} options - Optional parameters
+ * @param {Object} options - Optional parameters (workspaceId, forceRefresh, focusArea)
  * @returns {Object} Strategy suggestions and recommendations
  */
 async function generateStrategySuggestions(userId, options = {}) {
-  const { forceRefresh = false, focusArea = null } = options;
+  const { forceRefresh = false, focusArea = null, workspaceId = null } = options;
 
   // Build context
-  const context = await buildAgentContext(userId);
+  const context = await buildAgentContext(userId, workspaceId);
 
   // Create cache key
   const inputHash = hashInput({
@@ -90,7 +90,7 @@ async function generateStrategySuggestions(userId, options = {}) {
 
   // Check cache
   if (!forceRefresh) {
-    const cached = await getFromCache(userId, 'strategy-suggestion', inputHash);
+    const cached = await getFromCache(userId, 'strategy-suggestion', inputHash, workspaceId);
     if (cached) {
       return { ...cached, fromCache: true };
     }
@@ -202,7 +202,7 @@ Respond in JSON format:
   };
 
   // Cache the response
-  await setCache(userId, 'strategy-suggestion', inputHash, response, generationTimeMs);
+  await setCache(userId, 'strategy-suggestion', inputHash, response, generationTimeMs, workspaceId);
 
   return { ...response, fromCache: false, generationTimeMs };
 }

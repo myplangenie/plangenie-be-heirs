@@ -298,8 +298,10 @@ function getMonthlyThrust(scoredItems) {
  */
 async function recalculateAndCache(userId, workspaceId) {
   try {
-    // Get onboarding data
-    const ob = await Onboarding.findOne({ user: userId }).lean();
+    // Get onboarding data for this specific workspace
+    const filter = { user: userId };
+    if (workspaceId) filter.workspace = workspaceId;
+    const ob = await Onboarding.findOne(filter).lean();
     const answers = ob?.answers || {};
 
     // Extract and score all items

@@ -2,6 +2,7 @@ const Dashboard = require('../models/Dashboard');
 const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
 const { hasDepartmentRestriction, filterCompiledPlan, filterActionAssignments } = require('../utils/filterByDepartment');
+const { getWorkspaceFilter, getWorkspaceId, addWorkspaceToDoc } = require('../utils/workspaceQuery');
 const Notification = require('../models/Notification');
 const NotificationSettings = require('../models/NotificationSettings');
 const Department = require('../models/Department');
@@ -35,10 +36,15 @@ function parseDataUrl(dataUrl) {
 }
 
 // Minimal dashboard doc helper: create empty doc only as needed, no seeded content
-async function getOrCreate(userId) {
-  let doc = await Dashboard.findOne({ user: userId });
+// Now workspace-aware
+async function getOrCreate(userId, workspaceId = null) {
+  const filter = { user: userId };
+  if (workspaceId) filter.workspace = workspaceId;
+  let doc = await Dashboard.findOne(filter);
   if (doc) return doc;
-  doc = await Dashboard.create({ user: userId, summary: {} });
+  const createData = { user: userId, summary: {} };
+  if (workspaceId) createData.workspace = workspaceId;
+  doc = await Dashboard.create(createData);
   return doc;
 }
 
@@ -49,9 +55,10 @@ async function getOrCreate(userId) {
 exports.getSummary = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     // Pull latest onboarding answers to reflect user's inputs
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const a = ob?.answers || {};
     const ubp = (a.ubp || ob?.vision?.ubp || '').trim();
     const purpose = String(a.purpose || '').trim();
@@ -125,7 +132,7 @@ exports.getSummary = async (req, res, next) => {
       return { name: key, percent: progress };
     });
     // Pull any previously generated insights saved for this user
-    const dash = await Dashboard.findOne({ user: userId }).lean().exec();
+    const dash = await Dashboard.findOne(wsFilter).lean().exec();
     const savedInsights = (dash && dash.summary && Array.isArray(dash.summary.insights)) ? dash.summary.insights : [];
     const savedSections = (dash && dash.summary && Array.isArray(dash.summary.insightSections)) ? dash.summary.insightSections : [];
     // Build team with simple responsibility note
@@ -170,8 +177,9 @@ exports.getSummary = async (req, res, next) => {
 exports.generateFinancialInsights = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const a = ob?.answers || {};
     // Derive context similar to getFinancials()
     function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
@@ -244,8 +252,9 @@ exports.generateFinancialInsights = async (req, res, next) => {
 exports.getFinancialInsights = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const dash = await Dashboard.findOne({ user: userId }).lean().exec();
+    const dash = await Dashboard.findOne(wsFilter).lean().exec();
     let items = [];
     try {
       if (dash && dash.summary && Array.isArray(dash.summary.financialInsights)) {
@@ -271,8 +280,9 @@ exports.getFinancialInsights = async (req, res, next) => {
 exports.getInsights = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const dash = await Dashboard.findOne({ user: userId }).lean().exec();
+    const dash = await Dashboard.findOne(wsFilter).lean().exec();
     const sections = (dash && dash.summary && Array.isArray(dash.summary.insightSections)) ? dash.summary.insightSections : [];
     // Back-compat: if only flat insights exist, wrap into a single section
     let out = sections;
@@ -290,9 +300,10 @@ exports.getInsights = async (req, res, next) => {
 exports.generateInsights = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const sectionTitle = String(req.body?.sectionTitle || '').trim();
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const assignments = (ob && ob.answers && ob.answers.actionAssignments) ? ob.answers.actionAssignments : {};
 
     const ai = require('./ai.controller');
@@ -345,11 +356,12 @@ exports.generateInsights = async (req, res, next) => {
 exports.createMember = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { name, email, position, department, status, parentId } = req.body || {};
     const nm = String(name || '').trim();
     if (!nm) return res.status(400).json({ message: 'Name is required' });
-    const ob = await Onboarding.findOne({ user: userId });
+    const ob = await Onboarding.findOne(wsFilter);
     if (!ob) return res.status(400).json({ message: 'Onboarding not initialized' });
     const a = ob.answers || {};
     const list = Array.isArray(a.orgPositions) ? a.orgPositions : [];
@@ -386,8 +398,9 @@ exports.createMember = async (req, res, next) => {
 exports.getStrategyCanvas = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const a = ob?.answers || {};
     const ubp = (a.ubp || ob?.vision?.ubp || '').trim();
     const oneYear = (a.vision1y || '').split('\n').map((s)=>s.trim()).filter(Boolean);
@@ -416,12 +429,13 @@ exports.getStrategyCanvas = async (req, res, next) => {
 exports.updateStrategyCanvas = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const patch = req.body || {};
     const ent = require('../config/entitlements');
     const User = require('../models/User');
     const user = await User.findById(userId).lean().exec();
-    const ob = (await Onboarding.findOne({ user: userId })) || (await Onboarding.create({ user: userId }));
+    const ob = (await Onboarding.findOne(wsFilter)) || (await Onboarding.create(addWorkspaceToDoc({ user: userId }, req)));
     const a = ob.answers || {};
     // Update UBPs and horizons
     if (typeof patch.ubp !== 'undefined') {
@@ -465,12 +479,13 @@ exports.updateStrategyCanvas = async (req, res, next) => {
 exports.saveCompiledPlan = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const cp = req.body || {};
     const ent = require('../config/entitlements');
     const user = await User.findById(userId).lean().exec();
     const plan = ent.effectivePlan(user);
-    const ob = await Onboarding.findOne({ user: userId }) || await Onboarding.create({ user: userId });
+    const ob = await Onboarding.findOne(wsFilter) || await Onboarding.create(addWorkspaceToDoc({ user: userId }, req));
     ob.userProfile = {
       ...(ob.userProfile || {}),
       ...(cp.userProfile || {}),
@@ -624,11 +639,12 @@ exports.saveCompiledPlan = async (req, res, next) => {
 exports.getCompiledPlan = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    let ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    let ob = await Onboarding.findOne(wsFilter).lean().exec();
     if (!ob) {
       // Initialize a minimal onboarding document to ensure downstream consumers have data
-      const created = await Onboarding.create({ user: userId, answers: {} });
+      const created = await Onboarding.create(addWorkspaceToDoc({ user: userId, answers: {} }, req));
       ob = created.toObject();
     }
     const a = ob.answers || {};
@@ -676,9 +692,10 @@ exports.getCompiledPlan = async (req, res, next) => {
 exports.getNotifications = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     // Build dynamic task notifications from onboarding action assignments
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const a = ob?.answers || {};
     let assignments = a.actionAssignments || {};
     // Filter assignments for department-restricted collaborators
@@ -710,7 +727,7 @@ exports.getNotifications = async (req, res, next) => {
     const items = [];
     // Load persisted notifications (e.g., collaboration invites)
     try {
-      const docs = await Notification.find({ user: userId }).sort({ createdAt: -1 }).limit(50).lean().exec();
+      const docs = await Notification.find(wsFilter).sort({ createdAt: -1 }).limit(50).lean().exec();
       for (const n of docs) {
         items.push({
           nid: n.nid,
@@ -770,8 +787,9 @@ exports.getNotifications = async (req, res, next) => {
 exports.markAllRead = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    await Notification.updateMany({ user: userId, read: false }, { $set: { read: true } }).exec();
+    await Notification.updateMany({ ...wsFilter, read: false }, { $set: { read: true } }).exec();
     return res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -782,6 +800,7 @@ exports.markAllRead = async (req, res, next) => {
 exports.updateNotificationPrefs = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { frequency, tone } = req.body || {};
     const prefs = await NotificationSettings.findOneAndUpdate(
@@ -805,9 +824,10 @@ exports.updateNotificationPrefs = async (req, res, next) => {
 exports.getDepartments = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const [ob, user] = await Promise.all([
-      Onboarding.findOne({ user: userId }).lean().exec(),
+      Onboarding.findOne(wsFilter).lean().exec(),
       User.findById(userId).lean().exec(),
     ]);
     const a = ob?.answers || {};
@@ -900,7 +920,7 @@ exports.getDepartments = async (req, res, next) => {
     const fallbackOwner = (user?.fullName || '').trim() || '-';
 
     // Merge with stored Department overrides; progress is derived from action plan item progress/ statuses
-    const stored = await Department.find({ user: userId }).lean().exec();
+    const stored = await Department.find(wsFilter).lean().exec();
     const byName = new Map((stored || []).map((d) => [d.name, d]));
     const departments = Array.from(deptMap.values()).map((r) => {
       const s = byName.get(r.name);
@@ -937,6 +957,7 @@ exports.getDepartments = async (req, res, next) => {
 exports.updateDepartment = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { name, owner } = req.body || {};
     if (typeof name !== 'string' || !name.trim()) {
@@ -952,7 +973,7 @@ exports.updateDepartment = async (req, res, next) => {
     ).lean().exec();
     // Compute owner consistent with GET (department head or fallback to current user)
     const [ob, user] = await Promise.all([
-      Onboarding.findOne({ user: userId }).lean().exec(),
+      Onboarding.findOne(wsFilter).lean().exec(),
       User.findById(userId).lean().exec(),
     ]);
     const a = ob?.answers || {};
@@ -1040,6 +1061,7 @@ exports.updateDepartment = async (req, res, next) => {
 exports.updateActionAssignmentStatus = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const deptLabel = String(req.body?.department || '').trim();
     const deptKeyIn = String(req.body?.key || '').trim();
@@ -1047,7 +1069,7 @@ exports.updateActionAssignmentStatus = async (req, res, next) => {
     const status = String(req.body?.status || '').trim();
     if (!isFinite(index) || index < 0) return res.status(400).json({ message: 'Valid index is required' });
     if (!status) return res.status(400).json({ message: 'Status is required' });
-    const ob = await Onboarding.findOne({ user: userId });
+    const ob = await Onboarding.findOne(wsFilter);
     if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
     ob.answers = ob.answers || {};
     const assignments = ob.answers.actionAssignments = ob.answers.actionAssignments || {};
@@ -1121,6 +1143,7 @@ exports.updateActionAssignmentStatus = async (req, res, next) => {
 exports.updateActionAssignmentItem = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { key, department, index, patch } = req.body || {};
     const idx = Number(index);
@@ -1139,7 +1162,7 @@ exports.updateActionAssignmentItem = async (req, res, next) => {
       'ESG and Sustainability': 'communityImpact',
     };
 
-    const ob = await Onboarding.findOne({ user: userId });
+    const ob = await Onboarding.findOne(wsFilter);
     if (!ob) return res.status(404).json({ message: 'Not found' });
     const a = ob.answers || {};
     const curr = a.actionAssignments || {};
@@ -1232,16 +1255,17 @@ exports.updateActionAssignmentItem = async (req, res, next) => {
 exports.getFinancials = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     // Load any saved assumptions for this user (current values)
     let savedAssumptions = {};
     try {
-      const finDoc = await Financials.findOne({ user: userId }).lean().exec();
+      const finDoc = await Financials.findOne(wsFilter).lean().exec();
       if (finDoc && Array.isArray(finDoc.assumptions)) {
         savedAssumptions = Object.fromEntries(finDoc.assumptions.map((r)=> [String(r.key||''), String(r.value||'')]));
       }
     } catch {}
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const a = ob?.answers || {};
     function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
     const growth = num(a.finSalesGrowthPct) / 100;
@@ -1399,12 +1423,13 @@ exports.getFinancials = async (req, res, next) => {
 exports.saveFinancialAssumptions = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
     const map = new Map();
     rows.forEach((r)=>{ const k = String(r?.key || '').trim(); if (k) map.set(k, String(r?.value ?? '')); });
     // Upsert Financials doc for user; merge values by key
-    const fin = await Financials.findOne({ user: userId }) || await Financials.create({ user: userId, metrics:{}, chart:[], revenueBars:[], cashflowBars:[], assumptions:[] });
+    const fin = await Financials.findOne(wsFilter) || await Financials.create({ user: userId, metrics:{}, chart:[], revenueBars:[], cashflowBars:[], assumptions:[] });
     const existing = new Map((fin.assumptions || []).map((r)=> [String(r.key||''), r]));
     // Update or insert
     map.forEach((val, key) => {
@@ -1423,8 +1448,9 @@ exports.saveFinancialAssumptions = async (req, res, next) => {
 exports.getPlanProse = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const prose = (ob && ob.answers && ob.answers.planProse) || {};
     return res.json({ prose: { executiveSummary: prose.executiveSummary || '', marketStatement: prose.marketStatement || '', financialStatement: prose.financialStatement || '', generatedAt: prose.generatedAt || null } });
   } catch (err) {
@@ -1437,8 +1463,9 @@ exports.getPlanProse = async (req, res, next) => {
 exports.generatePlanProse = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne({ user: userId }) || await Onboarding.create({ user: userId });
+    const ob = await Onboarding.findOne(wsFilter) || await Onboarding.create(addWorkspaceToDoc({ user: userId }, req));
     const a = ob.answers || {};
     const { sections } = req.body || {};
     const wantExecutive = !Array.isArray(sections) || sections.includes('executive');
@@ -1696,10 +1723,11 @@ exports.generatePlanProse = async (req, res, next) => {
 exports.getPlan = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const [p, sectionsRaw] = await Promise.all([
-      Plan.findOne({ user: userId }).lean().exec(),
-      PlanSection.find({ user: userId }).sort({ order: 1, createdAt: 1 }).lean().exec(),
+      Plan.findOne(wsFilter).lean().exec(),
+      PlanSection.find(wsFilter).sort({ order: 1, createdAt: 1 }).lean().exec(),
     ]);
     const sections = sectionsRaw.map((s) => ({ sid: s.sid, name: s.name, complete: s.complete }));
     return res.json({ plan: { sections, companyLogoUrl: (p && p.companyLogoUrl) || '' } });
@@ -1712,6 +1740,7 @@ exports.getPlan = async (req, res, next) => {
 exports.uploadCompanyLogo = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     const { dataUrl } = req.body || {};
@@ -1754,6 +1783,7 @@ exports.uploadCompanyLogo = async (req, res, next) => {
 exports.exportPlanPdf = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     // Render the actual front‑end page so the PDF matches what users see
@@ -1890,8 +1920,9 @@ exports.exportPlanPdf = async (req, res, next) => {
 exports.exportStrategyCanvasDocx = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const a = ob?.answers || {};
     const ubp = (a.ubp || ob?.vision?.ubp || '').trim();
     const purpose = String(a.purpose || '').trim();
@@ -1966,6 +1997,7 @@ exports.exportStrategyCanvasDocx = async (req, res, next) => {
 exports.exportStrategyCanvasPdf = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
     const url = `${frontend}/dashboard/strategy-canvas/print?print=1`;
@@ -2022,8 +2054,9 @@ exports.exportStrategyCanvasPdf = async (req, res, next) => {
 exports.exportDepartmentsDocx = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const a = ob?.answers || {};
     const assignments = a.actionAssignments || {};
     const label = (k) => ({ marketing:'Marketing',sales:'Sales',operations:'Operations and Service Delivery',financeAdmin:'Finance and Admin',peopleHR:'People and Human Resources',partnerships:'Partnerships and Alliances',technology:'Technology and Infrastructure',communityImpact:'ESG and Sustainability' }[k] || k);
@@ -2078,6 +2111,7 @@ exports.exportDepartmentsDocx = async (req, res, next) => {
 exports.exportDepartmentsPdf = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
     const url = `${frontend}/dashboard/departments/print?print=1`;
@@ -2132,17 +2166,18 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
 exports.exportPlanDocx = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     // Load logo URL if any
     let logoUrl = '';
     try {
-      const planDoc = await Plan.findOne({ user: userId }).lean().exec();
+      const planDoc = await Plan.findOne(wsFilter).lean().exec();
       logoUrl = String(planDoc?.companyLogoUrl || '');
     } catch {}
 
     // Build plan data (same structure as getCompiledPlan)
-    const ob = (await Onboarding.findOne({ user: userId }).lean().exec()) || {};
+    const ob = (await Onboarding.findOne(wsFilter).lean().exec()) || {};
     const a = ob.answers || {};
     const plan = {
       businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '' },
@@ -2767,8 +2802,9 @@ exports.exportPlanDocx = async (req, res, next) => {
 exports.getProducts = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const items = Array.isArray(ob?.answers?.products) ? ob.answers.products : [];
     return res.json({ items });
   } catch (err) {
@@ -2780,6 +2816,7 @@ exports.getProducts = async (req, res, next) => {
 exports.saveProducts = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const inItems = Array.isArray(req.body?.items) ? req.body.items : [];
     const items = inItems.map((p) => ({
@@ -2790,7 +2827,7 @@ exports.saveProducts = async (req, res, next) => {
       price: typeof p?.price !== 'undefined' ? String(p?.price || '') : undefined,
       monthlyVolume: typeof p?.monthlyVolume !== 'undefined' ? String(p?.monthlyVolume || '') : undefined,
     }));
-    const ob = await Onboarding.findOne({ user: userId });
+    const ob = await Onboarding.findOne(wsFilter);
     if (!ob) return res.status(400).json({ message: 'Onboarding not initialized' });
     ob.answers = ob.answers || {};
     ob.answers.products = items;
@@ -2820,6 +2857,7 @@ exports.saveProducts = async (req, res, next) => {
 exports.recalculateFinancials = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     // No heavy compute is needed here as GET /financials derives on the fly. This exists for future background tasks.
     return res.json({ ok: true });
@@ -2834,9 +2872,10 @@ exports.recalculateFinancials = async (req, res, next) => {
 exports.saveFinancialActuals = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { revenue, cogs, marketing, payroll, fixed, month } = req.body || {};
-    const ob = await Onboarding.findOne({ user: userId }) || await Onboarding.create({ user: userId });
+    const ob = await Onboarding.findOne(wsFilter) || await Onboarding.create(addWorkspaceToDoc({ user: userId }, req));
     ob.answers = ob.answers || {};
     function normArr(arr) {
       if (!Array.isArray(arr)) return undefined;
@@ -2880,6 +2919,7 @@ exports.saveFinancialActuals = async (req, res, next) => {
 exports.importFinancialsCSV = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const csv = String(req.body?.csv || '').trim();
     if (!csv) return res.status(400).json({ message: 'CSV text is required' });
@@ -2931,7 +2971,7 @@ exports.importFinancialsCSV = async (req, res, next) => {
       if (idxNewCust >= 0) newCust[midx] = num(cols[idxNewCust]);
       updates++;
     }
-    const ob = await Onboarding.findOne({ user: userId }) || await Onboarding.create({ user: userId });
+    const ob = await Onboarding.findOne(wsFilter) || await Onboarding.create(addWorkspaceToDoc({ user: userId }, req));
     ob.answers = ob.answers || {};
     const setIfAny = (key, arr) => { if (arr.some((v)=> typeof v === 'number')) ob.answers[key] = arr; };
     setIfAny('finActualRevenue', actualRevenue);
@@ -2953,10 +2993,11 @@ exports.importFinancialsCSV = async (req, res, next) => {
 exports.addPlanSection = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { name } = req.body || {};
     if (!name || !String(name).trim()) return res.status(400).json({ message: 'Section name is required' });
-    const count = await PlanSection.countDocuments({ user: userId });
+    const count = await PlanSection.countDocuments(wsFilter);
     const section = await PlanSection.create({ user: userId, sid: ensureId('s_'), name: String(name).trim(), complete: 0, order: count });
     return res.status(201).json({ section: { sid: section.sid, name: section.name, complete: section.complete } });
   } catch (err) {
@@ -2968,6 +3009,7 @@ exports.addPlanSection = async (req, res, next) => {
 exports.deletePlanSection = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { sid } = req.params;
     const result = await PlanSection.deleteOne({ user: userId, sid }).exec();
@@ -2981,10 +3023,11 @@ exports.deletePlanSection = async (req, res, next) => {
 exports.getSettings = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const [user, ob] = await Promise.all([
       User.findById(userId).lean().exec(),
-      Onboarding.findOne({ user: userId }).exec(),
+      Onboarding.findOne(wsFilter).exec(),
     ]);
     const profile = {
       fullName: user?.fullName || '',
@@ -3013,7 +3056,7 @@ exports.getSettings = async (req, res, next) => {
     } catch {}
     // Fallback: read any members from TeamMember collection (no seeding)
     if (!members.length) {
-      const membersRaw = await TeamMember.find({ user: userId }).lean().exec();
+      const membersRaw = await TeamMember.find(wsFilter).lean().exec();
       members = membersRaw.map((m) => ({ mid: m.mid, name: m.name, email: m.email, position: m.role, department: m.department, status: m.status }));
     }
     // Prefer stored first/last name; fallback to split from fullName
@@ -3035,6 +3078,7 @@ exports.getSettings = async (req, res, next) => {
 exports.updateProfile = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { fullName, firstName, lastName, email, jobTitle, phone } = req.body || {};
     const update = {};
@@ -3069,11 +3113,12 @@ exports.updateProfile = async (req, res, next) => {
 exports.updateMember = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { mid } = req.params;
     const patch = req.body || {};
 
-    const ob = await Onboarding.findOne({ user: userId });
+    const ob = await Onboarding.findOne(wsFilter);
     if (!ob) return res.json({ member: null });
     const a = ob.answers || {};
     let list = Array.isArray(a.orgPositions) ? a.orgPositions : [];
@@ -3128,9 +3173,10 @@ exports.updateMember = async (req, res, next) => {
 exports.deleteMember = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { mid } = req.params;
-    const ob = await Onboarding.findOne({ user: userId });
+    const ob = await Onboarding.findOne(wsFilter);
     if (ob && ob.answers && Array.isArray(ob.answers.orgPositions)) {
       const before = ob.answers.orgPositions.length;
       ob.answers.orgPositions = ob.answers.orgPositions.filter((p) => {
@@ -3156,6 +3202,7 @@ exports.deleteMember = async (req, res, next) => {
 exports.purgeSampleMembers = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     // Delete known seeded entries by email or name match
     const result = await TeamMember.deleteMany({
@@ -3180,6 +3227,7 @@ const financialSnapshotService = require('../services/financialSnapshotService')
 exports.getFinancialSnapshot = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const snapshot = await financialSnapshotService.getOrCreate(userId, null);
     return res.json({ snapshot });
@@ -3192,6 +3240,7 @@ exports.getFinancialSnapshot = async (req, res, next) => {
 exports.updateFinancialSection = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { section } = req.params;
     if (!['revenue', 'costs', 'cash'].includes(section)) {
@@ -3208,6 +3257,7 @@ exports.updateFinancialSection = async (req, res, next) => {
 exports.getHealthTiles = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const tiles = await financialSnapshotService.getHealthTiles(userId, null);
     return res.json({ tiles });
@@ -3220,6 +3270,7 @@ exports.getHealthTiles = async (req, res, next) => {
 exports.getDecisionSupport = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const decisions = await financialSnapshotService.getDecisionSupport(userId, null);
     return res.json({ decisions });
@@ -3232,6 +3283,7 @@ exports.getDecisionSupport = async (req, res, next) => {
 exports.completeFinancialOnboarding = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const snapshot = await financialSnapshotService.completeOnboarding(userId, null);
     return res.json({ ok: true, snapshot });
@@ -3244,6 +3296,7 @@ exports.completeFinancialOnboarding = async (req, res, next) => {
 exports.syncFinancialFromOnboarding = async (req, res, next) => {
   try {
     const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const snapshot = await financialSnapshotService.syncFromOnboarding(userId, null);
     return res.json({ ok: true, snapshot });

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
   const NotificationSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', index: true },
     nid: { type: String, required: true, index: true },
     title: String,
     description: String,
@@ -21,6 +22,7 @@ const mongoose = require('mongoose');
   { timestamps: true }
 );
 
-NotificationSchema.index({ user: 1, createdAt: -1 });
+NotificationSchema.index({ user: 1, workspace: 1, createdAt: -1 });
+NotificationSchema.index({ user: 1, workspace: 1, nid: 1 }, { unique: true });
 
 module.exports = mongoose.model('Notification', NotificationSchema);

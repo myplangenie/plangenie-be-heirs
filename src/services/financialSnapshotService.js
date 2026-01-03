@@ -189,7 +189,9 @@ exports.getDecisionSupport = async (userId, workspaceId = null) => {
  * Sync financial data from existing onboarding answers
  */
 exports.syncFromOnboarding = async (userId, workspaceId = null) => {
-  const ob = await Onboarding.findOne({ user: userId }).lean();
+  const filter = { user: userId };
+  if (workspaceId) filter.workspace = workspaceId;
+  const ob = await Onboarding.findOne(filter).lean();
   if (!ob?.answers?.financial) return null;
 
   const f = ob.answers.financial;

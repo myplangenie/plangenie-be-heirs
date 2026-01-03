@@ -2,6 +2,7 @@ const Onboarding = require('../models/Onboarding');
 const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
 const User = require('../models/User');
+const { getWorkspaceFilter } = require('../utils/workspaceQuery');
 
 // Optional internal knowledge (Business Trainer)
 let rag;
@@ -427,7 +428,8 @@ exports.respond = async (req, res) => {
     const wantDebug = (req?.query && String(req.query.debug||'') === '1') || (req.body && req.body.debug === true);
     const messages = Array.isArray(raw) ? raw : [];
     const userId = req.user?.id;
-    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const wsFilter = getWorkspaceFilter(req);
+    const ob = userId ? await Onboarding.findOne(wsFilter) : null;
 
     // Derive simple, real user stats to ground AI responses
     let stats = {};
@@ -435,9 +437,9 @@ exports.respond = async (req, res) => {
       if (userId) {
         let [me, teamMembersCount, teamMembers, departments] = await Promise.all([
           User.findById(userId).lean().exec(),
-          TeamMember.countDocuments({ user: userId, status: 'Active' }).exec(),
-          TeamMember.find({ user: userId, status: 'Active' }).select('name email role department status').limit(200).lean().exec(),
-          Department.find({ user: userId }).select('name status owner dueDate').limit(50).lean().exec(),
+          TeamMember.countDocuments({ ...wsFilter, status: 'Active' }).exec(),
+          TeamMember.find({ ...wsFilter, status: 'Active' }).select('name email role department status').limit(200).lean().exec(),
+          Department.find(wsFilter).select('name status owner dueDate').limit(50).lean().exec(),
         ]);
         const a = (ob && ob.answers) || {};
         // Prefer orgPositions (Settings source of truth) over TeamMember collection

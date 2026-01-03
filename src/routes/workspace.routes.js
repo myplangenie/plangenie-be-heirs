@@ -14,6 +14,7 @@ router.get('/', workspaceCtx, ctrl.list);
 router.post('/', ctrl.create);
 router.get('/:wid', ctrl.get);
 router.patch('/:wid', ctrl.patch);
+router.delete('/:wid', ctrl.delete);
 router.get('/:wid/this-week', ctrl.thisWeek);
 
 // Decision Strip & Priorities

@@ -2,6 +2,7 @@ const express = require('express');
 const auth = require('../middleware/auth');
 const ctrl = require('../controllers/dashboard.controller');
 const viewAs = require('../middleware/viewAs');
+const workspaceContext = require('../middleware/workspace');
 const { body } = require('express-validator');
 const { requireFeature } = require('../middleware/plan');
 
@@ -10,6 +11,7 @@ const router = express.Router();
 // All dashboard APIs require auth; allow view-as (read-only) for collaborators
 router.use(auth(true));
 router.use(viewAs);
+router.use(workspaceContext);
 
 router.get('/summary',  ctrl.getSummary);
 // Insights

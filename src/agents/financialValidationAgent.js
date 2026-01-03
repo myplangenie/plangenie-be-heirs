@@ -207,14 +207,14 @@ function runBasicValidation(financial, products, context) {
 /**
  * Generate comprehensive financial validation
  * @param {string} userId - User ID
- * @param {Object} options - Optional parameters
+ * @param {Object} options - Optional parameters (workspaceId, forceRefresh)
  * @returns {Object} Validation results with errors, warnings, and suggestions
  */
 async function validateFinancials(userId, options = {}) {
-  const { forceRefresh = false } = options;
+  const { forceRefresh = false, workspaceId = null } = options;
 
   // Build context
-  const context = await buildAgentContext(userId);
+  const context = await buildAgentContext(userId, workspaceId);
   const financial = context.financial || context._rawAnswers?.financial || {};
   const products = context.products || [];
 
@@ -226,7 +226,7 @@ async function validateFinancials(userId, options = {}) {
 
   // Check cache
   if (!forceRefresh) {
-    const cached = await getFromCache(userId, 'financial-validation', inputHash);
+    const cached = await getFromCache(userId, 'financial-validation', inputHash, workspaceId);
     if (cached) {
       return { ...cached, fromCache: true };
     }
@@ -317,7 +317,7 @@ Respond in JSON format:
   };
 
   // Cache the response
-  await setCache(userId, 'financial-validation', inputHash, response, generationTimeMs);
+  await setCache(userId, 'financial-validation', inputHash, response, generationTimeMs, workspaceId);
 
   return { ...response, fromCache: false, generationTimeMs };
 }

@@ -2,6 +2,7 @@ const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
 const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
+const { getWorkspaceFilter } = require('../utils/workspaceQuery');
 let rag;
 try {
   rag = require('../rag/index.js');
@@ -61,13 +62,15 @@ function buildAnswersContext(ob) {
 // Build a richer, user-aware context for Core Strategic Project suggestions
 // Includes: Onboarding profile, fallback to User.companyName, key onboarding answers,
 // existing core projects, departments summary, and active team members (limited).
-async function buildCoreProjectContextForUser(userId) {
+async function buildCoreProjectContextForUser(userId, workspaceId = null) {
   try {
+    const wsFilter = { user: userId };
+    if (workspaceId) wsFilter.workspace = workspaceId;
     const [ob, user, departments, teamMembers] = await Promise.all([
-      userId ? Onboarding.findOne({ user: userId }) : null,
+      userId ? Onboarding.findOne(wsFilter) : null,
       userId ? User.findById(userId) : null,
-      userId ? Department.find({ user: userId }).select('name status owner dueDate').limit(50).lean().exec() : [],
-      userId ? TeamMember.find({ user: userId, status: 'Active' }).select('name role department email status').limit(200).lean().exec() : [],
+      userId ? Department.find(wsFilter).select('name status owner dueDate').limit(50).lean().exec() : [],
+      userId ? TeamMember.find({ ...wsFilter, status: 'Active' }).select('name role department email status').limit(200).lean().exec() : [],
     ]);
 
     // Profile section (with fallback business name)
@@ -426,7 +429,8 @@ exports.callOpenAIProse = callOpenAIProse;
 // assignments: { [dept: string]: Array<{ goal, milestone, resources, cost, kpi, dueWhen, firstName, lastName }> }
 // Returns up to n concise suggestions
 exports.generateActionInsightsForUser = async function generateActionInsightsForUser(userId, assignments = {}, n = 6) {
-  const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+  const wsFilter = getWorkspaceFilter(req);
+  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
   const baseCtx = buildContextText(ob);
   const answersCtx = buildAnswersContext(ob);
   const lines = [];
@@ -508,7 +512,8 @@ exports.generateActionInsightsForUser = async function generateActionInsightsFor
 
 // Structured sections generator: returns [{ title, items: string[] }]
 exports.generateActionInsightSectionsForUser = async function generateActionInsightSectionsForUser(userId, assignments = {}, maxSections = 2) {
-  const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+  const wsFilter = getWorkspaceFilter(req);
+  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
   const baseCtx = buildContextText(ob);
   const answersCtx = buildAnswersContext(ob);
   const lines = [];
@@ -666,7 +671,8 @@ exports.generateActionInsightSectionsForUser = async function generateActionInsi
 
 // Generate or regenerate a single section by title
 exports.generateSingleInsightSectionForUser = async function generateSingleInsightSectionForUser(userId, assignments = {}, title = 'Recommendations') {
-  const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+  const wsFilter = getWorkspaceFilter(req);
+  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
   const baseCtx = buildContextText(ob);
   const answersCtx = buildAnswersContext(ob);
   const lines = [];
@@ -837,7 +843,7 @@ exports.suggestUbp = async (req, res) => {
     const { input } = req.body || {};
     // If user is authenticated, use onboarding context; otherwise proceed without it
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIList({ type: 'Unique Business Proposition (UBP)', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -853,7 +859,7 @@ exports.rewriteUbp = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'Unique Business Proposition (UBP)', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -870,7 +876,7 @@ exports.suggestPurpose = async (req, res) => {
     const { input } = req.body || {};
     // If user is authenticated, use onboarding context; otherwise proceed without it
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIList({ type: 'Purpose statement', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -886,7 +892,7 @@ exports.rewritePurpose = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'Purpose statement', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -902,7 +908,7 @@ exports.suggestValuesCore = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const items = await callOpenAIListWithKeywords({ type: 'Core values statement', input, contextText, n: 3 });
     const suggestions = items.map((it) => it.text);
     const topKeywords = items[0]?.keywords || [];
@@ -920,7 +926,7 @@ exports.rewriteValuesCore = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'Core values statement', text, contextText });
     let keywords = [];
     try { keywords = await callOpenAIKeywordsForText({ type: 'Core values statement', text: rewrite, contextText: '' }); } catch (_) {}
@@ -938,7 +944,7 @@ exports.suggestCultureFeeling = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIList({ type: 'Culture/brand experience feeling statement', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -954,7 +960,7 @@ exports.rewriteCultureFeeling = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'Culture/brand experience feeling statement', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -971,7 +977,7 @@ exports.suggestSwotStrengths = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIListPhrases({ type: 'SWOT Strengths (short phrases)', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -987,7 +993,7 @@ exports.suggestSwotWeaknesses = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIListPhrases({ type: 'SWOT Weaknesses (short phrases)', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -1003,7 +1009,7 @@ exports.suggestSwotOpportunities = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIListPhrases({ type: 'SWOT Opportunities (short phrases)', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -1019,7 +1025,7 @@ exports.suggestSwotThreats = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const baseCtx = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const contextText = baseCtx;
     const suggestions = await callOpenAIListPhrases({ type: 'SWOT Threats (short phrases)', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
@@ -1036,8 +1042,9 @@ exports.suggestMarketCustomer = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const wsFilter = getWorkspaceFilter(req);
+  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIList({ type: 'Target market and ideal customer profile summary', input, contextText, n: 3 });
     const bp = ob?.businessProfile || {};
     const q = [bp.industry || '', bp.businessName || '', bp.city || '', bp.country || '', 'ideal customer profile'].filter(Boolean).join(' ');
@@ -1056,7 +1063,7 @@ exports.rewriteMarketCustomer = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'Target market and ideal customer profile summary', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -1072,8 +1079,9 @@ exports.suggestMarketPartners = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const baseCtx = userId ? await buildCoreProjectContextForUser(userId) : '';
-    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
+    const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
+    const wsFilter = getWorkspaceFilter(req);
+  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
     const bp = ob?.businessProfile || {};
     // Web search for potential partner platforms/distributors relevant to the industry/location
     const query = [
@@ -1131,7 +1139,7 @@ exports.rewriteMarketPartners = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'Go-to-market partners and channels plan', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -1147,8 +1155,9 @@ exports.suggestMarketCompetitors = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const wsFilter = getWorkspaceFilter(req);
+  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     // Build competitor names list from stored answers or infer later
     const ans = (ob && ob.answers) || {};
     let compNames = Array.isArray(ans.competitorNames) ? ans.competitorNames.map((s)=>String(s||'').trim()).filter(Boolean).slice(0,3) : [];
@@ -1225,7 +1234,7 @@ exports.rewriteMarketCompetitors = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'Competitive differentiation notes', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -1242,7 +1251,7 @@ exports.suggestCompetitorAdvantages = async (req, res) => {
   try {
     const names = Array.isArray(req.body?.names) ? req.body.names.slice(0, 3) : [];
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const out = [];
     for (const name of names) {
       const input = `Competitor name: ${String(name || '').trim()}`;
@@ -1264,8 +1273,9 @@ exports.suggestCompetitorNames = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const ob = userId ? await Onboarding.findOne({ user: userId }) : null;
-    const baseCtx = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const wsFilter = getWorkspaceFilter(req);
+  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
+    const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
 
     const bp = ob?.businessProfile || {};
     const q = [
@@ -1322,7 +1332,7 @@ exports.suggestFinancialForecast = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIList({ type: '12-month financial snapshot (revenue streams and costs) summary', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -1338,7 +1348,7 @@ exports.rewriteFinancialForecast = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: '12-month financial snapshot (revenue streams and costs) summary', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -1356,7 +1366,7 @@ exports.suggestFinancialNumber = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
 
     // Use a very strict system prompt and small max tokens for numeric-only responses
     const client = getOpenAI();
@@ -1409,7 +1419,7 @@ exports.suggestFinancialAll = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
 
     const client = getOpenAI();
 
@@ -1547,7 +1557,7 @@ exports.suggestVision1y = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIList({ type: '1-year success outcome', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -1563,7 +1573,7 @@ exports.rewriteVision1y = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: '1-year success outcome', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -1583,7 +1593,7 @@ exports.suggestVision3y = async (req, res) => {
     const currentIso = now.toISOString().slice(0, 10);
     const targetYear = now.getUTCFullYear() + 3;
     const anchor = `Current date: ${currentIso}. When referring to "3 years", anchor outcomes to the year ${targetYear} (not earlier years).`;
-    const baseCtx = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const contextText = [baseCtx, anchor].filter(Boolean).join('\n');
     const suggestions = await callOpenAIList({ type: '3-year thriving vision', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
@@ -1601,7 +1611,7 @@ exports.suggestActionGoal = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestion = await callOpenAI({ type: 'action plan goal (1-2 sentences)', input, contextText });
     return res.json({ suggestion });
   } catch (err) {
@@ -1614,7 +1624,7 @@ exports.rewriteActionGoal = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'action plan goal (1-2 sentences)', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -1627,7 +1637,7 @@ exports.suggestActionMilestone = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestion = await callOpenAI({ type: 'concise milestone phrase', input, contextText });
     return res.json({ suggestion });
   } catch (err) {
@@ -1640,7 +1650,7 @@ exports.rewriteActionMilestone = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'concise milestone phrase', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -1653,7 +1663,7 @@ exports.suggestActionResources = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestion = await callOpenAI({ type: 'resources/tools/budget summary (short phrase)', input, contextText });
     return res.json({ suggestion });
   } catch (err) {
@@ -1666,7 +1676,7 @@ exports.rewriteActionResources = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'resources/tools/budget summary (short phrase)', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -1679,7 +1689,7 @@ exports.suggestActionKpi = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestion = await callOpenAI({ type: 'KPI metric specification (short phrase)', input, contextText });
     return res.json({ suggestion });
   } catch (err) {
@@ -1692,7 +1702,7 @@ exports.rewriteActionKpi = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'KPI metric specification (short phrase)', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -1706,7 +1716,7 @@ exports.suggestActionCost = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestion = await callOpenAI({ type: 'estimated cost/budget (short phrase, e.g., "$2,000 for design and ads")', input, contextText });
     return res.json({ suggestion });
   } catch (err) {
@@ -1719,7 +1729,7 @@ exports.rewriteActionCost = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'estimated cost/budget (short phrase)', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -1734,7 +1744,7 @@ exports.suggestCoreProject = async (req, res) => {
     const { input = '', n } = req.body || {};
     const userId = req.user?.id;
     // Build a richer context using current user data (Onboarding + User + Departments + Team Members)
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const client = getOpenAI();
 
     const wanted = (typeof n === 'number' && n > 0) ? Math.min(8, Math.max(1, n)) : 4;
@@ -1846,7 +1856,7 @@ exports.suggestCoreDeliverables = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIList({ type: 'core strategic project deliverables (3–4 high-level items)', input, contextText, n: 4 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -1863,7 +1873,7 @@ exports.suggestActionAll = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
 
     const [goal, milestone, resources, cost, kpi, title] = await Promise.all([
       callOpenAI({ type: 'action plan goal (1-2 sentences)', input, contextText }),
@@ -1890,7 +1900,7 @@ exports.suggestDeptGoalsBulk = async (req, res) => {
       return res.json({ goals: {} });
     }
     const userId = req.user?.id;
-    const baseCtx = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const contextText = [baseCtx, context].filter(Boolean).join('\n');
 
     const out = {};
@@ -1914,7 +1924,7 @@ exports.suggestActionDue = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const baseCtx = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const contextText = [baseCtx, 'Constraints: Return only ISO date (YYYY-MM-DD)'].filter(Boolean).join('\n');
     const suggestion = await callOpenAI({ type: 'due date in ISO format', input, contextText });
     // basic sanitize for date-like
@@ -1930,7 +1940,7 @@ exports.rewriteActionDue = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const baseCtx = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const contextText = [baseCtx, 'Constraints: Return only ISO date (YYYY-MM-DD)'].filter(Boolean).join('\n');
     const rewrite = await callOpenAIRewrite({ type: 'due date in ISO format', text, contextText });
     const iso = String(rewrite || '').trim().slice(0, 10);
@@ -1949,7 +1959,7 @@ exports.rewriteVision3y = async (req, res) => {
     const currentIso = now.toISOString().slice(0, 10);
     const targetYear = now.getUTCFullYear() + 3;
     const anchor = `Current date: ${currentIso}. When referring to "3 years", anchor outcomes to the year ${targetYear} (not earlier years).`;
-    const baseCtx = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const contextText = [baseCtx, anchor].filter(Boolean).join('\n');
     const rewrite = await callOpenAIRewrite({ type: '3-year thriving vision', text, contextText });
     return res.json({ rewrite });
@@ -1967,7 +1977,7 @@ exports.suggestVisionBhag = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIList({ type: 'Long-Term Strategic Vision (BHAG)', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
@@ -1983,7 +1993,7 @@ exports.rewriteVisionBhag = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'Long-Term Strategic Vision (BHAG)', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -2000,7 +2010,7 @@ exports.suggestIdentitySummary = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestion = await callOpenAI({ type: 'strategic identity summary (1–3 sentences, polished narrative)', input, contextText });
     return res.json({ suggestion, suggestions: suggestion ? [suggestion] : [] });
   } catch (err) {
@@ -2013,7 +2023,7 @@ exports.rewriteIdentitySummary = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewrite({ type: 'strategic identity summary (1–3 sentences, polished narrative)', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -2026,7 +2036,7 @@ exports.rewriteSwotStrengths = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewritePhrase({ type: 'SWOT Strength item', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -2042,7 +2052,7 @@ exports.rewriteSwotWeaknesses = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewritePhrase({ type: 'SWOT Weakness item', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -2058,7 +2068,7 @@ exports.rewriteSwotOpportunities = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewritePhrase({ type: 'SWOT Opportunity item', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -2074,7 +2084,7 @@ exports.rewriteSwotThreats = async (req, res) => {
   try {
     const { text } = req.body || {};
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const rewrite = await callOpenAIRewritePhrase({ type: 'SWOT Threat item', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
@@ -2200,7 +2210,7 @@ exports.extractValuesCoreKeywords = async (req, res) => {
     const { text } = req.body || {};
     if (!text || !String(text).trim()) return res.json({ keywords: [] });
     const userId = req.user?.id;
-    const contextText = userId ? await buildCoreProjectContextForUser(userId) : '';
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const keywords = await callOpenAIKeywordsForText({ type: 'Core values statement', text: String(text).trim(), contextText });
     return res.json({ keywords });
   } catch (err) {

@@ -6,6 +6,7 @@
 const cron = require('node-cron');
 const { Resend } = require('resend');
 const User = require('../models/User');
+const Workspace = require('../models/Workspace');
 const Onboarding = require('../models/Onboarding');
 const scoringService = require('../services/scoringService');
 const { generateWeeklyDigest } = require('../emails/weeklyDigest');
@@ -83,8 +84,14 @@ function formatDueDate(dueWhen) {
  */
 async function sendDigestToUser(user, resend, fromAddress, dashboardUrl) {
   try {
-    // Get user's onboarding data
-    const ob = await Onboarding.findOne({ user: user._id }).lean();
+    // Get user's default workspace
+    const workspace = await Workspace.findOne({ user: user._id, defaultWorkspace: true }).lean();
+    if (!workspace) {
+      return { sent: false, reason: 'no_workspace' };
+    }
+
+    // Get user's onboarding data for their default workspace
+    const ob = await Onboarding.findOne({ user: user._id, workspace: workspace._id }).lean();
     const answers = ob?.answers || {};
 
     // Extract and score items

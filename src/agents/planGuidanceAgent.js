@@ -19,14 +19,14 @@ const scoringService = require('../services/scoringService');
 /**
  * Generate plan guidance for a user
  * @param {string} userId - User ID
- * @param {Object} options - Optional parameters
+ * @param {Object} options - Optional parameters (workspaceId, forceRefresh)
  * @returns {Object} Guidance with priorities and reasoning
  */
 async function generateGuidance(userId, options = {}) {
-  const { forceRefresh = false } = options;
+  const { forceRefresh = false, workspaceId = null } = options;
 
   // Build context and create cache key
-  const context = await buildAgentContext(userId);
+  const context = await buildAgentContext(userId, workspaceId);
   const inputHash = hashInput({
     projects: context.coreProjectDetails?.map(p => ({ title: p.title, dueWhen: p.dueWhen })),
     assignments: Object.keys(context.actionAssignments || {}),
@@ -35,7 +35,7 @@ async function generateGuidance(userId, options = {}) {
 
   // Check cache unless forced refresh
   if (!forceRefresh) {
-    const cached = await getFromCache(userId, 'plan-guidance', inputHash);
+    const cached = await getFromCache(userId, 'plan-guidance', inputHash, workspaceId);
     if (cached) {
       return { ...cached, fromCache: true };
     }
@@ -195,7 +195,7 @@ Provide guidance in this JSON format:
   };
 
   // Cache the response
-  await setCache(userId, 'plan-guidance', inputHash, response, generationTimeMs);
+  await setCache(userId, 'plan-guidance', inputHash, response, generationTimeMs, workspaceId);
 
   return { ...response, fromCache: false, generationTimeMs };
 }

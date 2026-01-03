@@ -16,7 +16,8 @@ const FinancialAssumptionSchema = new mongoose.Schema(
 
 const FinancialsSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', index: true },
     metrics: {
       monthlyRevenue: String,
       monthlyCosts: String,
@@ -37,5 +38,8 @@ const FinancialsSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Compound index for user + workspace uniqueness
+FinancialsSchema.index({ user: 1, workspace: 1 }, { unique: true });
 
 module.exports = mongoose.model('Financials', FinancialsSchema);

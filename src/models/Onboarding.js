@@ -44,7 +44,8 @@ const VisionSchema = new mongoose.Schema(
 
 const OnboardingSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', index: true },
     userProfile: UserProfileSchema,
     businessProfile: BusinessProfileSchema,
     vision: VisionSchema,
@@ -53,6 +54,9 @@ const OnboardingSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Compound index for user + workspace uniqueness
+OnboardingSchema.index({ user: 1, workspace: 1 }, { unique: true });
 
 // Migrate legacy value 'personal' -> 'organization' transparently on save
 OnboardingSchema.pre('save', function(next) {

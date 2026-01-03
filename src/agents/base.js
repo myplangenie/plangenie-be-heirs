@@ -48,14 +48,16 @@ function hashInput(data) {
 /**
  * Check cache for existing response
  */
-async function getFromCache(userId, agentType, inputHash) {
+async function getFromCache(userId, agentType, inputHash, workspaceId = null) {
   try {
-    const cached = await AgentCache.findOne({
+    const filter = {
       user: userId,
       agentType,
       inputHash,
       expiresAt: { $gt: new Date() }
-    }).lean();
+    };
+    if (workspaceId) filter.workspace = workspaceId;
+    const cached = await AgentCache.findOne(filter).lean();
     return cached?.response || null;
   } catch (err) {
     console.error('[AgentCache] Get error:', err.message);
@@ -66,22 +68,24 @@ async function getFromCache(userId, agentType, inputHash) {
 /**
  * Store response in cache
  */
-async function setCache(userId, agentType, inputHash, response, generationTimeMs = 0) {
+async function setCache(userId, agentType, inputHash, response, generationTimeMs = 0, workspaceId = null) {
   try {
     const ttl = CACHE_TTL[agentType] || 60 * 60 * 1000;
-    await AgentCache.findOneAndUpdate(
-      { user: userId, agentType },
-      {
-        user: userId,
-        agentType,
-        inputHash,
-        response,
-        generatedAt: new Date(),
-        expiresAt: new Date(Date.now() + ttl),
-        generationTimeMs,
-      },
-      { upsert: true, new: true }
-    );
+    const filter = { user: userId, agentType };
+    if (workspaceId) filter.workspace = workspaceId;
+
+    const update = {
+      user: userId,
+      agentType,
+      inputHash,
+      response,
+      generatedAt: new Date(),
+      expiresAt: new Date(Date.now() + ttl),
+      generationTimeMs,
+    };
+    if (workspaceId) update.workspace = workspaceId;
+
+    await AgentCache.findOneAndUpdate(filter, update, { upsert: true, new: true });
   } catch (err) {
     console.error('[AgentCache] Set error:', err.message);
   }
@@ -90,13 +94,12 @@ async function setCache(userId, agentType, inputHash, response, generationTimeMs
 /**
  * Invalidate cache for a user's agent
  */
-async function invalidateCache(userId, agentType) {
+async function invalidateCache(userId, agentType, workspaceId = null) {
   try {
-    if (agentType) {
-      await AgentCache.deleteMany({ user: userId, agentType });
-    } else {
-      await AgentCache.deleteMany({ user: userId });
-    }
+    const filter = { user: userId };
+    if (agentType) filter.agentType = agentType;
+    if (workspaceId) filter.workspace = workspaceId;
+    await AgentCache.deleteMany(filter);
   } catch (err) {
     console.error('[AgentCache] Invalidate error:', err.message);
   }
@@ -105,12 +108,21 @@ async function invalidateCache(userId, agentType) {
 /**
  * Build comprehensive context for agents from user data
  */
-async function buildAgentContext(userId) {
+async function buildAgentContext(userId, workspaceId = null) {
+  const obFilter = { user: userId };
+  if (workspaceId) obFilter.workspace = workspaceId;
+
+  const deptFilter = { user: userId };
+  if (workspaceId) deptFilter.workspace = workspaceId;
+
+  const tmFilter = { user: userId, status: 'Active' };
+  if (workspaceId) tmFilter.workspace = workspaceId;
+
   const [ob, user, departments, teamMembers] = await Promise.all([
-    Onboarding.findOne({ user: userId }).lean(),
+    Onboarding.findOne(obFilter).lean(),
     User.findById(userId).lean(),
-    Department.find({ user: userId }).select('name status owner dueDate progress').limit(50).lean(),
-    TeamMember.find({ user: userId, status: 'Active' }).select('name role department').limit(100).lean(),
+    Department.find(deptFilter).select('name status owner dueDate progress').limit(50).lean(),
+    TeamMember.find(tmFilter).select('name role department').limit(100).lean(),
   ]);
 
   const bp = ob?.businessProfile || {};

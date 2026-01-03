@@ -18,8 +18,8 @@ let isRunning = false;
  */
 async function recalculateForUserWorkspace(userId, workspaceId) {
   try {
-    // Get onboarding data
-    const ob = await Onboarding.findOne({ user: userId }).lean();
+    // Get onboarding data for this specific workspace
+    const ob = await Onboarding.findOne({ user: userId, workspace: workspaceId }).lean();
     const answers = ob?.answers || {};
 
     // Extract and score all items

@@ -2,6 +2,14 @@ const Workspace = require('../models/Workspace');
 const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
 const PriorityCache = require('../models/PriorityCache');
+const AgentCache = require('../models/AgentCache');
+const Department = require('../models/Department');
+const TeamMember = require('../models/TeamMember');
+const Notification = require('../models/Notification');
+const Assumption = require('../models/Assumption');
+const Scenario = require('../models/Scenario');
+const Decision = require('../models/Decision');
+const ReviewSession = require('../models/ReviewSession');
 const scoringService = require('../services/scoringService');
 const riskService = require('../services/riskService');
 const { recalculateForUserWorkspace } = require('../jobs/recalculatePriorities');
@@ -118,6 +126,56 @@ exports.patch = async (req, res, next) => {
   }
 };
 
+// DELETE /api/workspaces/:wid
+exports.delete = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const wid = String(req.params?.wid || '').trim();
+
+    const doc = await Workspace.findOne({ user: userId, wid });
+    if (!doc) return res.status(404).json({ message: 'Workspace not found' });
+
+    // Prevent deleting the default workspace if it's the only one
+    const workspaceCount = await Workspace.countDocuments({ user: userId });
+    if (workspaceCount === 1) {
+      return res.status(400).json({ message: 'Cannot delete your only workspace. Create another workspace first.' });
+    }
+
+    const workspaceId = doc._id;
+
+    // Delete all associated data
+    await Promise.all([
+      Onboarding.deleteMany({ user: userId, workspace: workspaceId }),
+      PriorityCache.deleteMany({ user: userId, workspace: workspaceId }),
+      AgentCache.deleteMany({ user: userId, workspace: workspaceId }),
+      Department.deleteMany({ user: userId, workspace: workspaceId }),
+      TeamMember.deleteMany({ user: userId, workspace: workspaceId }),
+      Notification.deleteMany({ user: userId, workspace: workspaceId }),
+      Assumption.deleteMany({ user: userId, workspace: workspaceId }),
+      Scenario.deleteMany({ workspace: workspaceId }),
+      Decision.deleteMany({ user: userId, workspace: workspaceId }),
+      ReviewSession.deleteMany({ user: userId, workspace: workspaceId }),
+    ]);
+
+    // Delete the workspace itself
+    await Workspace.deleteOne({ _id: workspaceId });
+
+    // If deleted workspace was default, set another as default
+    if (doc.defaultWorkspace) {
+      const nextDefault = await Workspace.findOne({ user: userId }).sort({ createdAt: -1 });
+      if (nextDefault) {
+        nextDefault.defaultWorkspace = true;
+        await nextDefault.save();
+      }
+    }
+
+    return res.json({ ok: true, message: 'Workspace and all associated data deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/workspaces/:wid/this-week
 exports.thisWeek = async (req, res, next) => {
   try {
@@ -126,7 +184,7 @@ exports.thisWeek = async (req, res, next) => {
     const wid = String(req.params?.wid || '').trim();
     const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
     if (!ws) return res.status(404).json({ message: 'Workspace not found' });
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne({ user: userId, workspace: ws._id }).lean().exec();
     const a = ob?.answers || {};
 
     const parseDue = (s) => {
@@ -274,7 +332,7 @@ exports.getRoadmap = async (req, res, next) => {
     const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
     if (!ws) return res.status(404).json({ message: 'Workspace not found' });
 
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne({ user: userId, workspace: ws._id }).lean().exec();
     const a = ob?.answers || {};
 
     // Calculate time range: 1 year past, 2 years future (to allow full roadmap navigation)
@@ -412,7 +470,7 @@ exports.acceptReschedule = async (req, res, next) => {
       return res.status(400).json({ message: 'source and newDueDate are required' });
     }
 
-    const ob = await Onboarding.findOne({ user: userId });
+    const ob = await Onboarding.findOne({ user: userId, workspace: ws._id });
     if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
 
     const a = ob.answers || {};
@@ -534,7 +592,7 @@ exports.markComplete = async (req, res, next) => {
       return res.status(400).json({ message: 'source is required' });
     }
 
-    const ob = await Onboarding.findOne({ user: userId });
+    const ob = await Onboarding.findOne({ user: userId, workspace: ws._id });
     if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
 
     const a = ob.answers || {};
@@ -678,7 +736,7 @@ exports.getAISuggestions = async (req, res, next) => {
     if (!ws) return res.status(404).json({ message: 'Workspace not found' });
 
     // Get onboarding data for context
-    const ob = await Onboarding.findOne({ user: userId }).lean().exec();
+    const ob = await Onboarding.findOne({ user: userId, workspace: ws._id }).lean().exec();
     const answers = ob?.answers || {};
 
     // Get cached priorities

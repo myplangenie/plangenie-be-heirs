@@ -7,6 +7,7 @@ const mongoose = require('mongoose');
 const AgentCacheSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', index: true },
     agentType: {
       type: String,
       required: true,
@@ -27,7 +28,7 @@ const AgentCacheSchema = new mongoose.Schema(
 );
 
 // Compound index for efficient lookups
-AgentCacheSchema.index({ user: 1, agentType: 1 });
+AgentCacheSchema.index({ user: 1, workspace: 1, agentType: 1 });
 
 // TTL index to auto-delete expired entries (MongoDB handles this)
 AgentCacheSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

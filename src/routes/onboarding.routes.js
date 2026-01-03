@@ -1,19 +1,23 @@
 const express = require('express');
 const { body } = require('express-validator');
 const auth = require('../middleware/auth');
+const workspaceContext = require('../middleware/workspace');
 const ctrl = require('../controllers/onboarding.controller');
 const ai = require('../controllers/ai.controller');
 const { requireFeature } = require('../middleware/plan');
 
 const router = express.Router();
 
+// Apply auth first, then workspace context (workspace needs req.user.id)
+router.use(auth(false));
+router.use(workspaceContext);
+
 // Get current onboarding data
-router.get('/', auth(false), ctrl.get);
+router.get('/', ctrl.get);
 
 // Save user profile step
 router.post(
   '/user-profile',
-  auth(false),
   [
     body('fullName').optional().isString().trim(),
     body('role').optional().isString().trim(),
@@ -31,7 +35,6 @@ router.post(
 // Save business profile step
 router.post(
   '/business-profile',
-  auth(false),
   [
     body('businessName').optional().isString().trim(),
     body('businessStage').optional().isString().trim(),
@@ -50,86 +53,85 @@ router.post(
 // Save vision/purpose step
 router.post(
   '/vision',
-  auth(false),
   [body('ubp').optional().isString().trim().isLength({ min: 0, max: 5000 })],
   ctrl.saveVision
 );
 
 // AI suggestions for Vision & Purpose
-router.post('/vision/ubp/suggest', auth(false), ai.suggestUbp);
-router.post('/vision/purpose/suggest', auth(false), ai.suggestPurpose);
-router.post('/vision/destination/1y/suggest', auth(false), ai.suggestVision1y);
-router.post('/vision/destination/3y/suggest', auth(false), ai.suggestVision3y);
-router.post('/vision/destination/bhag/suggest', auth(false), ai.suggestVisionBhag);
+router.post('/vision/ubp/suggest', ai.suggestUbp);
+router.post('/vision/purpose/suggest', ai.suggestPurpose);
+router.post('/vision/destination/1y/suggest', ai.suggestVision1y);
+router.post('/vision/destination/3y/suggest', ai.suggestVision3y);
+router.post('/vision/destination/bhag/suggest', ai.suggestVisionBhag);
 // Rewrite endpoints (immediate rewrite of current text)
-router.post('/vision/ubp/rewrite', auth(false), ai.rewriteUbp);
-router.post('/vision/purpose/rewrite', auth(false), ai.rewritePurpose);
-router.post('/vision/destination/1y/rewrite', auth(false), ai.rewriteVision1y);
-router.post('/vision/destination/3y/rewrite', auth(false), ai.rewriteVision3y);
-router.post('/vision/destination/bhag/rewrite', auth(false), ai.rewriteVisionBhag);
+router.post('/vision/ubp/rewrite', ai.rewriteUbp);
+router.post('/vision/purpose/rewrite', ai.rewritePurpose);
+router.post('/vision/destination/1y/rewrite', ai.rewriteVision1y);
+router.post('/vision/destination/3y/rewrite', ai.rewriteVision3y);
+router.post('/vision/destination/bhag/rewrite', ai.rewriteVisionBhag);
 // Strategic Identity Summary
-router.post('/vision/identity/summary/suggest', auth(false), ai.suggestIdentitySummary);
-router.post('/vision/identity/summary/rewrite', auth(false), ai.rewriteIdentitySummary);
-router.post('/values/core/suggest', auth(false), ai.suggestValuesCore);
-router.post('/values/feeling/suggest', auth(false), ai.suggestCultureFeeling);
-router.post('/values/core/rewrite', auth(false), ai.rewriteValuesCore);
-router.post("/values/core/keywords", auth(false), ai.extractValuesCoreKeywords);
-router.post('/values/feeling/rewrite', auth(false), ai.rewriteCultureFeeling);
+router.post('/vision/identity/summary/suggest', ai.suggestIdentitySummary);
+router.post('/vision/identity/summary/rewrite', ai.rewriteIdentitySummary);
+router.post('/values/core/suggest', ai.suggestValuesCore);
+router.post('/values/feeling/suggest', ai.suggestCultureFeeling);
+router.post('/values/core/rewrite', ai.rewriteValuesCore);
+router.post("/values/core/keywords", ai.extractValuesCoreKeywords);
+router.post('/values/feeling/rewrite', ai.rewriteCultureFeeling);
 // SWOT analysis
-router.post('/values/swot/strengths/suggest', auth(false), ai.suggestSwotStrengths);
-router.post('/values/swot/weaknesses/suggest', auth(false), ai.suggestSwotWeaknesses);
-router.post('/values/swot/opportunities/suggest', auth(false), ai.suggestSwotOpportunities);
-router.post('/values/swot/threats/suggest', auth(false), ai.suggestSwotThreats);
-router.post('/values/swot/strengths/rewrite', auth(false), ai.rewriteSwotStrengths);
-router.post('/values/swot/weaknesses/rewrite', auth(false), ai.rewriteSwotWeaknesses);
-router.post('/values/swot/opportunities/rewrite', auth(false), ai.rewriteSwotOpportunities);
-router.post('/values/swot/threats/rewrite', auth(false), ai.rewriteSwotThreats);
-router.post('/market/customer/suggest', auth(false), requireFeature('aiCustomerAnalysis'), ai.suggestMarketCustomer);
-router.post('/market/customer/rewrite', auth(false), requireFeature('aiCustomerAnalysis'), ai.rewriteMarketCustomer);
-router.post('/market/partners/suggest', auth(false), ai.suggestMarketPartners);
-router.post('/market/competitors/suggest', auth(false), requireFeature('aiCompetitors'), ai.suggestMarketCompetitors);
-router.post('/market/competitors/names', auth(false), requireFeature('aiCompetitors'), ai.suggestCompetitorNames);
-router.post('/market/partners/rewrite', auth(false), ai.rewriteMarketPartners);
-router.post('/market/competitors/rewrite', auth(false), requireFeature('aiCompetitors'), ai.rewriteMarketCompetitors);
-router.post('/market/competitors/advantages', auth(false), requireFeature('aiCompetitors'), ai.suggestCompetitorAdvantages);
-router.post('/financial/forecast/suggest', auth(false), requireFeature('financials'), ai.suggestFinancialForecast);
-router.post('/financial/number/suggest', auth(false), requireFeature('financials'), ai.suggestFinancialNumber);
-router.post('/financial/suggest-all', auth(false), requireFeature('financials'), ai.suggestFinancialAll);
+router.post('/values/swot/strengths/suggest', ai.suggestSwotStrengths);
+router.post('/values/swot/weaknesses/suggest', ai.suggestSwotWeaknesses);
+router.post('/values/swot/opportunities/suggest', ai.suggestSwotOpportunities);
+router.post('/values/swot/threats/suggest', ai.suggestSwotThreats);
+router.post('/values/swot/strengths/rewrite', ai.rewriteSwotStrengths);
+router.post('/values/swot/weaknesses/rewrite', ai.rewriteSwotWeaknesses);
+router.post('/values/swot/opportunities/rewrite', ai.rewriteSwotOpportunities);
+router.post('/values/swot/threats/rewrite', ai.rewriteSwotThreats);
+router.post('/market/customer/suggest', requireFeature('aiCustomerAnalysis'), ai.suggestMarketCustomer);
+router.post('/market/customer/rewrite', requireFeature('aiCustomerAnalysis'), ai.rewriteMarketCustomer);
+router.post('/market/partners/suggest', ai.suggestMarketPartners);
+router.post('/market/competitors/suggest', requireFeature('aiCompetitors'), ai.suggestMarketCompetitors);
+router.post('/market/competitors/names', requireFeature('aiCompetitors'), ai.suggestCompetitorNames);
+router.post('/market/partners/rewrite', ai.rewriteMarketPartners);
+router.post('/market/competitors/rewrite', requireFeature('aiCompetitors'), ai.rewriteMarketCompetitors);
+router.post('/market/competitors/advantages', requireFeature('aiCompetitors'), ai.suggestCompetitorAdvantages);
+router.post('/financial/forecast/suggest', requireFeature('financials'), ai.suggestFinancialForecast);
+router.post('/financial/number/suggest', requireFeature('financials'), ai.suggestFinancialNumber);
+router.post('/financial/suggest-all', requireFeature('financials'), ai.suggestFinancialAll);
 // Action plan field suggestions (single result) and rewrites
-router.post('/actions/goal/suggest', auth(false), requireFeature('aiActionPlans'), ai.suggestActionGoal);
-router.post('/actions/goal/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionGoal);
-router.post('/actions/milestone/suggest', auth(false), requireFeature('aiActionPlans'), ai.suggestActionMilestone);
-router.post('/actions/milestone/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionMilestone);
-router.post('/actions/resources/suggest', auth(false), requireFeature('aiActionPlans'), ai.suggestActionResources);
-router.post('/actions/resources/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionResources);
+router.post('/actions/goal/suggest', requireFeature('aiActionPlans'), ai.suggestActionGoal);
+router.post('/actions/goal/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionGoal);
+router.post('/actions/milestone/suggest', requireFeature('aiActionPlans'), ai.suggestActionMilestone);
+router.post('/actions/milestone/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionMilestone);
+router.post('/actions/resources/suggest', requireFeature('aiActionPlans'), ai.suggestActionResources);
+router.post('/actions/resources/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionResources);
 // Allow Lite users to generate KPI suggestions
-router.post('/actions/kpi/suggest', auth(false), ai.suggestActionKpi);
-router.post('/actions/kpi/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionKpi);
+router.post('/actions/kpi/suggest', ai.suggestActionKpi);
+router.post('/actions/kpi/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionKpi);
 // Allow Lite users to suggest due dates for core project details
-router.post('/actions/due/suggest', auth(false), ai.suggestActionDue);
-router.post('/actions/due/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionDue);
+router.post('/actions/due/suggest', ai.suggestActionDue);
+router.post('/actions/due/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionDue);
 // Cost + suggest-all
-router.post('/actions/cost/suggest', auth(false), requireFeature('aiActionPlans'), ai.suggestActionCost);
-router.post('/actions/cost/rewrite', auth(false), requireFeature('aiActionPlans'), ai.rewriteActionCost);
+router.post('/actions/cost/suggest', requireFeature('aiActionPlans'), ai.suggestActionCost);
+router.post('/actions/cost/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionCost);
 // Allow Lite users to use the bulk suggest-all for action plan fields
-router.post('/actions/suggest-all', auth(false), ai.suggestActionAll);
+router.post('/actions/suggest-all', ai.suggestActionAll);
 // Core Strategic Projects deliverables
-router.post('/actions/core/deliverables', auth(false), requireFeature('aiCoreProjects'), ai.suggestCoreDeliverables);
+router.post('/actions/core/deliverables', requireFeature('aiCoreProjects'), ai.suggestCoreDeliverables);
 // Core Strategic Project (full) suggestion
-router.post('/actions/core/project/suggest', auth(false), requireFeature('aiCoreProjects'), ai.suggestCoreProject);
+router.post('/actions/core/project/suggest', requireFeature('aiCoreProjects'), ai.suggestCoreProject);
 // Bulk goals per department/section
 // Allow Lite users to generate section goals used by core projects workflows
-router.post('/actions/sections/goals', auth(false), ai.suggestDeptGoalsBulk);
-router.post('/financial/forecast/rewrite', auth(false), requireFeature('financials'), ai.rewriteFinancialForecast);
+router.post('/actions/sections/goals', ai.suggestDeptGoalsBulk);
+router.post('/financial/forecast/rewrite', requireFeature('financials'), ai.rewriteFinancialForecast);
 
 // 1-Year Goals CRUD
-router.get('/vision/destination/1y/goals', auth(false), ctrl.getVision1yGoals);
-router.post('/vision/destination/1y/goals', auth(false), ctrl.addVision1yGoal);
-router.patch('/vision/destination/1y/goals/:index', auth(false), ctrl.updateVision1yGoal);
-router.delete('/vision/destination/1y/goals/:index', auth(false), ctrl.deleteVision1yGoal);
+router.get('/vision/destination/1y/goals', ctrl.getVision1yGoals);
+router.post('/vision/destination/1y/goals', ctrl.addVision1yGoal);
+router.patch('/vision/destination/1y/goals/:index', ctrl.updateVision1yGoal);
+router.delete('/vision/destination/1y/goals/:index', ctrl.deleteVision1yGoal);
 
 // Save/load all onboarding answers (optional server persistence)
-router.get('/all', auth(false), ctrl.getAllAnswers);
-router.post('/all', auth(false), ctrl.saveAllAnswers);
+router.get('/all', ctrl.getAllAnswers);
+router.post('/all', ctrl.saveAllAnswers);
 
 module.exports = router;

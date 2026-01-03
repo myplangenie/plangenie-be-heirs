@@ -1,12 +1,13 @@
 const mongoose = require('mongoose');
 
-// Read model: a per-user dashboard summary snapshot.
+// Read model: a per-user per-workspace dashboard summary snapshot.
 // Authoritative data for notifications, departments, financials, plan, and team members
 // lives in their dedicated collections. This model stores only the summary used by the
 // dashboard overview page.
 const DashboardSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', index: true },
 
     // Dashboard summary page
     summary: {
@@ -62,5 +63,8 @@ const DashboardSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
+// Compound index for user + workspace uniqueness
+DashboardSchema.index({ user: 1, workspace: 1 }, { unique: true });
 
 module.exports = mongoose.model('Dashboard', DashboardSchema);
