@@ -18,6 +18,43 @@ function parseDataUrl(dataUrl) {
   }
 }
 
+// Mark a specific tour as completed
+exports.completeTour = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const { tourKey } = req.body || {};
+    const validTours = ['onboardingDetail', 'dashboard'];
+    if (!tourKey || !validTours.includes(tourKey)) {
+      return res.status(400).json({ message: 'Invalid tour key' });
+    }
+
+    const update = { [`toursCompleted.${tourKey}`]: true };
+    const user = await User.findByIdAndUpdate(userId, update, { new: true });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    return res.json({ ok: true, toursCompleted: user.toursCompleted });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to update tour status' });
+  }
+};
+
+// Get tour completion status
+exports.getTourStatus = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const user = await User.findById(userId).select('toursCompleted');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    return res.json({ toursCompleted: user.toursCompleted || {} });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to get tour status' });
+  }
+};
+
 exports.uploadAvatar = async (req, res) => {
   try {
     const userId = req.user?.id;

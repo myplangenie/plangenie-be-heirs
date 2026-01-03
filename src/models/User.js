@@ -30,6 +30,11 @@ const UserSchema = new mongoose.Schema(
     onboardingDone: { type: Boolean, default: false },
     // New flags for explicit onboarding phases (use onboardingDone only for first phase)
     onboardingDetailCompleted: { type: Boolean, default: false },
+    // Tour completion flags
+    toursCompleted: {
+      onboardingDetail: { type: Boolean, default: false },
+      dashboard: { type: Boolean, default: false },
+    },
     // Marker to identify users who are collaborators (invited to view others' dashboards)
     isCollaborator: { type: Boolean, default: false },
 

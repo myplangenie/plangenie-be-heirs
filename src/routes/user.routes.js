@@ -12,5 +12,14 @@ router.post(
   ctrl.uploadAvatar
 );
 
+// Tour completion endpoints
+router.get('/tours', auth(true), ctrl.getTourStatus);
+router.post(
+  '/tours/complete',
+  auth(true),
+  [body('tourKey').isString().withMessage('tourKey is required')],
+  ctrl.completeTour
+);
+
 module.exports = router;
 

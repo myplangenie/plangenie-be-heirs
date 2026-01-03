@@ -170,6 +170,11 @@ function buildContextText(ob, stats, extras) {
     userFullName && `User Name: ${userFullName}`,
     typeof stats?.teamMembersCount === 'number' && `Active Team Members: ${stats.teamMembersCount}`,
     typeof stats?.coreProjectsCount === 'number' && `Core Strategic Projects: ${stats.coreProjectsCount}`,
+    typeof stats?.departmentalProjectsCount === 'number' && `Departmental Projects: ${stats.departmentalProjectsCount}`,
+    typeof stats?.productsCount === 'number' && `Products/Services: ${stats.productsCount}`,
+    typeof stats?.orgPositionsCount === 'number' && `Organization Positions: ${stats.orgPositionsCount}`,
+    typeof stats?.oneYearGoalsCount === 'number' && stats.oneYearGoalsCount > 0 && `1-Year Goals: ${stats.oneYearGoalsCount}`,
+    typeof stats?.threeYearGoalsCount === 'number' && stats.threeYearGoalsCount > 0 && `3-Year Goals: ${stats.threeYearGoalsCount}`,
   ].filter(Boolean);
   const profileText = profileLines.length ? `Context about the business:\n- ${profileLines.join('\n- ')}` : '';
 
@@ -472,7 +477,22 @@ exports.respond = async (req, res) => {
         const coreProjectsCount = Array.isArray(a?.coreProjectDetails) && a.coreProjectDetails.length
           ? a.coreProjectDetails.length
           : (Array.isArray(a?.coreProjects) ? a.coreProjects.length : 0);
-        stats = { teamMembersCount, coreProjectsCount };
+        // Count departmental projects (action items across all departments)
+        let departmentalProjectsCount = 0;
+        try {
+          Object.values(a.actionAssignments || {}).forEach((arr) => {
+            if (Array.isArray(arr)) departmentalProjectsCount += arr.length;
+          });
+        } catch {}
+        // Count products
+        const productsCount = Array.isArray(a.products) ? a.products.length : 0;
+        // Count org positions
+        const orgPositionsCount = Array.isArray(a.orgPositions) ? a.orgPositions.length : 0;
+        // Count 1-year goals
+        const oneYearGoalsCount = String(a.vision1y || '').trim().split('\n').filter(Boolean).length;
+        // Count 3-year goals
+        const threeYearGoalsCount = String(a.vision3y || '').trim().split('\n').filter(Boolean).length;
+        stats = { teamMembersCount, coreProjectsCount, departmentalProjectsCount, productsCount, orgPositionsCount, oneYearGoalsCount, threeYearGoalsCount };
         // Build context with expanded extras
         const contextText = buildContextText(ob, stats, { teamMembers, departments, user: me });
 
@@ -489,8 +509,10 @@ exports.respond = async (req, res) => {
           }
         } catch {}
         
+        const todayDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         const system = [
           'You are Plangenie, a helpful business planning copilot.',
+          `Today's date is ${todayDate}.`,
           'Be concise, human, and specific. Avoid buzzwords.',
           'Ground every answer in the provided business context and the conversation. Do not invent facts or numbers.',
           'If a detail is missing from context, say what is missing and ask a concise follow-up question.',
@@ -520,6 +542,17 @@ exports.respond = async (req, res) => {
           { type: 'function', function: { name: 'get_core_projects_count', description: 'Get count of core strategic projects.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_core_projects', description: 'List core strategic projects.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_deadlines', description: 'List upcoming deadlines.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_departmental_projects_count', description: 'Get count of departmental projects (action items assigned across all departments).', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_departmental_projects', description: 'List departmental projects (action items assigned to departments).', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 }, department: { type: 'string', description: 'Optional: filter by department key' } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_products', description: 'List products and services offered by the business.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_products_count', description: 'Get count of products/services.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_financial_snapshot', description: 'Get financial data including revenue, costs, cash, funding, margins.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_vision_and_goals', description: 'Get business vision, UBP (unique business proposition), purpose, and 1-year/3-year goals.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_values_and_culture', description: 'Get core values, culture, and character traits.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_market_info', description: 'Get market information including ideal customer, partners, competitors.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_org_positions', description: 'Get organizational structure and positions.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 100 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_overdue_tasks', description: 'Get tasks and deadlines that are past their due date (overdue).', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 100 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_upcoming_tasks', description: 'Get tasks and deadlines due in the future (not yet overdue).', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 100 }, days: { type: 'number', description: 'Optional: only include tasks due within this many days' } }, additionalProperties: false } } },
         ];
 
         const aAns = (ob && ob.answers) || {};
@@ -564,6 +597,148 @@ exports.respond = async (req, res) => {
             case 'get_core_projects_count': { let count = 0; if (Array.isArray(aAns?.coreProjectDetails) && aAns.coreProjectDetails.length) count = aAns.coreProjectDetails.length; else if (Array.isArray(aAns?.coreProjects)) count = aAns.coreProjects.length; return { count }; }
             case 'get_core_projects': { const limit = limitNum(args?.limit, 10, 50); const list = []; if (Array.isArray(aAns?.coreProjectDetails) && aAns.coreProjectDetails.length) { aAns.coreProjectDetails.forEach((p) => list.push({ title: String(p?.title||'').trim(), ownerName: p?.ownerName || '', dueWhen: p?.dueWhen || '', deliverables: Array.isArray(p?.deliverables) ? p.deliverables : [] })); } else if (Array.isArray(aAns?.coreProjects)) { aAns.coreProjects.forEach((t) => list.push({ title: String(t||'').trim() })); } return { list: list.slice(0, limit) }; }
             case 'get_deadlines': { const limit = limitNum(args?.limit, 20, 200); return { list: deadlineItems().slice(0, limit).map((d)=>({ date: d.when.toISOString().slice(0,10), label: d.label })) }; }
+            case 'get_departmental_projects_count': {
+              const assignments = aAns.actionAssignments || {};
+              let count = 0;
+              Object.values(assignments).forEach((arr) => {
+                if (Array.isArray(arr)) count += arr.length;
+              });
+              return { count };
+            }
+            case 'get_departmental_projects': {
+              const limit = limitNum(args?.limit, 20, 200);
+              const filterDept = args?.department ? String(args.department).trim().toLowerCase() : null;
+              const assignments = aAns.actionAssignments || {};
+              const list = [];
+              Object.entries(assignments).forEach(([dept, arr]) => {
+                if (filterDept && dept.toLowerCase() !== filterDept) return;
+                (arr || []).forEach((u) => {
+                  const goal = String(u?.goal || '').trim();
+                  if (!goal) return;
+                  list.push({
+                    department: dept,
+                    goal,
+                    owner: `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim() || undefined,
+                    milestone: String(u?.milestone || '').trim() || undefined,
+                    kpi: String(u?.kpi || '').trim() || undefined,
+                    resources: String(u?.resources || '').trim() || undefined,
+                    dueWhen: String(u?.dueWhen || '').trim() || undefined,
+                  });
+                });
+              });
+              return { list: list.slice(0, limit) };
+            }
+            case 'get_products': {
+              const limit = limitNum(args?.limit, 20, 50);
+              const products = Array.isArray(aAns.products) ? aAns.products : [];
+              return {
+                list: products.slice(0, limit).map((p) => ({
+                  name: String(p?.product || '').trim() || undefined,
+                  description: String(p?.description || '').trim() || undefined,
+                  price: p?.price || undefined,
+                  unitCost: p?.unitCost || undefined,
+                  pricing: String(p?.pricing || '').trim() || undefined,
+                  monthlyVolume: p?.monthlyVolume || undefined,
+                }))
+              };
+            }
+            case 'get_products_count': {
+              const products = Array.isArray(aAns.products) ? aAns.products : [];
+              return { count: products.length };
+            }
+            case 'get_financial_snapshot': {
+              return {
+                salesVolume: aAns.finSalesVolume || undefined,
+                salesGrowthPct: aAns.finSalesGrowthPct || undefined,
+                avgUnitCost: aAns.finAvgUnitCost || undefined,
+                fixedOperatingCosts: aAns.finFixedOperatingCosts || undefined,
+                marketingSalesSpend: aAns.finMarketingSalesSpend || undefined,
+                payrollCost: aAns.finPayrollCost || undefined,
+                startingCash: aAns.finStartingCash || undefined,
+                additionalFundingAmount: aAns.finAdditionalFundingAmount || undefined,
+                additionalFundingMonth: aAns.finAdditionalFundingMonth || undefined,
+                paymentCollectionDays: aAns.finPaymentCollectionDays || undefined,
+                targetProfitMarginPct: aAns.finTargetProfitMarginPct || undefined,
+                isNonprofit: aAns.finIsNonprofit || undefined,
+              };
+            }
+            case 'get_vision_and_goals': {
+              const oneYearGoals = String(aAns.vision1y || '').trim().split('\n').filter(Boolean);
+              const threeYearGoals = String(aAns.vision3y || '').trim().split('\n').filter(Boolean);
+              return {
+                ubp: String(aAns.ubp || '').trim() || undefined,
+                purpose: String(aAns.purpose || '').trim() || undefined,
+                bhag: String(aAns.visionBhag || '').trim() || undefined,
+                oneYearGoals: oneYearGoals.length ? oneYearGoals : undefined,
+                threeYearGoals: threeYearGoals.length ? threeYearGoals : undefined,
+              };
+            }
+            case 'get_values_and_culture': {
+              const keywords = Array.isArray(aAns.valuesCoreKeywords) ? aAns.valuesCoreKeywords : [];
+              return {
+                coreValues: String(aAns.valuesCore || '').trim() || undefined,
+                culture: String(aAns.cultureFeeling || '').trim() || undefined,
+                characterTraits: keywords.length ? keywords : undefined,
+              };
+            }
+            case 'get_market_info': {
+              const competitorNames = Array.isArray(aAns.competitorNames) ? aAns.competitorNames : [];
+              return {
+                idealCustomer: String(aAns.marketCustomer || '').trim() || undefined,
+                partners: String(aAns.partnersDesc || '').trim() || undefined,
+                competitorNotes: String(aAns.compNotes || '').trim() || undefined,
+                competitorNames: competitorNames.length ? competitorNames : undefined,
+              };
+            }
+            case 'get_org_positions': {
+              const limit = limitNum(args?.limit, 50, 100);
+              const org = Array.isArray(aAns.orgPositions) ? aAns.orgPositions : [];
+              return {
+                list: org.slice(0, limit).map((p) => ({
+                  name: String(p?.name || '').trim() || undefined,
+                  position: String(p?.position || '').trim() || undefined,
+                  department: String(p?.department || '').trim() || undefined,
+                  email: String(p?.email || '').trim() || undefined,
+                  status: String(p?.status || 'Active').trim(),
+                }))
+              };
+            }
+            case 'get_overdue_tasks': {
+              const limit = limitNum(args?.limit, 20, 100);
+              const now = new Date();
+              now.setHours(0, 0, 0, 0); // Start of today
+              const allItems = deadlineItems();
+              const overdue = allItems.filter((item) => item.when < now);
+              return {
+                count: overdue.length,
+                list: overdue.slice(0, limit).map((d) => ({
+                  date: d.when.toISOString().slice(0, 10),
+                  daysOverdue: Math.floor((now - d.when) / (1000 * 60 * 60 * 24)),
+                  label: d.label
+                }))
+              };
+            }
+            case 'get_upcoming_tasks': {
+              const limit = limitNum(args?.limit, 20, 100);
+              const daysFilter = args?.days && Number.isFinite(args.days) ? args.days : null;
+              const now = new Date();
+              now.setHours(0, 0, 0, 0); // Start of today
+              const allItems = deadlineItems();
+              let upcoming = allItems.filter((item) => item.when >= now);
+              if (daysFilter) {
+                const cutoff = new Date(now);
+                cutoff.setDate(cutoff.getDate() + daysFilter);
+                upcoming = upcoming.filter((item) => item.when <= cutoff);
+              }
+              return {
+                count: upcoming.length,
+                list: upcoming.slice(0, limit).map((d) => ({
+                  date: d.when.toISOString().slice(0, 10),
+                  daysUntilDue: Math.floor((d.when - now) / (1000 * 60 * 60 * 24)),
+                  label: d.label
+                }))
+              };
+            }
             default: return {};
           }
         };
@@ -602,8 +777,10 @@ exports.respond = async (req, res) => {
     // If we couldn't gather expanded data (e.g., unauthenticated), fallback to minimal context
     const contextText = buildContextText(ob, stats, {});
 
+    const todayDateFallback = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const system = [
       'You are Plangenie, a helpful business planning copilot.',
+      `Today's date is ${todayDateFallback}.`,
       'Be concise, human, and specific. Avoid buzzwords.',
       'Use provided context if relevant; never contradict it.',
       'When giving recommendations, explicitly reference the business name and/or industry when known.',
