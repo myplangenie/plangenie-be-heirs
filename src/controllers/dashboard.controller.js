@@ -569,6 +569,9 @@ exports.saveCompiledPlan = async (req, res, next) => {
   priority: p?.priority ? String(p.priority) : undefined,
   ownerId: p?.ownerId ? String(p.ownerId) : undefined,
   ownerName: p?.ownerName ? String(p.ownerName) : undefined,
+  linkedGoals: Array.isArray(p?.linkedGoals) ? p.linkedGoals.filter(g => typeof g === 'number') : undefined,
+  departments: Array.isArray(p?.departments) ? p.departments.filter(d => typeof d === 'string') : undefined,
+  relatedProjects: Array.isArray(p?.relatedProjects) ? p.relatedProjects.filter(r => typeof r === 'number') : undefined,
   deliverables: Array.isArray(p && p.deliverables)
     ? (p.deliverables || []).map((d) => ({
         text: String((d && d.text) || '').trim(),
@@ -1223,6 +1226,8 @@ exports.updateActionAssignmentItem = async (req, res, next) => {
       ...(p.kpi !== undefined ? { kpi: String(p.kpi || '') } : {}),
       ...(p.dueWhen !== undefined ? { dueWhen: String(p.dueWhen || '') } : {}),
       ...(p.progress !== undefined ? (()=>{ const v = clampPct(p.progress); return v === undefined ? {} : { progress: v }; })() : {}),
+      ...(p.linkedCoreProject !== undefined ? { linkedCoreProject: typeof p.linkedCoreProject === 'number' ? p.linkedCoreProject : undefined } : {}),
+      ...(p.linkedGoal !== undefined ? { linkedGoal: typeof p.linkedGoal === 'number' ? p.linkedGoal : undefined } : {}),
       ...(p.deliverables !== undefined ? { deliverables: Array.isArray(p.deliverables) ? p.deliverables.map((d) => ({
         text: String(d?.text || ''),
         kpi: String(d?.kpi || ''),
