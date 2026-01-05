@@ -41,6 +41,12 @@ exports.updateSection = async (userId, workspaceId, section, data) => {
 
   for (const [key, value] of Object.entries(data)) {
     if (value === 'not_sure' || value === null || value === undefined) {
+      // fundingMonth must be 1-12 or not set at all (schema min: 1)
+      if (key === 'fundingMonth') {
+        // Don't set fundingMonth - leave it undefined/unset
+        fieldsNotSure.push(key);
+        continue;
+      }
       cleanedData[key] = CONSERVATIVE_DEFAULTS[key] ?? 0;
       fieldsNotSure.push(key);
     } else {
@@ -54,6 +60,11 @@ exports.updateSection = async (userId, workspaceId, section, data) => {
 
   // Update the section
   snapshot[section] = { ...existingSection, ...cleanedData };
+
+  // If fundingMonth was explicitly passed as null, unset it
+  if (section === 'cash' && data.fundingMonth === null) {
+    snapshot.cash.fundingMonth = undefined;
+  }
 
   // Calculate confidence based on non-default answers
   const totalFields = Object.keys(data).length;
@@ -214,7 +225,15 @@ exports.syncFromOnboarding = async (userId, workspaceId = null) => {
     snapshot.cash.expectedFunding = parseFloat(String(f.additionalFundingAmount).replace(/[^0-9.-]/g, '')) || 0;
   }
   if (f.additionalFundingMonth) {
-    const month = parseInt(String(f.additionalFundingMonth).replace(/[^0-9]/g, ''), 10);
+    // Parse YYYY-MM format (e.g., "2026-01") or plain month number
+    const s = String(f.additionalFundingMonth || '');
+    let month;
+    if (s.includes('-')) {
+      const parts = s.split('-').map(Number);
+      month = parts[1]; // Get month from YYYY-MM
+    } else {
+      month = parseInt(s.replace(/[^0-9]/g, ''), 10);
+    }
     if (month >= 1 && month <= 12) {
       snapshot.cash.fundingMonth = month;
     }

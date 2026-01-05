@@ -2415,7 +2415,16 @@ exports.exportPlanDocx = async (req, res, next) => {
         ['Payroll Cost', plan.financial?.payrollCost || '—'],
         ['Starting Cash', plan.financial?.startingCash || '—'],
         ['Additional Funding Amount', plan.financial?.additionalFundingAmount || '—'],
-        ['Additional Funding Month', plan.financial?.additionalFundingMonth || '—'],
+        ['Additional Funding Month', (() => {
+          const m = plan.financial?.additionalFundingMonth;
+          if (!m) return '—';
+          if (String(m).includes('-')) {
+            const [y, mo] = String(m).split('-');
+            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            return `${months[parseInt(mo, 10) - 1] || mo} ${y}`;
+          }
+          return m;
+        })()],
         ['Payment Collection Days', plan.financial?.paymentCollectionDays || '—'],
         ['Target Profit Margin (%)', plan.financial?.targetProfitMarginPct || '—'],
       ];
@@ -2775,7 +2784,16 @@ exports.exportPlanDocx = async (req, res, next) => {
       <div class="box"><div class="label">Payroll Cost</div>${escapeHtml(plan.financial?.payrollCost || '')}</div>
       <div class="box"><div class="label">Starting Cash</div>${escapeHtml(plan.financial?.startingCash || '')}</div>
       <div class="box"><div class="label">Additional Funding Amount</div>${escapeHtml(plan.financial?.additionalFundingAmount || '')}</div>
-      <div class="box"><div class="label">Additional Funding Month</div>${escapeHtml(plan.financial?.additionalFundingMonth || '')}</div>
+      <div class="box"><div class="label">Additional Funding Month</div>${(() => {
+        const m = plan.financial?.additionalFundingMonth;
+        if (!m) return '';
+        if (String(m).includes('-')) {
+          const [y, mo] = String(m).split('-');
+          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          return escapeHtml(`${months[parseInt(mo, 10) - 1] || mo} ${y}`);
+        }
+        return escapeHtml(m);
+      })()}</div>
       <div class="box"><div class="label">Payment Collection Days</div>${escapeHtml(plan.financial?.paymentCollectionDays || '')}</div>
       <div class="box"><div class="label">Target Profit Margin (%)</div>${escapeHtml(plan.financial?.targetProfitMarginPct || '')}</div>
       <h3>Departmental Projects</h3>

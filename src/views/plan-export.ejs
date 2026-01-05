@@ -168,7 +168,17 @@
     <div class="box"><div class="label">Payroll Cost</div><div><%= fin.payrollCost || '—' %></div></div>
     <div class="box"><div class="label">Starting Cash</div><div><%= fin.startingCash || '—' %></div></div>
     <div class="box"><div class="label">Additional Funding Amount</div><div><%= fin.additionalFundingAmount || '—' %></div></div>
-    <div class="box"><div class="label">Additional Funding Month</div><div><%= fin.additionalFundingMonth || '—' %></div></div>
+    <div class="box"><div class="label">Additional Funding Month</div><div><%= (() => {
+      const m = fin.additionalFundingMonth;
+      if (!m) return '—';
+      if (m.includes('-')) {
+        const [y, mo] = m.split('-');
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const monthName = months[parseInt(mo, 10) - 1] || mo;
+        return `${monthName} ${y}`;
+      }
+      return m;
+    })() %></div></div>
     <div class="box"><div class="label">Payment Collection Days</div><div><%= fin.paymentCollectionDays || '—' %></div></div>
     <div class="box"><div class="label">Target Profit Margin (%)</div><div><%= fin.targetProfitMarginPct || '—' %></div></div>
   </div>

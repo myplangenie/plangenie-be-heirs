@@ -298,7 +298,7 @@ async function callOpenAI({ type, input, contextText }) {
 }
 
 // New: return an array of n suggestions (default 3)
-async function callOpenAIList({ type, input, contextText, n = 3 }) {
+async function callOpenAIList({ type, input, contextText, n = 3, nonce }) {
   const client = getOpenAI();
   const system =
     'You are a helpful business planning assistant. ' +
@@ -324,6 +324,8 @@ async function callOpenAIList({ type, input, contextText, n = 3 }) {
     'Constraints:',
     '- Each option should be 1-2 sentences.',
     '- Be specific and user-centered.',
+    '- Generate fresh, unique suggestions different from any previous responses.',
+    nonce ? `- Request ID: ${nonce}` : '',
     '- Return ONLY a valid JSON array of strings (length exactly ${n}).',
     '- Do NOT include any extra text before or after the JSON.',
     '',
@@ -1077,7 +1079,7 @@ exports.rewriteMarketCustomer = async (req, res) => {
 
 exports.suggestMarketPartners = async (req, res) => {
   try {
-    const { input } = req.body || {};
+    const { input, nonce } = req.body || {};
     const userId = req.user?.id;
     const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const wsFilter = getWorkspaceFilter(req);
@@ -1102,12 +1104,14 @@ exports.suggestMarketPartners = async (req, res) => {
       baseCtx || '',
       refs ? ('Recent web results (titles):\n' + refs) : '',
       'Task: Propose 2–3 specific partner platforms or distributors relevant to the business context.',
+      'Generate fresh, unique suggestions different from any previous responses.',
       'For EACH, include:',
       '- name: the platform/company name',
       '- url: a plausible official URL if clearly implied by results (optional)',
       '- note: one sentence on how to partner or what they offer',
       'Output format (strict JSON): [{ "name": string, "url"?: string, "note": string }]',
-      'No extra text before/after the JSON.'
+      'No extra text before/after the JSON.',
+      nonce ? `(Request ID: ${nonce})` : '',
     ].filter(Boolean).join('\n');
     let partners = [];
     try {
@@ -1124,7 +1128,7 @@ exports.suggestMarketPartners = async (req, res) => {
     } catch (_) {}
 
     // Also keep simple sentence suggestions for backward-compatibility
-    const suggestions = await callOpenAIList({ type: 'Go-to-market partners and channels plan', input, contextText: baseCtx, n: 3 });
+    const suggestions = await callOpenAIList({ type: 'Go-to-market partners and channels plan', input, contextText: baseCtx, n: 3, nonce });
     return res.json({ suggestion: suggestions[0] || '', suggestions, links, partners });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1153,7 +1157,7 @@ exports.rewriteMarketPartners = async (req, res) => {
 
 exports.suggestMarketCompetitors = async (req, res) => {
   try {
-    const { input } = req.body || {};
+    const { input, nonce } = req.body || {};
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
   const ob = userId ? await Onboarding.findOne(wsFilter) : null;
@@ -1197,6 +1201,8 @@ exports.suggestMarketCompetitors = async (req, res) => {
       contextText || '',
       namesText,
       'Task: For each competitor, provide a one-sentence "they do better" and a one-sentence "we do better".',
+      'Important: Generate fresh, unique insights different from any previous suggestions.',
+      nonce ? `Request ID: ${nonce}` : '',
       'Output format (strict JSON): [ { "name": string, "theyDoBetter": string, "weDoBetter": string } ]',
       'No extra commentary before or after the JSON.'
     ].filter(Boolean).join('\n');
@@ -1219,7 +1225,7 @@ exports.suggestMarketCompetitors = async (req, res) => {
     } catch (_) {}
     // Add any enriched links first
     Object.entries(linkMap).forEach(([name,url])=>{ links.push({ title: name, url }); });
-    const suggestions = await callOpenAIList({ type: 'Competitive differentiation notes', input, contextText, n: 3 });
+    const suggestions = await callOpenAIList({ type: 'Competitive differentiation notes', input, contextText, n: 3, nonce });
     return res.json({ suggestion: suggestions[0] || '', suggestions, links, competitors });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1547,6 +1553,112 @@ exports.suggestFinancialAll = async (req, res) => {
       paymentCollectionDays,
       targetProfitMarginPct,
     });
+  } catch (err) {
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestions';
+    return res.status(500).json({ message });
+  }
+};
+
+// Suggest financial data for a specific stage (revenue, costs, cash)
+exports.suggestFinancialStage = async (req, res) => {
+  try {
+    const { stage } = req.body || {};
+    const userId = req.user?.id;
+    const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
+    const client = getOpenAI();
+
+    async function askNumber(prompt) {
+      const system = 'You are a calculator. Always respond with only a number. No text, no units, no symbols.';
+      const userPrompt = [
+        contextText || '',
+        'Task: Suggest a realistic numeric estimate for the requested finance input based on the business context.',
+        'Return ONLY a plain number (digits with optional decimal point). No currency symbols, no commas, no percent signs, and no words.',
+        `Specific request: ${prompt}`,
+      ].filter(Boolean).join('\n');
+      const resp = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.3,
+        max_tokens: 16,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: userPrompt },
+        ],
+      });
+      let out = String(resp.choices?.[0]?.message?.content || '').trim();
+      const m = out.match(/\d+(?:\.\d+)?/);
+      return m ? m[0] : '';
+    }
+
+    async function askCategory(prompt, options) {
+      const system = `You must respond with exactly one of these options: ${options.join(', ')}. No other text.`;
+      const userPrompt = [
+        contextText || '',
+        'Task: Based on the business context, select the most appropriate option.',
+        `Question: ${prompt}`,
+        `Options: ${options.join(', ')}`,
+      ].filter(Boolean).join('\n');
+      const resp = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0,
+        max_tokens: 32,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: userPrompt },
+        ],
+      });
+      const out = String(resp.choices?.[0]?.message?.content || '').trim();
+      // Find best match from options
+      const lower = out.toLowerCase();
+      for (const opt of options) {
+        if (lower.includes(opt.toLowerCase())) return opt;
+      }
+      return options[0]; // Default to first option
+    }
+
+    let result = {};
+
+    if (stage === 'revenue') {
+      const [monthlyRevenue, revenueGrowthPct, recurringPct] = await Promise.all([
+        askNumber('Estimated average monthly revenue for a business of this type and size.'),
+        askNumber('Expected monthly revenue growth rate percentage (just the number, e.g., 5 for 5%).'),
+        askNumber('What percentage of revenue is likely recurring (subscriptions, retainers)? Just the number.'),
+      ]);
+      result = {
+        monthlyRevenue,
+        revenueGrowthPct,
+        isRecurring: parseInt(recurringPct) > 0,
+        recurringPct,
+      };
+    } else if (stage === 'costs') {
+      const categories = ['Payroll & Salaries', 'Rent & Facilities', 'Marketing & Ads', 'Software & Tools', 'Inventory & Materials'];
+      const [monthlyCosts, fixedCosts, variableCostsPct, biggestCostCategory] = await Promise.all([
+        askNumber('Estimated total monthly costs/expenses for a business of this type.'),
+        askNumber('Estimated monthly fixed costs (rent, salaries, subscriptions) for this business.'),
+        askNumber('What percentage of costs varies with sales volume? Just the number.'),
+        askCategory('What is typically the biggest expense category for this type of business?', categories),
+      ]);
+      result = {
+        monthlyCosts,
+        fixedCosts,
+        variableCostsPct,
+        biggestCostCategory,
+      };
+    } else if (stage === 'cash') {
+      const [currentCash, expectedFunding] = await Promise.all([
+        askNumber('Suggested starting cash/bank balance for a business of this type.'),
+        askNumber('Typical additional funding amount a business like this might seek.'),
+      ]);
+      // Suggest funding month 3-6 months from now
+      const now = new Date();
+      const fundingMonth = Math.floor(Math.random() * 4) + 3; // 3-6 months ahead
+      result = {
+        currentCash,
+        expectedFunding,
+        fundingMonth,
+      };
+    }
+
+    return res.json(result);
   } catch (err) {
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestions';
     return res.status(500).json({ message });

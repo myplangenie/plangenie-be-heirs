@@ -97,6 +97,7 @@ router.post('/market/competitors/advantages', requireFeature('aiCompetitors'), a
 router.post('/financial/forecast/suggest', requireFeature('financials'), ai.suggestFinancialForecast);
 router.post('/financial/number/suggest', requireFeature('financials'), ai.suggestFinancialNumber);
 router.post('/financial/suggest-all', requireFeature('financials'), ai.suggestFinancialAll);
+router.post('/financial/stage/suggest', requireFeature('financials'), ai.suggestFinancialStage);
 // Action plan field suggestions (single result) and rewrites
 router.post('/actions/goal/suggest', requireFeature('aiActionPlans'), ai.suggestActionGoal);
 router.post('/actions/goal/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionGoal);
