@@ -33,7 +33,7 @@ const envOrigins = (process.env.CORS_ORIGINS || '')
   .map(normalizeOrigin);
 
 // In production, default to the known public domains if not explicitly set
-const defaultProdOrigins = ['https://plangenie.com', 'https://www.plangenie.com'];
+const defaultProdOrigins = ['https://plangenie.com', 'https://www.plangenie.com', 'https://test.plangenie.com'];
 const allowedOrigins = new Set(
   envOrigins.length > 0
     ? envOrigins

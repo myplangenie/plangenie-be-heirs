@@ -2001,7 +2001,8 @@ exports.suggestActionAll = async (req, res) => {
     let title = String(rawTitle || '').replace(/^Title:\s*/i, '').trim();
     // Remove anything after | or : that looks like additional fields
     title = title.split(/\s*\|\s*/)[0].split(/:\s*(?=[A-Z])/)[0].trim();
-    return res.json({ goal, resources, kpi, title });
+    // Return cost as same as resources (for core projects that use cost field)
+    return res.json({ goal, resources, cost: resources, kpi, title });
   } catch (err) {
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestions';
     return res.status(500).json({ message });
