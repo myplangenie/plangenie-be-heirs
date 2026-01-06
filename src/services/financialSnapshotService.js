@@ -42,8 +42,9 @@ exports.updateSection = async (userId, workspaceId, section, data) => {
   for (const [key, value] of Object.entries(data)) {
     if (value === 'not_sure' || value === null || value === undefined) {
       // fundingMonth must be 1-12 or not set at all (schema min: 1)
-      if (key === 'fundingMonth') {
-        // Don't set fundingMonth - leave it undefined/unset
+      // fundingYear should also be left unset when null
+      if (key === 'fundingMonth' || key === 'fundingYear') {
+        // Don't set - leave it undefined/unset
         fieldsNotSure.push(key);
         continue;
       }
@@ -61,9 +62,14 @@ exports.updateSection = async (userId, workspaceId, section, data) => {
   // Update the section
   snapshot[section] = { ...existingSection, ...cleanedData };
 
-  // If fundingMonth was explicitly passed as null, unset it
-  if (section === 'cash' && data.fundingMonth === null) {
-    snapshot.cash.fundingMonth = undefined;
+  // If fundingMonth/fundingYear was explicitly passed as null, unset it
+  if (section === 'cash') {
+    if (data.fundingMonth === null) {
+      snapshot.cash.fundingMonth = undefined;
+    }
+    if (data.fundingYear === null) {
+      snapshot.cash.fundingYear = undefined;
+    }
   }
 
   // Calculate confidence based on non-default answers

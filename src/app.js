@@ -1,6 +1,7 @@
 const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const errorHandler = require('./middleware/errorHandler');
 const subscriptionCtrl = require('./controllers/subscription.controller');
 
@@ -13,6 +14,7 @@ app.post('/api/subscriptions/webhook', express.raw({ type: 'application/json' })
 // Increase JSON limit to allow base64 image payloads for avatar upload
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
 app.use(morgan('dev'));
 
 // CORS

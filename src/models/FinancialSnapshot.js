@@ -39,6 +39,7 @@ const FinancialSnapshotSchema = new Schema(
       monthlyBurn: { type: Number, default: 0 },
       expectedFunding: { type: Number, default: 0 },
       fundingMonth: { type: Number, min: 1, max: 12 },
+      fundingYear: { type: Number },
       confidence: { type: Number, default: 0, min: 0, max: 100 },
     },
 

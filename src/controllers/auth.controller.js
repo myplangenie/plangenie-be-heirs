@@ -6,10 +6,43 @@ const { Resend } = require('resend');
 const User = require('../models/User');
 const Collaboration = require('../models/Collaboration');
 const Workspace = require('../models/Workspace');
+const RefreshToken = require('../models/RefreshToken');
 const { effectivePlan, plans } = require('../config/entitlements');
+const {
+  ACCESS_TOKEN_COOKIE,
+  REFRESH_TOKEN_COOKIE,
+  clearCookieOptions,
+} = require('../config/cookies');
 
 function signToken(userId) {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '30m' });
+}
+
+// Helper to issue access + refresh tokens and set httpOnly cookies
+async function issueTokensAndSetCookies(res, user, req) {
+  // Generate access token (JWT)
+  const accessToken = signToken(user._id);
+
+  // Generate opaque refresh token
+  const refreshTokenValue = RefreshToken.generateToken();
+  const family = RefreshToken.generateFamily();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+  // Store refresh token in DB
+  await RefreshToken.create({
+    token: refreshTokenValue,
+    user: user._id,
+    expiresAt,
+    family,
+    userAgent: req.get('User-Agent') || '',
+    ipAddress: req.ip || req.connection?.remoteAddress || '',
+  });
+
+  // Set cookies
+  res.cookie(ACCESS_TOKEN_COOKIE.name, accessToken, ACCESS_TOKEN_COOKIE.options);
+  res.cookie(REFRESH_TOKEN_COOKIE.name, refreshTokenValue, REFRESH_TOKEN_COOKIE.options);
+
+  return { accessToken, refreshTokenValue };
 }
 
 exports.register = async (req, res) => {
@@ -74,9 +107,9 @@ exports.register = async (req, res) => {
       // Non-fatal
       console.error('[collab] Failed to link collaboration on signup:', err?.message || err);
     }
-    const token = signToken(user._id);
+    await issueTokensAndSetCookies(res, user, req);
     const safe = user.toSafeJSON();
-    return res.status(201).json({ token, user: safe, ownerId: collabOwnerId });
+    return res.status(201).json({ user: safe, ownerId: collabOwnerId });
   }
 
   // Default path: create user and send OTP for verification
@@ -182,7 +215,10 @@ exports.login = async (req, res) => {
   }
   // Update lastActiveAt on login (non-blocking)
   try { await User.findByIdAndUpdate(user._id, { lastActiveAt: new Date() }); } catch {}
-  const token = signToken(user._id);
+
+  // Issue tokens and set httpOnly cookies
+  await issueTokensAndSetCookies(res, user, req);
+
   const safe = user.toSafeJSON();
   if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
   const nextRoute = !safe.onboardingDone
@@ -204,7 +240,8 @@ exports.login = async (req, res) => {
       if (owners && owners.length) viewAsOwnerId = String(owners[0]._id);
     }
   } catch {}
-  return res.json({ token, user: safe, nextRoute, plan: { slug: planSlug, name: planName }, viewAsOwnerId });
+  // Return user data (no token in response body - it's in httpOnly cookie)
+  return res.json({ user: safe, nextRoute, plan: { slug: planSlug, name: planName }, viewAsOwnerId });
 };
 
 exports.me = async (req, res) => {
@@ -329,4 +366,92 @@ exports.resendOtp = async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: 'Server error' });
   }
+};
+
+// POST /api/auth/refresh - Refresh access token using refresh token
+exports.refresh = async (req, res) => {
+  const refreshTokenValue = req.cookies[REFRESH_TOKEN_COOKIE.name];
+
+  if (!refreshTokenValue) {
+    return res.status(401).json({ message: 'No refresh token provided' });
+  }
+
+  // Find the refresh token in DB
+  const tokenDoc = await RefreshToken.findOne({ token: refreshTokenValue });
+
+  if (!tokenDoc) {
+    // Token doesn't exist - might be stolen and already rotated
+    return res.status(401).json({ message: 'Invalid refresh token' });
+  }
+
+  // Check if token is expired
+  if (tokenDoc.expiresAt < new Date()) {
+    await RefreshToken.deleteOne({ _id: tokenDoc._id });
+    return res.status(401).json({ message: 'Refresh token expired' });
+  }
+
+  // Check if token was already used (replay attack detection)
+  if (tokenDoc.used) {
+    // Potential token theft! Invalidate entire token family
+    await RefreshToken.deleteMany({ family: tokenDoc.family });
+    // Clear cookies
+    res.cookie(ACCESS_TOKEN_COOKIE.name, '', clearCookieOptions(ACCESS_TOKEN_COOKIE));
+    res.cookie(REFRESH_TOKEN_COOKIE.name, '', clearCookieOptions(REFRESH_TOKEN_COOKIE));
+    return res.status(401).json({ message: 'Token reuse detected. All sessions invalidated.' });
+  }
+
+  // Mark current token as used
+  tokenDoc.used = true;
+  await tokenDoc.save();
+
+  // Get user
+  const user = await User.findById(tokenDoc.user);
+  if (!user) {
+    await RefreshToken.deleteOne({ _id: tokenDoc._id });
+    return res.status(401).json({ message: 'User not found' });
+  }
+
+  // Generate new access token
+  const accessToken = signToken(user._id);
+
+  // Generate new refresh token (rotation)
+  const newRefreshTokenValue = RefreshToken.generateToken();
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+  await RefreshToken.create({
+    token: newRefreshTokenValue,
+    user: user._id,
+    expiresAt,
+    family: tokenDoc.family, // Same family for rotation tracking
+    userAgent: req.get('User-Agent') || '',
+    ipAddress: req.ip || req.connection?.remoteAddress || '',
+  });
+
+  // Set new cookies
+  res.cookie(ACCESS_TOKEN_COOKIE.name, accessToken, ACCESS_TOKEN_COOKIE.options);
+  res.cookie(REFRESH_TOKEN_COOKIE.name, newRefreshTokenValue, REFRESH_TOKEN_COOKIE.options);
+
+  // Update lastActiveAt (non-blocking)
+  try { await User.findByIdAndUpdate(user._id, { lastActiveAt: new Date() }); } catch {}
+
+  return res.json({ ok: true });
+};
+
+// POST /api/auth/logout - Clear cookies and invalidate refresh token
+exports.logout = async (req, res) => {
+  const refreshTokenValue = req.cookies[REFRESH_TOKEN_COOKIE.name];
+
+  if (refreshTokenValue) {
+    // Find and get the family, then delete all tokens in that family
+    const tokenDoc = await RefreshToken.findOne({ token: refreshTokenValue });
+    if (tokenDoc) {
+      await RefreshToken.deleteMany({ family: tokenDoc.family });
+    }
+  }
+
+  // Clear cookies
+  res.cookie(ACCESS_TOKEN_COOKIE.name, '', clearCookieOptions(ACCESS_TOKEN_COOKIE));
+  res.cookie(REFRESH_TOKEN_COOKIE.name, '', clearCookieOptions(REFRESH_TOKEN_COOKIE));
+
+  return res.json({ ok: true });
 };

@@ -1987,15 +1987,21 @@ exports.suggestActionAll = async (req, res) => {
     const userId = req.user?.id;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
 
-    const [goal, milestone, resources, cost, kpi, title] = await Promise.all([
+    const [goal, rawResources, kpi, rawTitle] = await Promise.all([
       callOpenAI({ type: 'action plan goal (1-2 sentences)', input, contextText }),
-      callOpenAI({ type: 'concise deliverable/milestone phrase', input, contextText }),
-      callOpenAI({ type: 'resources/tools/budget summary (short phrase)', input, contextText }),
-      callOpenAI({ type: 'estimated cost/budget (short phrase, e.g., "$2,000 for design and ads")', input, contextText }),
-      callOpenAI({ type: 'KPI metric specification (short phrase)', input, contextText }),
-      callOpenAI({ type: 'short, specific project title (3–6 words)', input, contextText }),
+      callOpenAI({ type: 'estimated project budget as a dollar amount (e.g., "$5,000" or "$15,000"). State just the amount.', input, contextText }),
+      callOpenAI({ type: 'KPI metric (short phrase)', input, contextText }),
+      callOpenAI({ type: 'project title ONLY (3-6 words max). Examples: "Local Tech Partnerships Initiative", "Customer Feedback System", "Mobile App Development". Return ONLY the title, no descriptions or other fields.', input, contextText }),
     ]);
-    return res.json({ goal, milestone, resources, cost, kpi, title });
+    // Extract numeric value from resources - look for dollar amounts or plain numbers
+    const resourcesStr = String(rawResources || '');
+    const resourcesMatch = resourcesStr.match(/\$?\s*([\d,]+(?:\.\d+)?)/);
+    const resources = resourcesMatch ? resourcesMatch[1].replace(/,/g, '') : '5000'; // Default to 5000 if no number found
+    // Clean title: remove any prefix and extra content after pipe/colon separators
+    let title = String(rawTitle || '').replace(/^Title:\s*/i, '').trim();
+    // Remove anything after | or : that looks like additional fields
+    title = title.split(/\s*\|\s*/)[0].split(/:\s*(?=[A-Z])/)[0].trim();
+    return res.json({ goal, resources, kpi, title });
   } catch (err) {
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestions';
     return res.status(500).json({ message });
@@ -2037,7 +2043,14 @@ exports.suggestActionDue = async (req, res) => {
     const { input } = req.body || {};
     const userId = req.user?.id;
     const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    const contextText = [baseCtx, 'Constraints: Return only ISO date (YYYY-MM-DD)'].filter(Boolean).join('\n');
+    // Calculate date range: from today to 12 months from now
+    const now = new Date();
+    const minDate = now.toISOString().slice(0, 10);
+    const maxDate = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString().slice(0, 10);
+    const contextText = [
+      baseCtx,
+      `Constraints: Return only ISO date (YYYY-MM-DD). Date must be between ${minDate} and ${maxDate} (within the next 12 months). Distribute dates evenly across the year based on project scope and complexity.`
+    ].filter(Boolean).join('\n');
     const suggestion = await callOpenAI({ type: 'due date in ISO format', input, contextText });
     // basic sanitize for date-like
     const iso = String(suggestion || '').trim().slice(0, 10);
@@ -2053,7 +2066,14 @@ exports.rewriteActionDue = async (req, res) => {
     const { text } = req.body || {};
     const userId = req.user?.id;
     const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    const contextText = [baseCtx, 'Constraints: Return only ISO date (YYYY-MM-DD)'].filter(Boolean).join('\n');
+    // Calculate date range: from today to 12 months from now
+    const now = new Date();
+    const minDate = now.toISOString().slice(0, 10);
+    const maxDate = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString().slice(0, 10);
+    const contextText = [
+      baseCtx,
+      `Constraints: Return only ISO date (YYYY-MM-DD). Date must be between ${minDate} and ${maxDate} (within the next 12 months).`
+    ].filter(Boolean).join('\n');
     const rewrite = await callOpenAIRewrite({ type: 'due date in ISO format', text, contextText });
     const iso = String(rewrite || '').trim().slice(0, 10);
     return res.json({ rewrite: iso });

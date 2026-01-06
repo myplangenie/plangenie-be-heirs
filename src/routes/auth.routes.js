@@ -44,4 +44,10 @@ router.post('/resend-otp', ctrl.resendOtp);
 // Email verification
 router.get('/verify', ctrl.verifyEmail);
 
+// Token refresh endpoint
+router.post('/refresh', ctrl.refresh);
+
+// Logout endpoint (clear cookies and invalidate refresh token)
+router.post('/logout', ctrl.logout);
+
 module.exports = router;

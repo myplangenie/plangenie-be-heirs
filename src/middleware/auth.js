@@ -1,11 +1,18 @@
 const jwt = require('jsonwebtoken');
+const { ACCESS_TOKEN_COOKIE } = require('../config/cookies');
 
 function auth(required = true) {
   return (req, res, next) => {
-    const header = req.headers['authorization'];
-    const token = header && header.startsWith('Bearer ')
-      ? header.slice(7)
-      : null;
+    // Priority: 1) Cookie, 2) Authorization header (for backward compatibility during migration)
+    let token = req.cookies?.[ACCESS_TOKEN_COOKIE.name];
+
+    // Fallback to Authorization header for backward compatibility
+    if (!token) {
+      const header = req.headers['authorization'];
+      token = header && header.startsWith('Bearer ')
+        ? header.slice(7)
+        : null;
+    }
 
     if (!token) {
       if (required) return res.status(401).json({ message: 'Authorization token missing' });
@@ -18,7 +25,11 @@ function auth(required = true) {
       req.user = { id: payload.id };
       next();
     } catch (err) {
-      return res.status(401).json({ message: 'Invalid or expired token' });
+      // Differentiate between expired and invalid tokens
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({ message: 'Token expired', code: 'TOKEN_EXPIRED' });
+      }
+      return res.status(401).json({ message: 'Invalid token' });
     }
   };
 }
