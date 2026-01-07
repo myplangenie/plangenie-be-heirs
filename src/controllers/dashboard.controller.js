@@ -10,6 +10,7 @@ const Financials = require('../models/Financials');
 const Plan = require('../models/Plan');
 const PlanSection = require('../models/PlanSection');
 const TeamMember = require('../models/TeamMember');
+const financialSnapshotService = require('../services/financialSnapshotService');
 const nodeCrypto = require('crypto');
 const { PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getR2Client } = require('../config/r2');
@@ -1618,11 +1619,20 @@ exports.generatePlanProse = async (req, res, next) => {
       marketStatement = await ai.callOpenAIProse({ type: 'Market and Opportunity Study', input: studyInstruction, contextText: marketCtx, maxTokens: 1400 });
     }
 
-    // Financial section generation using client-provided prompt and headings
+    // Financial section generation using FinancialSnapshot data
     let financialStatement = undefined;
     if (wantFinancial) {
-      // Helper numeric parser
+      // Fetch FinancialSnapshot data
+      const workspaceId = getWorkspaceId(req);
+      const snapshot = await financialSnapshotService.getOrCreate(userId, workspaceId);
+      const rev = snapshot.revenue || {};
+      const costs = snapshot.costs || {};
+      const cash = snapshot.cash || {};
+      const metrics = snapshot.metrics || {};
+
+      // Helper numeric parser for product data
       function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
+
       // Collect product-level inputs (monthly volumes, prices, unit costs)
       const list = Array.isArray(a.products) ? a.products : [];
       const productLines = list.map((p) => {
@@ -1646,42 +1656,52 @@ exports.generatePlanProse = async (req, res, next) => {
         ].filter(Boolean);
         return `- ${name}: ${parts.join(' | ')}`;
       }).join('\n');
-      // High-level financial inputs
-      const fixedOperating = num(a.finFixedOperatingCosts);
-      const marketingSpend = num(a.finMarketingSalesSpend);
-      const payrollCost = num(a.finPayrollCost);
-      const startCash = num(a.finStartingCash);
-      const fundAmt = num(a.finAdditionalFundingAmount);
-      const taxRate = null; // Not captured explicitly
+
+      // Staff count from org positions
       const staffCount = Array.isArray(a.orgPositions) ? a.orgPositions.length : null;
-      const avgSalary = (staffCount && payrollCost) ? Math.round(payrollCost / staffCount) : null;
-      const payDays = String(a.finPaymentCollectionDays || '').trim();
-      // Derive simple metrics from supplied inputs (for AI reference only)
-      // Average price/cost from products if available
-      let totalW = 0, sumPrice = 0, sumCost = 0;
-      try {
-        const nums = list.map((p)=>({ v: num(p.monthlyVolume), price: num(p.price ?? p.pricing), cost: num(p.unitCost) }));
-        totalW = nums.reduce((sum, r)=> sum + (r.v||0), 0);
-        sumPrice = nums.reduce((sum, r)=> sum + ((r.price||0)*(r.v||0)), 0);
-        sumCost = nums.reduce((sum, r)=> sum + ((r.cost||0)*(r.v||0)), 0);
-      } catch {}
-      const avgPrice = totalW ? (sumPrice/totalW) : 0;
-      const avgCost = totalW ? (sumCost/totalW) : 0;
+
+      // Format biggest expense categories
+      const biggestCostCategories = Array.isArray(costs.biggestCostCategory)
+        ? costs.biggestCostCategory.join(', ')
+        : costs.biggestCostCategory || '';
+
+      // Build context using FinancialSnapshot data
       const finCtx = [
         contextBase,
-        'FINANCIAL INPUTS (user-supplied):',
-        productLines && `Products:\n${productLines}`,
-        (fixedOperating || a.finFixedOperatingCosts) && `Monthly operating expenses (total): ${a.finFixedOperatingCosts || fixedOperating}`,
-        (payrollCost || a.finPayrollCost) && `Monthly staffing costs (total): ${a.finPayrollCost || payrollCost}`,
-        (staffCount ? `Team size (approx.): ${staffCount}` : ''),
-        (avgSalary ? `Avg monthly salary per staff (approx.): ${avgSalary}` : ''),
-        a.finAdditionalFundingAmount && `Funding expected this year: ${a.finAdditionalFundingAmount}`,
-        a.finStartingCash && `Opening cash balance: ${a.finStartingCash}`,
-        a.finPaymentCollectionDays && `Payment timing assumption (days): ${a.finPaymentCollectionDays}`,
         '',
-        'DERIVED (from user inputs; optional):',
-        totalW ? `Approx. weighted avg unit price: ${Math.round(avgPrice)}` : '',
-        totalW ? `Approx. weighted avg unit cost: ${Math.round(avgCost)}` : '',
+        '=== FINANCIAL SNAPSHOT DATA ===',
+        '',
+        'REVENUE:',
+        `Monthly Revenue: $${(rev.monthlyRevenue || 0).toLocaleString()}`,
+        `Revenue Growth Rate: ${rev.revenueGrowthPct || 0}% per month`,
+        `Has Recurring Revenue: ${rev.isRecurring ? 'Yes' : 'No'}`,
+        rev.isRecurring && `Recurring Revenue Percentage: ${rev.recurringPct || 0}%`,
+        '',
+        'COSTS:',
+        `Monthly Costs (total): $${(costs.monthlyCosts || 0).toLocaleString()}`,
+        `Fixed Costs: $${(costs.fixedCosts || 0).toLocaleString()}`,
+        `Variable Costs Percentage: ${costs.variableCostsPct || 0}%`,
+        biggestCostCategories && `Biggest Expense Categories: ${biggestCostCategories}`,
+        '',
+        'CASH POSITION:',
+        `Current Cash: $${(cash.currentCash || 0).toLocaleString()}`,
+        `Monthly Burn Rate: $${(cash.monthlyBurn || 0).toLocaleString()}`,
+        cash.expectedFunding > 0 && `Expected Funding: $${cash.expectedFunding.toLocaleString()}`,
+        cash.fundingMonth && cash.fundingYear && `Funding Expected: ${cash.fundingMonth}/${cash.fundingYear}`,
+        '',
+        'KEY METRICS:',
+        `Net Profit (monthly): $${(metrics.netProfit || 0).toLocaleString()}`,
+        `Profit Margin: ${metrics.profitMarginPct || 0}%`,
+        metrics.monthsOfRunway !== null && metrics.monthsOfRunway !== undefined
+          ? `Months of Runway: ${metrics.monthsOfRunway}`
+          : 'Months of Runway: Not burning cash (profitable)',
+        metrics.breakEvenMonth && `Months to Break-even: ${metrics.breakEvenMonth}`,
+        `Financial Health Score: ${metrics.healthScore || 0}/100`,
+        '',
+        '=== PRODUCT DETAILS ===',
+        productLines && `Products:\n${productLines}`,
+        '',
+        staffCount && `Team Size: ${staffCount} positions`,
       ].filter(Boolean).join('\n');
 
       const financialInstruction = [
