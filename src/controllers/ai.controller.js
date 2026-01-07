@@ -1618,13 +1618,12 @@ exports.suggestFinancialStage = async (req, res) => {
     let result = {};
 
     if (stage === 'revenue') {
-      const [monthlyRevenue, revenueGrowthPct, recurringPct] = await Promise.all([
-        askNumber('Estimated average monthly revenue for a business of this type and size.'),
+      // Note: monthlyRevenue is not suggested by AI - it comes strictly from Products & Services
+      const [revenueGrowthPct, recurringPct] = await Promise.all([
         askNumber('Expected monthly revenue growth rate percentage (just the number, e.g., 5 for 5%).'),
         askNumber('What percentage of revenue is likely recurring (subscriptions, retainers)? Just the number.'),
       ]);
       result = {
-        monthlyRevenue,
         revenueGrowthPct,
         isRecurring: parseInt(recurringPct) > 0,
         recurringPct,
