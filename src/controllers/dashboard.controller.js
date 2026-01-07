@@ -1804,6 +1804,34 @@ exports.uploadCompanyLogo = async (req, res, next) => {
   }
 };
 
+// GET /api/dashboard/print-data/:token (public - no auth required)
+// Used by the print page to fetch data for PDF generation
+exports.getPrintData = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    if (!token) return res.status(400).json({ message: 'Token required' });
+
+    if (!global._printDataCache) {
+      return res.status(404).json({ message: 'Print data not found' });
+    }
+
+    const entry = global._printDataCache.get(token);
+    if (!entry) {
+      return res.status(404).json({ message: 'Print data not found or expired' });
+    }
+
+    if (entry.expires < Date.now()) {
+      global._printDataCache.delete(token);
+      return res.status(404).json({ message: 'Print data expired' });
+    }
+
+    // Keep token valid until expiry (needed for multiple page loads)
+    return res.json(entry.data);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/dashboard/plan/export/pdf
 exports.exportPlanPdf = async (req, res, next) => {
   try {
@@ -1871,17 +1899,28 @@ exports.exportPlanPdf = async (req, res, next) => {
       if (snapshot) financialData = snapshot;
     } catch {}
 
-    // Encode all data as base64 JSON to pass via URL
+    // Store print data with a temporary token (avoids URI_TOO_LONG error)
     const printData = {
       plan: { companyLogoUrl: compiledPlan.companyLogoUrl || '' },
       compiled: compiledPlan,
       prose: proseData,
       financial: financialData,
     };
-    const dataParam = encodeURIComponent(Buffer.from(JSON.stringify(printData)).toString('base64'));
+    const crypto = require('crypto');
+    const printToken = crypto.randomBytes(32).toString('hex');
 
-    const orgUrl = `${frontend}/print/plan?data=${dataParam}&orgOnly=1`;
-    const mainUrl = `${frontend}/print/plan?data=${dataParam}&noOrg=1`;
+    // Store in global cache with 5-minute expiry
+    if (!global._printDataCache) global._printDataCache = new Map();
+    global._printDataCache.set(printToken, { data: printData, expires: Date.now() + 5 * 60 * 1000 });
+
+    // Clean up expired entries
+    for (const [key, val] of global._printDataCache.entries()) {
+      if (val.expires < Date.now()) global._printDataCache.delete(key);
+    }
+
+    const backendUrl = process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get('host')}`;
+    const orgUrl = `${frontend}/print/plan?printToken=${printToken}&apiUrl=${encodeURIComponent(backendUrl)}&orgOnly=1`;
+    const mainUrl = `${frontend}/print/plan?printToken=${printToken}&apiUrl=${encodeURIComponent(backendUrl)}&noOrg=1`;
 
     const puppeteer = require('puppeteer');
     const fs = require('fs');

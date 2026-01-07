@@ -8,6 +8,9 @@ const { requireFeature } = require('../middleware/plan');
 
 const router = express.Router();
 
+// Public endpoint for print data (used by PDF generation - no auth needed)
+router.get('/print-data/:token', ctrl.getPrintData);
+
 // All dashboard APIs require auth; allow view-as (read-only) for collaborators
 router.use(auth(true));
 router.use(viewAs);
