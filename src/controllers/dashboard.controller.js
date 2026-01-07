@@ -1813,9 +1813,15 @@ exports.exportPlanPdf = async (req, res, next) => {
 
     // Use dedicated print page that bypasses RequireAuth and accepts token via query param
     const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
-    const authHeader = req.headers['authorization'] || '';
-    const m = String(authHeader).match(/Bearer\s+(.+)/i);
-    const token = m?.[1] || '';
+
+    // Get token from cookie (primary) or Authorization header (fallback)
+    const { ACCESS_TOKEN_COOKIE } = require('../config/cookies');
+    let token = req.cookies?.[ACCESS_TOKEN_COOKIE.name] || '';
+    if (!token) {
+      const authHeader = req.headers['authorization'] || '';
+      const m = String(authHeader).match(/Bearer\s+(.+)/i);
+      token = m?.[1] || '';
+    }
     const viewAs = req.headers['x-view-as'] || '';
 
     // Build URLs with token as query parameter for the print page
