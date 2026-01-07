@@ -129,10 +129,48 @@ exports.deleteUser = async (req, res) => {
     await session.withTransaction(async () => {
       const user = await User.findById(id).session(session);
       if (!user) return res.status(404).json({ message: 'Not found' });
+
       // Delete collaborations where this user is the owner, or the collaborator/viewer
       try {
-        await Collaboration.deleteMany({ $or: [ { owner: id }, { viewer: id }, { collaborator: id } ] }).session(session);
+        await Collaboration.deleteMany({ $or: [{ owner: id }, { viewer: id }, { collaborator: id }] }).session(session);
       } catch {}
+
+      // Delete all related data - best effort cleanup
+      // Each model is loaded dynamically to avoid import issues if some don't exist
+      const modelsToClean = [
+        'Onboarding',
+        'Notification',
+        'NotificationSettings',
+        'Subscription',
+        'SubscriptionHistory',
+        'RefreshToken',
+        'Workspace',
+        'Journey',
+        'Dashboard',
+        'Financials',
+        'FinancialSnapshot',
+        'TeamMember',
+        'Department',
+        'AgentCache',
+        'PriorityCache',
+        'ReviewSession',
+        'Decision',
+        'Assumption',
+        'Scenario',
+        'Plan',
+        'PlanSection',
+      ];
+
+      for (const modelName of modelsToClean) {
+        try {
+          const Model = require(`../models/${modelName}`);
+          await Model.deleteMany({ user: id }).session(session);
+        } catch (_modelErr) {
+          // Model might not exist or other non-fatal error - continue
+        }
+      }
+
+      // Finally delete the user
       await User.deleteOne({ _id: id }).session(session);
       await log('User deleted', 'warning', user.email, { userId: String(user._id) });
       return res.json({ ok: true });

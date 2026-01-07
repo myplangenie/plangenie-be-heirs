@@ -62,6 +62,19 @@ app.options('*', cors(corsOptions));
 // Health check
 app.get('/health', (req, res) => res.json({ ok: true }));
 
+// Debug endpoint for cookie configuration (temporary - remove after debugging)
+app.get('/debug/cookie-config', (req, res) => {
+  const { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } = require('./config/cookies');
+  res.json({
+    nodeEnv: process.env.NODE_ENV,
+    cookieDomain: process.env.COOKIE_DOMAIN || '(not set)',
+    cookieSameSite: process.env.COOKIE_SAMESITE || '(using default)',
+    accessCookieOptions: ACCESS_TOKEN_COOKIE.options,
+    refreshCookieOptions: REFRESH_TOKEN_COOKIE.options,
+    corsOrigins: Array.from(allowedOrigins),
+  });
+});
+
 // Routes
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/onboarding', require('./routes/onboarding.routes'));

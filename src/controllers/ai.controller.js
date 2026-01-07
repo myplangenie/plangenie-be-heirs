@@ -1117,7 +1117,7 @@ exports.suggestMarketPartners = async (req, res) => {
     try {
       const resp = await client.chat.completions.create({
         model: 'gpt-4o-mini',
-        temperature: 0.7,
+        temperature: 0.95,
         messages: [ { role: 'system', content: system }, { role: 'user', content: userPrompt } ],
         max_tokens: 500,
       });
@@ -1210,7 +1210,7 @@ exports.suggestMarketCompetitors = async (req, res) => {
     try {
       const resp = await client.chat.completions.create({
         model: 'gpt-4o-mini',
-        temperature: 0.7,
+        temperature: 0.95,
         messages: [ { role: 'system', content: system }, { role: 'user', content: userPrompt } ],
         max_tokens: 500,
       });

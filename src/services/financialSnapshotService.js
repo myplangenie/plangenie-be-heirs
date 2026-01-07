@@ -10,6 +10,65 @@ const CONSERVATIVE_DEFAULTS = {
 };
 
 /**
+ * Calculate revenue data from products in onboarding
+ * Returns { monthlyRevenue, avgPrice, avgUnitCost, totalVolume, products } or null if no products
+ */
+exports.calculateRevenueFromProducts = (products) => {
+  if (!Array.isArray(products) || products.length === 0) return null;
+
+  const parseNum = (v) => {
+    const s = String(v || '').replace(/[^0-9.-]/g, '');
+    const n = parseFloat(s);
+    return isFinite(n) && n > 0 ? n : 0;
+  };
+
+  let totalRevenue = 0;
+  let totalVolume = 0;
+  let totalCost = 0;
+  let weightedPriceSum = 0;
+  let weightedCostSum = 0;
+
+  for (const p of products) {
+    const price = parseNum(p.price || p.pricing);
+    const volume = parseNum(p.monthlyVolume);
+    const unitCost = parseNum(p.unitCost);
+
+    if (price > 0 && volume > 0) {
+      totalRevenue += price * volume;
+      totalVolume += volume;
+      weightedPriceSum += price * volume;
+      if (unitCost > 0) {
+        weightedCostSum += unitCost * volume;
+        totalCost += unitCost * volume;
+      }
+    }
+  }
+
+  if (totalRevenue === 0) return null;
+
+  return {
+    monthlyRevenue: Math.round(totalRevenue),
+    avgPrice: totalVolume > 0 ? Math.round(weightedPriceSum / totalVolume * 100) / 100 : 0,
+    avgUnitCost: totalVolume > 0 ? Math.round(weightedCostSum / totalVolume * 100) / 100 : 0,
+    totalVolume,
+    totalCost: Math.round(totalCost),
+    productCount: products.filter(p => parseNum(p.price || p.pricing) > 0 && parseNum(p.monthlyVolume) > 0).length,
+  };
+};
+
+/**
+ * Get products data from onboarding for a user/workspace
+ */
+exports.getProductsFromOnboarding = async (userId, workspaceId = null) => {
+  const filter = { user: userId };
+  if (workspaceId) filter.workspace = workspaceId;
+  else filter.workspace = null;
+
+  const ob = await Onboarding.findOne(filter).lean();
+  return ob?.answers?.products || [];
+};
+
+/**
  * Get or create a financial snapshot for a user/workspace
  */
 exports.getOrCreate = async (userId, workspaceId = null) => {

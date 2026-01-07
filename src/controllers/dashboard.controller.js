@@ -2184,6 +2184,11 @@ exports.exportPlanDocx = async (req, res, next) => {
     // Build plan data (same structure as getCompiledPlan)
     const ob = (await Onboarding.findOne(wsFilter).lean().exec()) || {};
     const a = ob.answers || {};
+
+    // Load FinancialSnapshot for new financial data
+    const workspaceId = getWorkspaceId(req);
+    const snapshot = await financialSnapshotService.getOrCreate(userId, workspaceId);
+
     const plan = {
       businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '' },
       vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
@@ -2191,19 +2196,12 @@ exports.exportPlanDocx = async (req, res, next) => {
       market: { customer: a.marketCustomer || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
       products: Array.isArray(a.products) ? a.products : [],
       org: Array.isArray(a.orgPositions) ? a.orgPositions.map((p)=>({ id: p.id, name: p.name, position: p.position, department: p.department || null, parentId: p.parentId || null })) : [],
-      financial: {
-        salesVolume: a.finSalesVolume || '',
-        salesGrowthPct: a.finSalesGrowthPct || '',
-        avgUnitCost: a.finAvgUnitCost || '',
-        fixedOperatingCosts: a.finFixedOperatingCosts || '',
-        marketingSalesSpend: a.finMarketingSalesSpend || '',
-        payrollCost: a.finPayrollCost || '',
-        startingCash: a.finStartingCash || '',
-        additionalFundingAmount: a.finAdditionalFundingAmount || '',
-        additionalFundingMonth: a.finAdditionalFundingMonth || '',
-        paymentCollectionDays: a.finPaymentCollectionDays || '',
-        targetProfitMarginPct: a.finTargetProfitMarginPct || '',
-      },
+      financialSnapshot: snapshot ? {
+        revenue: snapshot.revenue || {},
+        costs: snapshot.costs || {},
+        cash: snapshot.cash || {},
+        metrics: snapshot.metrics || {},
+      } : null,
       actionPlans: a.actionAssignments || {},
       coreProjects: Array.isArray(a.coreProjects) ? a.coreProjects : [],
       coreProjectDetails: Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [],
@@ -2405,28 +2403,39 @@ exports.exportPlanDocx = async (req, res, next) => {
         layout: TableLayoutType.FIXED,
       });
 
-      // Financials table (2 columns)
+      // Financials table (2 columns) - using new FinancialSnapshot structure
+      const fs = plan.financialSnapshot || {};
+      const fmtCurrency = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) && n !== 0 ? `$${n.toLocaleString()}` : '—';
+      };
+      const fmtPct = (v) => {
+        const n = Number(v);
+        return Number.isFinite(n) && n !== 0 ? `${n}%` : '—';
+      };
+      const fmtFundingDate = () => {
+        const m = fs.cash?.fundingMonth;
+        const y = fs.cash?.fundingYear;
+        if (!m || !y) return '—';
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return `${months[m - 1] || m} ${y}`;
+      };
       const finPairs = [
-        ['Projected Monthly Sales Volume', plan.financial?.salesVolume || '—'],
-        ['Monthly Sales Growth (%)', plan.financial?.salesGrowthPct || '—'],
-        ['Average Unit Cost', plan.financial?.avgUnitCost || '—'],
-        ['Fixed Operating Costs', plan.financial?.fixedOperatingCosts || '—'],
-        ['Marketing and Sales Spend', plan.financial?.marketingSalesSpend || '—'],
-        ['Payroll Cost', plan.financial?.payrollCost || '—'],
-        ['Starting Cash', plan.financial?.startingCash || '—'],
-        ['Additional Funding Amount', plan.financial?.additionalFundingAmount || '—'],
-        ['Additional Funding Month', (() => {
-          const m = plan.financial?.additionalFundingMonth;
-          if (!m) return '—';
-          if (String(m).includes('-')) {
-            const [y, mo] = String(m).split('-');
-            const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            return `${months[parseInt(mo, 10) - 1] || mo} ${y}`;
-          }
-          return m;
-        })()],
-        ['Payment Collection Days', plan.financial?.paymentCollectionDays || '—'],
-        ['Target Profit Margin (%)', plan.financial?.targetProfitMarginPct || '—'],
+        ['Monthly Revenue', fmtCurrency(fs.revenue?.monthlyRevenue)],
+        ['Revenue Growth Rate', fmtPct(fs.revenue?.revenueGrowthPct)],
+        ['Recurring Revenue', fs.revenue?.isRecurring ? `Yes (${fmtPct(fs.revenue?.recurringPct)})` : 'No'],
+        ['Monthly Costs', fmtCurrency(fs.costs?.monthlyCosts)],
+        ['Fixed Costs', fmtCurrency(fs.costs?.fixedCosts)],
+        ['Variable Costs', fmtPct(fs.costs?.variableCostsPct)],
+        ['Biggest Cost Category', fs.costs?.biggestCostCategory || '—'],
+        ['Current Cash', fmtCurrency(fs.cash?.currentCash)],
+        ['Monthly Burn Rate', fmtCurrency(fs.cash?.monthlyBurn)],
+        ['Expected Funding', fmtCurrency(fs.cash?.expectedFunding)],
+        ['Funding Date', fmtFundingDate()],
+        ['Net Profit', fmtCurrency(fs.metrics?.netProfit)],
+        ['Profit Margin', fmtPct(fs.metrics?.profitMarginPct)],
+        ['Months of Runway', fs.metrics?.monthsOfRunway != null ? `${fs.metrics.monthsOfRunway} months` : '—'],
+        ['Break-Even Month', fs.metrics?.breakEvenMonth != null ? `Month ${fs.metrics.breakEvenMonth}` : '—'],
       ];
       const finRows = finPairs.map(([k,v]) => new TableRow({ children: [ new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: k, bold: true })] })] }), new TableCell({ children: [p(v)] }) ] }));
       const finW1 = Math.floor(contentWidth * 0.45);
@@ -2521,7 +2530,7 @@ exports.exportPlanDocx = async (req, res, next) => {
         const productNames = products.map((p)=> String(p?.name || p?.title || p?.product || p?.service || '').trim()).filter(Boolean).slice(0,3);
         const toNum = (v) => { const n = parseFloat(String(v ?? '').replace(/[^0-9.\-]/g,'')); return Number.isFinite(n) ? n : 0; };
         const revenue0 = products.reduce((a, p)=> a + toNum(p?.price ?? p?.pricing) * toNum(p?.monthlyVolume), 0);
-        const growthPct = toNum(plan.financial?.salesGrowthPct);
+        const growthPct = toNum(plan.financialSnapshot?.revenue?.revenueGrowthPct);
         const problemText = (() => {
           if (customer && purpose) return `${customer} often lack a simple, reliable way to "${purpose}"`;
           if (customer) return `${customer} face a clear operational and planning gap`;
@@ -2720,7 +2729,7 @@ exports.exportPlanDocx = async (req, res, next) => {
       const productNames = products.map((p)=> String(p?.name || p?.title || p?.product || p?.service || '').trim()).filter(Boolean).slice(0,3);
       const toNum = (v) => { const n = parseFloat(String(v ?? '').replace(/[^0-9.\-]/g,'')); return Number.isFinite(n) ? n : 0; };
       const revenue0 = products.reduce((a, p)=> a + toNum(p?.price ?? p?.pricing) * toNum(p?.monthlyVolume), 0);
-      const growthPct = toNum(plan.financial?.salesGrowthPct);
+      const growthPct = toNum(plan.financialSnapshot?.revenue?.revenueGrowthPct);
 
       const problemText = (() => {
         if (customer && purpose) return `${esc(customer)} often lack a simple, reliable way to "${esc(purpose)}"`;
@@ -2775,27 +2784,42 @@ exports.exportPlanDocx = async (req, res, next) => {
       <h3>Core Strategic Projects</h3>
       ${coreHtml}
       ${financialProse ? `<h3>Financials</h3><div class="box"><div class="label">Financial Section</div><div>${escapeHtml(financialProse).replace(/\n/g,'<br/>')}</div></div>` : ''}
-      <h3>Financial Forecasting Inputs</h3>
-      <div class="box"><div class="label">Projected Monthly Sales Volume</div>${escapeHtml(plan.financial?.salesVolume || '')}</div>
-      <div class="box"><div class="label">Monthly Sales Growth (%)</div>${escapeHtml(plan.financial?.salesGrowthPct || '')}</div>
-      <div class="box"><div class="label">Average Unit Cost</div>${escapeHtml(plan.financial?.avgUnitCost || '')}</div>
-      <div class="box"><div class="label">Fixed Operating Costs</div>${escapeHtml(plan.financial?.fixedOperatingCosts || '')}</div>
-      <div class="box"><div class="label">Marketing and Sales Spend</div>${escapeHtml(plan.financial?.marketingSalesSpend || '')}</div>
-      <div class="box"><div class="label">Payroll Cost</div>${escapeHtml(plan.financial?.payrollCost || '')}</div>
-      <div class="box"><div class="label">Starting Cash</div>${escapeHtml(plan.financial?.startingCash || '')}</div>
-      <div class="box"><div class="label">Additional Funding Amount</div>${escapeHtml(plan.financial?.additionalFundingAmount || '')}</div>
-      <div class="box"><div class="label">Additional Funding Month</div>${(() => {
-        const m = plan.financial?.additionalFundingMonth;
-        if (!m) return '';
-        if (String(m).includes('-')) {
-          const [y, mo] = String(m).split('-');
+      <h3>Financial Forecasting</h3>
+      ${(() => {
+        const fs = plan.financialSnapshot || {};
+        const fmtCurrency = (v) => {
+          const n = Number(v);
+          return Number.isFinite(n) && n !== 0 ? '$' + n.toLocaleString() : '—';
+        };
+        const fmtPct = (v) => {
+          const n = Number(v);
+          return Number.isFinite(n) && n !== 0 ? n + '%' : '—';
+        };
+        const fmtFundingDate = () => {
+          const m = fs.cash?.fundingMonth;
+          const y = fs.cash?.fundingYear;
+          if (!m || !y) return '—';
           const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-          return escapeHtml(`${months[parseInt(mo, 10) - 1] || mo} ${y}`);
-        }
-        return escapeHtml(m);
-      })()}</div>
-      <div class="box"><div class="label">Payment Collection Days</div>${escapeHtml(plan.financial?.paymentCollectionDays || '')}</div>
-      <div class="box"><div class="label">Target Profit Margin (%)</div>${escapeHtml(plan.financial?.targetProfitMarginPct || '')}</div>
+          return (months[m - 1] || m) + ' ' + y;
+        };
+        return [
+          ['Monthly Revenue', fmtCurrency(fs.revenue?.monthlyRevenue)],
+          ['Revenue Growth Rate', fmtPct(fs.revenue?.revenueGrowthPct)],
+          ['Recurring Revenue', fs.revenue?.isRecurring ? 'Yes (' + fmtPct(fs.revenue?.recurringPct) + ')' : 'No'],
+          ['Monthly Costs', fmtCurrency(fs.costs?.monthlyCosts)],
+          ['Fixed Costs', fmtCurrency(fs.costs?.fixedCosts)],
+          ['Variable Costs', fmtPct(fs.costs?.variableCostsPct)],
+          ['Biggest Cost Category', fs.costs?.biggestCostCategory || '—'],
+          ['Current Cash', fmtCurrency(fs.cash?.currentCash)],
+          ['Monthly Burn Rate', fmtCurrency(fs.cash?.monthlyBurn)],
+          ['Expected Funding', fmtCurrency(fs.cash?.expectedFunding)],
+          ['Funding Date', fmtFundingDate()],
+          ['Net Profit', fmtCurrency(fs.metrics?.netProfit)],
+          ['Profit Margin', fmtPct(fs.metrics?.profitMarginPct)],
+          ['Months of Runway', fs.metrics?.monthsOfRunway != null ? fs.metrics.monthsOfRunway + ' months' : '—'],
+          ['Break-Even Month', fs.metrics?.breakEvenMonth != null ? 'Month ' + fs.metrics.breakEvenMonth : '—'],
+        ].map(([label, value]) => '<div class="box"><div class="label">' + escapeHtml(label) + '</div>' + escapeHtml(value) + '</div>').join('');
+      })()}
       <h3>Departmental Projects</h3>
       ${plansHtml}
       `
@@ -3253,7 +3277,12 @@ exports.getFinancialSnapshot = async (req, res, next) => {
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const snapshot = await financialSnapshotService.getOrCreate(userId, null);
-    return res.json({ snapshot });
+
+    // Get products from onboarding and calculate derived revenue
+    const products = await financialSnapshotService.getProductsFromOnboarding(userId, null);
+    const productsRevenue = financialSnapshotService.calculateRevenueFromProducts(products);
+
+    return res.json({ snapshot, productsRevenue });
   } catch (err) {
     next(err);
   }

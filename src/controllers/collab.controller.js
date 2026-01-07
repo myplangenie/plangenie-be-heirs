@@ -68,11 +68,19 @@ exports.invite = async (req, res) => {
       return res.status(400).json({ message: 'At least one department required for department access' });
     }
 
-    // If the email already belongs to an existing user account,
-    // do not allow adding as a collaborator per product requirement.
-    const existingUser = await User.findOne({ email: emailRaw }).select('_id').lean().exec();
+    // Check if email belongs to an existing user
+    const existingUser = await User.findOne({ email: emailRaw }).select('_id isCollaborator onboardingDone').lean().exec();
+
+    // Allow re-inviting if:
+    // 1. No existing user, OR
+    // 2. Existing user is a collaborator-only account (isCollaborator=true, no onboardingDone)
+    // Block if the user is a full account holder (has completed onboarding as an owner)
     if (existingUser) {
-      return res.status(400).json({ message: "Email already exists and can't be added as a collaborator" });
+      const isCollaboratorOnly = existingUser.isCollaborator && !existingUser.onboardingDone;
+      if (!isCollaboratorOnly) {
+        return res.status(400).json({ message: "This email belongs to an existing account holder and can't be added as a collaborator" });
+      }
+      // For collaborator-only accounts, we can proceed to create/update the collaboration
     }
 
     let collab = await Collaboration.findOne({ owner: userId, email: emailRaw });
@@ -83,11 +91,18 @@ exports.invite = async (req, res) => {
         status: 'pending',
         accessType,
         departments,
+        // If existing collaborator-only user exists, link them immediately
+        ...(existingUser ? { viewer: existingUser._id, collaborator: existingUser._id } : {}),
       });
     } else {
       // Update access settings if re-inviting
       collab.accessType = accessType;
       collab.departments = departments;
+      // If existing collaborator-only user exists, ensure they're linked
+      if (existingUser) {
+        collab.viewer = collab.viewer || existingUser._id;
+        collab.collaborator = collab.collaborator || existingUser._id;
+      }
     }
     // Generate (or refresh) accept token
     const token = crypto.randomBytes(24).toString('hex');
@@ -219,13 +234,44 @@ exports.revoke = async (req, res) => {
     const query = id ? { _id: id, owner: ownerId } : { owner: ownerId, email: emailRaw };
     const doc = await Collaboration.findOneAndDelete(query).lean().exec();
     if (!doc) return res.status(404).json({ message: 'Collaboration not found' });
+
     // Clean up notifications for the invitee if present
     try {
       const invitee = await User.findOne({ email: doc.email }).lean().exec();
       if (invitee) {
         await Notification.deleteMany({ user: invitee._id, nid: `collab-${String(doc._id)}` }).exec();
+
+        // Check if this was a collaborator-only account with no other collaborations
+        // If so, delete or reset their User record to free up the email
+        const isCollaboratorOnly = invitee.isCollaborator && !invitee.onboardingDone;
+        if (isCollaboratorOnly) {
+          // Check if they have other active collaborations
+          const otherCollabs = await Collaboration.countDocuments({
+            $or: [{ viewer: invitee._id }, { collaborator: invitee._id }],
+            status: 'accepted',
+          }).exec();
+
+          // Check if they own any collaborations (i.e., they're also an owner)
+          const ownsCollabs = await Collaboration.countDocuments({ owner: invitee._id }).exec();
+
+          // If no other collaborations and not an owner, clean up the user
+          if (otherCollabs === 0 && ownsCollabs === 0) {
+            // Delete the collaborator-only user account to free up the email
+            await User.deleteOne({ _id: invitee._id }).exec();
+            // Also clean up any related data
+            try {
+              const RefreshToken = require('../models/RefreshToken');
+              await RefreshToken.deleteMany({ user: invitee._id }).exec();
+            } catch {}
+            try {
+              await Notification.deleteMany({ user: invitee._id }).exec();
+            } catch {}
+          }
+        }
       }
-    } catch (_e) {}
+    } catch (_e) {
+      console.error('[revoke] Cleanup error:', _e?.message || _e);
+    }
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ message: err?.message || 'Failed to revoke collaborator' });

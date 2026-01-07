@@ -38,6 +38,14 @@ async function issueTokensAndSetCookies(res, user, req) {
     ipAddress: req.ip || req.connection?.remoteAddress || '',
   });
 
+  // Debug: log cookie options being used
+  console.log('[auth] Setting cookies with options:', {
+    accessCookie: ACCESS_TOKEN_COOKIE.options,
+    refreshCookie: REFRESH_TOKEN_COOKIE.options,
+    nodeEnv: process.env.NODE_ENV,
+    cookieDomain: process.env.COOKIE_DOMAIN,
+  });
+
   // Set cookies
   res.cookie(ACCESS_TOKEN_COOKIE.name, accessToken, ACCESS_TOKEN_COOKIE.options);
   res.cookie(REFRESH_TOKEN_COOKIE.name, refreshTokenValue, REFRESH_TOKEN_COOKIE.options);
