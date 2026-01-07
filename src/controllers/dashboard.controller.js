@@ -3288,7 +3288,6 @@ exports.purgeSampleMembers = async (req, res, next) => {
 // =============================================================================
 // FINANCIAL SNAPSHOT (Financial Clarity Feature)
 // =============================================================================
-const financialSnapshotService = require('../services/financialSnapshotService');
 
 // GET /api/dashboard/financial-snapshot
 exports.getFinancialSnapshot = async (req, res, next) => {
