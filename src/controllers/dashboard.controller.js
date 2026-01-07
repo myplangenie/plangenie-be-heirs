@@ -2327,15 +2327,26 @@ exports.exportPlanDocx = async (req, res, next) => {
     const marketProse = typeof prose.marketStatement === 'string' ? prose.marketStatement : '';
     const financialProse = typeof prose.financialStatement === 'string' ? prose.financialStatement : '';
 
-    // Optionally capture Org Chart as an image using the same approach as PDF
+    // Optionally capture Org Chart as an image using the same token approach as PDF
     let orgB64 = null;
     try {
       const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
-      const orgUrl = `${frontend}/dashboard/plan/org-only?orgOnly=1`;
-      const authHeader = req.headers['authorization'] || '';
-      const m = String(authHeader).match(/Bearer\s+(.+)/i);
-      const token = m?.[1] || '';
-      const viewAs = req.headers['x-view-as'] || '';
+      const backendUrl = process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get('host')}`;
+
+      // Store print data with temporary token (same approach as PDF export)
+      const crypto = require('crypto');
+      const printToken = crypto.randomBytes(32).toString('hex');
+      const printData = {
+        plan: { companyLogoUrl: logoUrl },
+        compiled: plan,
+        prose: { executiveSummary: execProse, marketStatement: marketProse, financialStatement: financialProse },
+        financial: snapshot,
+      };
+      if (!global._printDataCache) global._printDataCache = new Map();
+      global._printDataCache.set(printToken, { data: printData, expires: Date.now() + 5 * 60 * 1000 });
+
+      const orgUrl = `${frontend}/print/plan?printToken=${printToken}&apiUrl=${encodeURIComponent(backendUrl)}&orgOnly=1`;
+
       const puppeteer = require('puppeteer');
       const fs = require('fs');
       const path = require('path');
@@ -2367,9 +2378,6 @@ exports.exportPlanDocx = async (req, res, next) => {
       });
       try {
         const page = await browser.newPage();
-        await page.evaluateOnNewDocument((t, va) => {
-          try { localStorage.setItem('pg_token', String(t || '')); if (va) localStorage.setItem('pg_view_as', String(va)); } catch {}
-        }, token, viewAs);
         await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: 3 });
         await page.goto(orgUrl, { waitUntil: 'networkidle0', timeout: 60000 });
         try { await page.emulateMediaType('screen'); } catch {}
