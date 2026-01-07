@@ -1814,26 +1814,57 @@ exports.exportPlanPdf = async (req, res, next) => {
     const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
 
     // Fetch all data server-side to avoid CORS issues in Puppeteer
-    // This data will be passed directly to the print page
-    let planData = {};
+    // Build the compiled plan the same way getCompiledPlan does - from Onboarding
     let compiledPlan = {};
     let proseData = {};
     let financialData = {};
 
     try {
-      const CompiledPlan = require('../models/CompiledPlan');
-      const cp = await CompiledPlan.findOne({ user: userId, ...wsFilter }).lean();
-      if (cp) {
-        planData = { companyLogoUrl: cp.companyLogoUrl || '' };
-        compiledPlan = cp;
-      }
-    } catch {}
+      const ob = await Onboarding.findOne(wsFilter).lean().exec();
+      if (ob) {
+        const a = ob.answers || {};
+        // Build plan data exactly like getCompiledPlan does
+        compiledPlan = {
+          companyLogoUrl: a.companyLogoUrl || ob.companyLogoUrl || '',
+          userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
+          businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '', ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '' },
+          vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
+          values: { core: a.valuesCore || '', culture: a.cultureFeeling || '', traits: Array.isArray(a.valuesCoreKeywords) ? a.valuesCoreKeywords.filter((t)=> typeof t === 'string' && t.trim()).slice(0, 3) : [] },
+          goals: { shortTerm: (a.goalsShortTerm || '').split('\n').filter(Boolean), midTerm: (a.goalsMidTerm || '').split('\n').filter(Boolean), longTerm: (a.goalsLongTerm || '').split('\n').filter(Boolean) },
+          market: { customer: a.marketCustomer || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
+          products: Array.isArray(a.products) ? a.products : [],
+          org: Array.isArray(a.orgPositions) ? a.orgPositions.map((p)=>({ id: p.id, name: p.name, position: p.position, department: p.department || null, parentId: p.parentId || null })) : [],
+          financial: {
+            salesVolume: a.finSalesVolume || '',
+            salesGrowthPct: a.finSalesGrowthPct || '',
+            avgUnitCost: a.finAvgUnitCost || '',
+            fixedOperatingCosts: a.finFixedOperatingCosts || '',
+            marketingSalesSpend: a.finMarketingSalesSpend || '',
+            payrollCost: a.finPayrollCost || '',
+            startingCash: a.finStartingCash || '',
+            additionalFundingAmount: a.finAdditionalFundingAmount || '',
+            additionalFundingMonth: a.finAdditionalFundingMonth || '',
+            paymentCollectionDays: a.finPaymentCollectionDays || '',
+            targetProfitMarginPct: a.finTargetProfitMarginPct || '',
+            isNonprofit: a.finIsNonprofit || '',
+          },
+          actionPlans: a.actionAssignments || {},
+          actionSections: Array.isArray(a.actionSections) ? a.actionSections.map((s)=>({ key: String(s && s.key || '').trim(), label: String(s && s.label || '').trim() })) : undefined,
+          coreProjects: Array.isArray(a.coreProjects) ? a.coreProjects : [],
+          coreProjectDetails: Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [],
+        };
 
-    try {
-      const PlanProse = require('../models/PlanProse');
-      const prose = await PlanProse.findOne({ user: userId, ...wsFilter }).lean();
-      if (prose) proseData = prose;
-    } catch {}
+        // Get prose data the same way getPlanProse does
+        const prose = a.planProse || {};
+        proseData = {
+          executiveSummary: prose.executiveSummary || '',
+          marketStatement: prose.marketStatement || '',
+          financialStatement: prose.financialStatement || '',
+        };
+      }
+    } catch (e) {
+      console.error('PDF export: Error fetching onboarding data:', e);
+    }
 
     try {
       const snapshot = await financialSnapshotService.getOrCreate(userId, wsFilter.workspace);
@@ -1842,7 +1873,7 @@ exports.exportPlanPdf = async (req, res, next) => {
 
     // Encode all data as base64 JSON to pass via URL
     const printData = {
-      plan: planData,
+      plan: { companyLogoUrl: compiledPlan.companyLogoUrl || '' },
       compiled: compiledPlan,
       prose: proseData,
       financial: financialData,
