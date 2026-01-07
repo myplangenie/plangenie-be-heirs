@@ -259,12 +259,24 @@ exports.getDecisionStrip = async (req, res, next) => {
     const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
     if (!ws) return res.status(404).json({ message: 'Workspace not found' });
 
-    // Get or recalculate cache
+    // Get cache and onboarding to check if recalculation is needed
     let cache = await PriorityCache.findOne({ user: userId, workspace: ws._id }).lean();
+    const ob = await Onboarding.findOne({ user: userId, workspace: ws._id }).select('updatedAt').lean();
 
-    // If cache is stale (>1 hour old) or doesn't exist, recalculate
+    // Recalculate if:
+    // 1. Cache doesn't exist
+    // 2. Onboarding was updated after cache was calculated (data changed)
+    // 3. Cache is older than 1 hour (force refresh)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    if (!cache || !cache.calculatedAt || new Date(cache.calculatedAt) < oneHourAgo) {
+    const cacheTime = cache?.calculatedAt ? new Date(cache.calculatedAt) : null;
+    const obUpdatedTime = ob?.updatedAt ? new Date(ob.updatedAt) : null;
+
+    const needsRecalc = !cache ||
+      !cacheTime ||
+      cacheTime < oneHourAgo ||
+      (obUpdatedTime && obUpdatedTime > cacheTime);
+
+    if (needsRecalc) {
       await recalculateForUserWorkspace(userId, ws._id);
       cache = await PriorityCache.findOne({ user: userId, workspace: ws._id }).lean();
     }
