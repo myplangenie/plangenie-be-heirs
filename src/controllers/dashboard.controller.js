@@ -1811,15 +1811,18 @@ exports.exportPlanPdf = async (req, res, next) => {
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    // Render the actual front‑end page so the PDF matches what users see
+    // Use dedicated print page that bypasses RequireAuth and accepts token via query param
     const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
-    const orgUrl = `${frontend}/dashboard/plan/org-only?orgOnly=1`;
-    const mainUrl = `${frontend}/dashboard/plan?print=1&noOrg=1`;
-
     const authHeader = req.headers['authorization'] || '';
     const m = String(authHeader).match(/Bearer\s+(.+)/i);
     const token = m?.[1] || '';
     const viewAs = req.headers['x-view-as'] || '';
+
+    // Build URLs with token as query parameter for the print page
+    const tokenParam = encodeURIComponent(token);
+    const viewAsParam = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : '';
+    const orgUrl = `${frontend}/print/plan?token=${tokenParam}&orgOnly=1${viewAsParam}`;
+    const mainUrl = `${frontend}/print/plan?token=${tokenParam}&noOrg=1${viewAsParam}`;
 
     const puppeteer = require('puppeteer');
     const fs = require('fs');
@@ -1852,13 +1855,6 @@ exports.exportPlanPdf = async (req, res, next) => {
     });
     try {
       const page = await browser.newPage();
-      // Seed token (and view-as) into localStorage before any scripts run
-      await page.evaluateOnNewDocument((t, va) => {
-        try {
-          localStorage.setItem('pg_token', String(t || ''));
-          if (va) localStorage.setItem('pg_view_as', String(va));
-        } catch {}
-      }, token, viewAs);
 
       // Pass 1: capture org-only page
       await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: 3 });
@@ -1883,7 +1879,7 @@ exports.exportPlanPdf = async (req, res, next) => {
       // Pass 2: open main doc without org and inject image
       await page.goto(mainUrl, { waitUntil: 'networkidle0', timeout: 60000 });
       try { await page.emulateMediaType('screen'); } catch {}
-      try { await page.waitForFunction('window.__PG_PRINT_READY === true', { timeout: 4000 }); } catch {}
+      try { await page.waitForFunction('window.__PG_PRINT_READY === true', { timeout: 8000 }); } catch {}
       if (orgB64) {
         try {
           await page.evaluate((src) => {
