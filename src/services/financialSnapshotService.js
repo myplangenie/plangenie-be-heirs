@@ -1,5 +1,6 @@
 const FinancialSnapshot = require('../models/FinancialSnapshot');
 const Onboarding = require('../models/Onboarding');
+const Workspace = require('../models/Workspace');
 
 // Conservative defaults for "Not sure" answers
 const CONSERVATIVE_DEFAULTS = {
@@ -58,10 +59,22 @@ exports.calculateRevenueFromProducts = (products) => {
 
 /**
  * Get products data from onboarding for a user/workspace
+ * If no workspaceId provided, looks up the user's default workspace
  */
 exports.getProductsFromOnboarding = async (userId, workspaceId = null) => {
+  let wsId = workspaceId;
+
+  // If no workspace ID provided, find the user's default workspace
+  // (matching the same logic in onboarding controller's getOrCreate)
+  if (!wsId) {
+    const defaultWs = await Workspace.findOne({ user: userId, defaultWorkspace: true }).lean();
+    if (defaultWs) {
+      wsId = defaultWs._id;
+    }
+  }
+
   const filter = { user: userId };
-  if (workspaceId) filter.workspace = workspaceId;
+  if (wsId) filter.workspace = wsId;
   else filter.workspace = null;
 
   const ob = await Onboarding.findOne(filter).lean();
@@ -70,17 +83,29 @@ exports.getProductsFromOnboarding = async (userId, workspaceId = null) => {
 
 /**
  * Get or create a financial snapshot for a user/workspace
+ * If no workspaceId provided, looks up the user's default workspace
  */
 exports.getOrCreate = async (userId, workspaceId = null) => {
+  let wsId = workspaceId;
+
+  // If no workspace ID provided, find the user's default workspace
+  // (matching the same logic in onboarding controller's getOrCreate)
+  if (!wsId) {
+    const defaultWs = await Workspace.findOne({ user: userId, defaultWorkspace: true }).lean();
+    if (defaultWs) {
+      wsId = defaultWs._id;
+    }
+  }
+
   let snapshot = await FinancialSnapshot.findOne({
     user: userId,
-    ...(workspaceId ? { workspace: workspaceId } : { workspace: null }),
+    ...(wsId ? { workspace: wsId } : { workspace: null }),
   });
 
   if (!snapshot) {
     snapshot = await FinancialSnapshot.create({
       user: userId,
-      workspace: workspaceId || null,
+      workspace: wsId || null,
     });
   }
 
@@ -263,15 +288,27 @@ exports.getDecisionSupport = async (userId, workspaceId = null) => {
 
 /**
  * Sync financial data from existing onboarding answers
+ * If no workspaceId provided, looks up the user's default workspace
  */
 exports.syncFromOnboarding = async (userId, workspaceId = null) => {
+  let wsId = workspaceId;
+
+  // If no workspace ID provided, find the user's default workspace
+  if (!wsId) {
+    const defaultWs = await Workspace.findOne({ user: userId, defaultWorkspace: true }).lean();
+    if (defaultWs) {
+      wsId = defaultWs._id;
+    }
+  }
+
   const filter = { user: userId };
-  if (workspaceId) filter.workspace = workspaceId;
+  if (wsId) filter.workspace = wsId;
+  else filter.workspace = null;
   const ob = await Onboarding.findOne(filter).lean();
   if (!ob?.answers?.financial) return null;
 
   const f = ob.answers.financial;
-  const snapshot = await exports.getOrCreate(userId, workspaceId);
+  const snapshot = await exports.getOrCreate(userId, wsId);
 
   // Map existing fields
   if (f.salesVolume) {

@@ -3274,12 +3274,12 @@ const financialSnapshotService = require('../services/financialSnapshotService')
 exports.getFinancialSnapshot = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const snapshot = await financialSnapshotService.getOrCreate(userId, null);
+    const snapshot = await financialSnapshotService.getOrCreate(userId, workspaceId);
 
     // Get products from onboarding and calculate derived revenue
-    const products = await financialSnapshotService.getProductsFromOnboarding(userId, null);
+    const products = await financialSnapshotService.getProductsFromOnboarding(userId, workspaceId);
     const productsRevenue = financialSnapshotService.calculateRevenueFromProducts(products);
 
     return res.json({ snapshot, productsRevenue });
@@ -3292,13 +3292,13 @@ exports.getFinancialSnapshot = async (req, res, next) => {
 exports.updateFinancialSection = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { section } = req.params;
     if (!['revenue', 'costs', 'cash'].includes(section)) {
       return res.status(400).json({ message: 'Invalid section. Must be revenue, costs, or cash.' });
     }
-    const snapshot = await financialSnapshotService.updateSection(userId, null, section, req.body);
+    const snapshot = await financialSnapshotService.updateSection(userId, workspaceId, section, req.body);
     return res.json({ snapshot });
   } catch (err) {
     next(err);
@@ -3309,9 +3309,9 @@ exports.updateFinancialSection = async (req, res, next) => {
 exports.getHealthTiles = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const tiles = await financialSnapshotService.getHealthTiles(userId, null);
+    const tiles = await financialSnapshotService.getHealthTiles(userId, workspaceId);
     return res.json({ tiles });
   } catch (err) {
     next(err);
@@ -3322,9 +3322,9 @@ exports.getHealthTiles = async (req, res, next) => {
 exports.getDecisionSupport = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const decisions = await financialSnapshotService.getDecisionSupport(userId, null);
+    const decisions = await financialSnapshotService.getDecisionSupport(userId, workspaceId);
     return res.json({ decisions });
   } catch (err) {
     next(err);
@@ -3335,9 +3335,9 @@ exports.getDecisionSupport = async (req, res, next) => {
 exports.completeFinancialOnboarding = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const snapshot = await financialSnapshotService.completeOnboarding(userId, null);
+    const snapshot = await financialSnapshotService.completeOnboarding(userId, workspaceId);
     return res.json({ ok: true, snapshot });
   } catch (err) {
     next(err);
@@ -3348,9 +3348,9 @@ exports.completeFinancialOnboarding = async (req, res, next) => {
 exports.syncFinancialFromOnboarding = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const snapshot = await financialSnapshotService.syncFromOnboarding(userId, null);
+    const snapshot = await financialSnapshotService.syncFromOnboarding(userId, workspaceId);
     return res.json({ ok: true, snapshot });
   } catch (err) {
     next(err);
