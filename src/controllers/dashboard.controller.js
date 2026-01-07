@@ -1811,27 +1811,46 @@ exports.exportPlanPdf = async (req, res, next) => {
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    // Use dedicated print page that bypasses RequireAuth and accepts token via query param
     const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
 
-    // Get token from cookie (primary) or Authorization header (fallback)
-    const { ACCESS_TOKEN_COOKIE } = require('../config/cookies');
-    let token = req.cookies?.[ACCESS_TOKEN_COOKIE.name] || '';
-    if (!token) {
-      const authHeader = req.headers['authorization'] || '';
-      const m = String(authHeader).match(/Bearer\s+(.+)/i);
-      token = m?.[1] || '';
-    }
-    const viewAs = req.headers['x-view-as'] || '';
+    // Fetch all data server-side to avoid CORS issues in Puppeteer
+    // This data will be passed directly to the print page
+    let planData = {};
+    let compiledPlan = {};
+    let proseData = {};
+    let financialData = {};
 
-    // Build URLs with token as query parameter for the print page
-    // Also pass the backend API URL so the print page can make direct API calls
-    const backendUrl = process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get('host')}`;
-    const tokenParam = encodeURIComponent(token);
-    const apiUrlParam = `&apiUrl=${encodeURIComponent(backendUrl)}`;
-    const viewAsParam = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : '';
-    const orgUrl = `${frontend}/print/plan?token=${tokenParam}&orgOnly=1${apiUrlParam}${viewAsParam}`;
-    const mainUrl = `${frontend}/print/plan?token=${tokenParam}&noOrg=1${apiUrlParam}${viewAsParam}`;
+    try {
+      const CompiledPlan = require('../models/CompiledPlan');
+      const cp = await CompiledPlan.findOne({ user: userId, ...wsFilter }).lean();
+      if (cp) {
+        planData = { companyLogoUrl: cp.companyLogoUrl || '' };
+        compiledPlan = cp;
+      }
+    } catch {}
+
+    try {
+      const PlanProse = require('../models/PlanProse');
+      const prose = await PlanProse.findOne({ user: userId, ...wsFilter }).lean();
+      if (prose) proseData = prose;
+    } catch {}
+
+    try {
+      const snapshot = await financialSnapshotService.getOrCreate(userId, wsFilter.workspace);
+      if (snapshot) financialData = snapshot;
+    } catch {}
+
+    // Encode all data as base64 JSON to pass via URL
+    const printData = {
+      plan: planData,
+      compiled: compiledPlan,
+      prose: proseData,
+      financial: financialData,
+    };
+    const dataParam = encodeURIComponent(Buffer.from(JSON.stringify(printData)).toString('base64'));
+
+    const orgUrl = `${frontend}/print/plan?data=${dataParam}&orgOnly=1`;
+    const mainUrl = `${frontend}/print/plan?data=${dataParam}&noOrg=1`;
 
     const puppeteer = require('puppeteer');
     const fs = require('fs');
