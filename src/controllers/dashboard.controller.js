@@ -1825,10 +1825,13 @@ exports.exportPlanPdf = async (req, res, next) => {
     const viewAs = req.headers['x-view-as'] || '';
 
     // Build URLs with token as query parameter for the print page
+    // Also pass the backend API URL so the print page can make direct API calls
+    const backendUrl = process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get('host')}`;
     const tokenParam = encodeURIComponent(token);
+    const apiUrlParam = `&apiUrl=${encodeURIComponent(backendUrl)}`;
     const viewAsParam = viewAs ? `&viewAs=${encodeURIComponent(viewAs)}` : '';
-    const orgUrl = `${frontend}/print/plan?token=${tokenParam}&orgOnly=1${viewAsParam}`;
-    const mainUrl = `${frontend}/print/plan?token=${tokenParam}&noOrg=1${viewAsParam}`;
+    const orgUrl = `${frontend}/print/plan?token=${tokenParam}&orgOnly=1${apiUrlParam}${viewAsParam}`;
+    const mainUrl = `${frontend}/print/plan?token=${tokenParam}&noOrg=1${apiUrlParam}${viewAsParam}`;
 
     const puppeteer = require('puppeteer');
     const fs = require('fs');
