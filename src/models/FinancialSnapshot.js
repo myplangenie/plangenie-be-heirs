@@ -29,7 +29,7 @@ const FinancialSnapshotSchema = new Schema(
       monthlyCosts: { type: Number, default: 0 },
       fixedCosts: { type: Number, default: 0 },
       variableCostsPct: { type: Number, default: 0 },
-      biggestCostCategory: { type: String },
+      biggestCostCategory: [{ type: String }],
       confidence: { type: Number, default: 0, min: 0, max: 100 },
     },
 
