@@ -240,7 +240,7 @@ async function runJob() {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const fromAddress = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
-    const dashboardUrl = process.env.DASHBOARD_URL || 'https://app.plangenie.com';
+    const dashboardUrl = process.env.DASHBOARD_URL || 'https://www.plangenie.com/dashboard';
 
     // Get all active users (exclude collaborators - they view owner's data)
     const users = await User.find({

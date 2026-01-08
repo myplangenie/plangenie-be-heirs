@@ -513,6 +513,7 @@ exports.saveCompiledPlan = async (req, res, next) => {
     if (cp.values) {
       if (typeof cp.values.core !== 'undefined') a.valuesCore = String(cp.values.core || '');
       if (typeof cp.values.culture !== 'undefined') a.cultureFeeling = String(cp.values.culture || '');
+      if (Array.isArray(cp.values.traits)) a.valuesCoreKeywords = cp.values.traits.map(String).filter((t) => t.trim());
     }
     // Market
     if (cp.market) {
@@ -2196,7 +2197,7 @@ exports.exportStrategyCanvasPdf = async (req, res, next) => {
 
     const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
     const backendUrl = process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get('host')}`;
-    const url = `${frontend}/dashboard/strategy-canvas/print?printToken=${printToken}&apiUrl=${encodeURIComponent(backendUrl)}`;
+    const url = `${frontend}/print/strategy-canvas?printToken=${printToken}&apiUrl=${encodeURIComponent(backendUrl)}`;
 
     const puppeteer = require('puppeteer');
     const fs = require('fs');
@@ -2413,7 +2414,7 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
 
     const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
     const backendUrl = process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get('host')}`;
-    const url = `${frontend}/dashboard/departments/print?printToken=${printToken}&apiUrl=${encodeURIComponent(backendUrl)}`;
+    const url = `${frontend}/print/departments?printToken=${printToken}&apiUrl=${encodeURIComponent(backendUrl)}`;
 
     const puppeteer = require('puppeteer');
     const fs = require('fs');
