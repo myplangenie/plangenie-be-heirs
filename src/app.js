@@ -108,6 +108,9 @@ if (enableWorkspaces) {
 // Initialize weekly notification job (runs every Friday at 9 AM Eastern / 14:00 UTC)
 require('./jobs/weeklyNotifications').init();
 
+// Initialize daily wish job (runs daily at 12 noon Eastern / 17:00 UTC)
+require('./jobs/dailyWish').init();
+
 // Error handler
 app.use(errorHandler);
 

@@ -543,9 +543,11 @@ exports.respond = async (req, res) => {
           { type: 'function', function: { name: 'get_departments', description: 'List departments.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 100 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_core_projects_count', description: 'Get count of core strategic projects.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_core_projects', description: 'List core strategic projects.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_core_deliverables_count', description: 'Get count of active (not completed) deliverables under core strategic projects.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_deadlines', description: 'List upcoming deadlines.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_departmental_projects_count', description: 'Get count of departmental projects (action items assigned across all departments).', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
-          { type: 'function', function: { name: 'get_departmental_projects', description: 'List departmental projects (action items assigned to departments).', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 }, department: { type: 'string', description: 'Optional: filter by department key' } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_departmental_projects', description: 'List departmental projects (action items assigned to departments), including their deliverables.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 }, department: { type: 'string', description: 'Optional: filter by department key' } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_departmental_deliverables_count', description: 'Get count of active (not completed) deliverables under departmental projects.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_products', description: 'List products and services offered by the business.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_products_count', description: 'Get count of products/services.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_financial_snapshot', description: 'Get financial data including revenue, costs, cash, funding, margins.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
@@ -598,6 +600,15 @@ exports.respond = async (req, res) => {
             case 'get_departments': { const limit = limitNum(args?.limit, 20, 100); return { list: (departments || []).slice(0, limit).map((d)=>({ name: d?.name||'', status: d?.status||'', owner: d?.owner||'', dueDate: d?.dueDate||'' })) }; }
             case 'get_core_projects_count': { let count = 0; if (Array.isArray(aAns?.coreProjectDetails) && aAns.coreProjectDetails.length) count = aAns.coreProjectDetails.length; else if (Array.isArray(aAns?.coreProjects)) count = aAns.coreProjects.length; return { count }; }
             case 'get_core_projects': { const limit = limitNum(args?.limit, 10, 50); const list = []; if (Array.isArray(aAns?.coreProjectDetails) && aAns.coreProjectDetails.length) { aAns.coreProjectDetails.forEach((p) => list.push({ title: String(p?.title||'').trim(), ownerName: p?.ownerName || '', dueWhen: p?.dueWhen || '', deliverables: Array.isArray(p?.deliverables) ? p.deliverables : [] })); } else if (Array.isArray(aAns?.coreProjects)) { aAns.coreProjects.forEach((t) => list.push({ title: String(t||'').trim() })); } return { list: list.slice(0, limit) }; }
+            case 'get_core_deliverables_count': {
+              let count = 0;
+              const projects = Array.isArray(aAns?.coreProjectDetails) ? aAns.coreProjectDetails : [];
+              projects.forEach((p) => {
+                const dels = Array.isArray(p?.deliverables) ? p.deliverables : [];
+                dels.forEach((d) => { if (!d?.done) count++; });
+              });
+              return { count };
+            }
             case 'get_deadlines': { const limit = limitNum(args?.limit, 20, 200); return { list: deadlineItems().slice(0, limit).map((d)=>({ date: d.when.toISOString().slice(0,10), label: d.label })) }; }
             case 'get_departmental_projects_count': {
               const assignments = aAns.actionAssignments || {};
@@ -625,10 +636,23 @@ exports.respond = async (req, res) => {
                     kpi: String(u?.kpi || '').trim() || undefined,
                     resources: String(u?.resources || '').trim() || undefined,
                     dueWhen: String(u?.dueWhen || '').trim() || undefined,
+                    deliverables: Array.isArray(u?.deliverables) ? u.deliverables.map((d) => ({ text: String(d?.text || '').trim(), done: Boolean(d?.done), kpi: d?.kpi || undefined, dueWhen: d?.dueWhen || undefined })) : [],
                   });
                 });
               });
               return { list: list.slice(0, limit) };
+            }
+            case 'get_departmental_deliverables_count': {
+              let count = 0;
+              const assignments = aAns.actionAssignments || {};
+              Object.values(assignments).forEach((arr) => {
+                if (!Array.isArray(arr)) return;
+                arr.forEach((u) => {
+                  const dels = Array.isArray(u?.deliverables) ? u.deliverables : [];
+                  dels.forEach((d) => { if (!d?.done) count++; });
+                });
+              });
+              return { count };
             }
             case 'get_products': {
               const limit = limitNum(args?.limit, 20, 50);

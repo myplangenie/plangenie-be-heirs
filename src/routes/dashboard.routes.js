@@ -31,6 +31,13 @@ router.patch('/strategy-canvas',  ctrl.updateStrategyCanvas);
 router.get('/notifications',  ctrl.getNotifications);
 router.post('/notifications/mark-all-read',  ctrl.markAllRead);
 router.patch('/notifications/preferences',  ctrl.updateNotificationPrefs);
+router.get('/notifications/read-ids',  ctrl.getReadNotificationIds);
+router.post('/notifications/mark-read',  ctrl.markNotificationsRead);
+
+// Daily Wishes
+router.get('/daily-wishes',  ctrl.getDailyWishes);
+router.get('/daily-wishes/today',  ctrl.getTodayWish);
+router.post('/daily-wishes/:id/view',  ctrl.markWishViewed);
 
 // Departments
 router.get('/departments',  ctrl.getDepartments);
@@ -74,6 +81,7 @@ router.post('/plan/compiled', ctrl.saveCompiledPlan);
 router.get('/plan/compiled', ctrl.getCompiledPlan);
 // Plan Prose (AI-generated narrative sections)
 router.get('/plan/prose', ctrl.getPlanProse);
+router.put('/plan/prose', ctrl.savePlanProse);
 // Allow Lite users to generate Market/Financial prose for the plan
 router.post('/plan/prose/generate', ctrl.generatePlanProse);
 

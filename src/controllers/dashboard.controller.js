@@ -1,6 +1,7 @@
 const Dashboard = require('../models/Dashboard');
 const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
+const DailyWish = require('../models/DailyWish');
 const { hasDepartmentRestriction, filterCompiledPlan, filterActionAssignments } = require('../utils/filterByDepartment');
 const { getWorkspaceFilter, getWorkspaceId, addWorkspaceToDoc } = require('../utils/workspaceQuery');
 const Notification = require('../models/Notification');
@@ -1464,6 +1465,42 @@ exports.getPlanProse = async (req, res, next) => {
   }
 };
 
+// PUT /api/dashboard/plan/prose
+// Body: { executiveSummary?: string, marketStatement?: string, financialStatement?: string }
+exports.savePlanProse = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const { executiveSummary, marketStatement, financialStatement } = req.body || {};
+    const ob = await Onboarding.findOne(wsFilter) || await Onboarding.create(addWorkspaceToDoc({ user: userId }, req));
+
+    // Update only the fields that were provided
+    const currentProse = (ob.answers && ob.answers.planProse) || {};
+    const updatedProse = {
+      ...currentProse,
+      ...(typeof executiveSummary === 'string' ? { executiveSummary } : {}),
+      ...(typeof marketStatement === 'string' ? { marketStatement } : {}),
+      ...(typeof financialStatement === 'string' ? { financialStatement } : {}),
+    };
+
+    ob.answers = { ...(ob.answers || {}), planProse: updatedProse };
+    await ob.save();
+
+    return res.json({
+      prose: {
+        executiveSummary: updatedProse.executiveSummary || '',
+        marketStatement: updatedProse.marketStatement || '',
+        financialStatement: updatedProse.financialStatement || '',
+        generatedAt: updatedProse.generatedAt || null,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // POST /api/dashboard/plan/prose/generate
 // Body: { sections?: ['executive','market','financial'] }
 exports.generatePlanProse = async (req, res, next) => {
@@ -1847,13 +1884,20 @@ exports.exportPlanPdf = async (req, res, next) => {
     let proseData = {};
     let financialData = {};
 
+    // Fetch logo from Plan model (where uploadCompanyLogo saves it)
+    let logoUrl = '';
+    try {
+      const planDoc = await Plan.findOne(wsFilter).lean().exec();
+      logoUrl = String(planDoc?.companyLogoUrl || '');
+    } catch {}
+
     try {
       const ob = await Onboarding.findOne(wsFilter).lean().exec();
       if (ob) {
         const a = ob.answers || {};
         // Build plan data exactly like getCompiledPlan does
         compiledPlan = {
-          companyLogoUrl: a.companyLogoUrl || ob.companyLogoUrl || '',
+          companyLogoUrl: logoUrl || a.companyLogoUrl || ob.companyLogoUrl || '',
           userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
           businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '', ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '' },
           vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
@@ -2118,12 +2162,42 @@ exports.exportStrategyCanvasPdf = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    // Fetch strategy canvas data server-side (same logic as getStrategyCanvas)
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
+    const a = ob?.answers || {};
+    const canvasData = {
+      ubp: (a.ubp || ob?.vision?.ubp || '').trim(),
+      purpose: String(a.purpose || '').trim(),
+      oneYear: (a.vision1y || '').split('\n').map((s)=>s.trim()).filter(Boolean),
+      threeYear: (a.vision3y || '').split('\n').map((s)=>s.trim()).filter(Boolean),
+      summary: String(a.identitySummary || '').trim(),
+      values: { core: String(a.valuesCore || '').trim(), culture: String(a.cultureFeeling || '').trim() },
+      swot: {
+        strengths: String(a.swotStrengths || '').split('\n').map((s)=>s.trim()).filter(Boolean),
+        weaknesses: String(a.swotWeaknesses || '').split('\n').map((s)=>s.trim()).filter(Boolean),
+        opportunities: String(a.swotOpportunities || '').split('\n').map((s)=>s.trim()).filter(Boolean),
+        threats: String(a.swotThreats || '').split('\n').map((s)=>s.trim()).filter(Boolean),
+      },
+      goals: Object.values(a.actionAssignments || {}).flat().map((u)=> String(u?.goal||'').trim()).filter(Boolean),
+    };
+    const businessName = String(ob?.businessProfile?.businessName || '');
+
+    // Store print data with temporary token (same approach as plan export)
+    const crypto = require('crypto');
+    const printToken = crypto.randomBytes(32).toString('hex');
+    const printData = { canvas: canvasData, businessName };
+    if (!global._printDataCache) global._printDataCache = new Map();
+    global._printDataCache.set(printToken, { data: printData, expires: Date.now() + 5 * 60 * 1000 });
+    // Clean up expired entries
+    for (const [key, val] of global._printDataCache.entries()) {
+      if (val.expires < Date.now()) global._printDataCache.delete(key);
+    }
+
     const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
-    const url = `${frontend}/dashboard/strategy-canvas/print?print=1`;
-    const authHeader = req.headers['authorization'] || '';
-    const m = String(authHeader).match(/Bearer\s+(.+)/i);
-    const token = m?.[1] || '';
-    const viewAs = req.headers['x-view-as'] || '';
+    const backendUrl = process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get('host')}`;
+    const url = `${frontend}/dashboard/strategy-canvas/print?printToken=${printToken}&apiUrl=${encodeURIComponent(backendUrl)}`;
+
     const puppeteer = require('puppeteer');
     const fs = require('fs');
     const path = require('path');
@@ -2155,9 +2229,6 @@ exports.exportStrategyCanvasPdf = async (req, res, next) => {
     });
     try {
       const page = await browser.newPage();
-      await page.evaluateOnNewDocument((t, va) => {
-        try { localStorage.setItem('pg_token', String(t || '')); if (va) localStorage.setItem('pg_view_as', String(va)); } catch {}
-      }, token, viewAs);
       await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
       await page.emulateMediaType('screen').catch(()=>{});
       try { await page.waitForFunction('window.__PG_PRINT_READY === true', { timeout: 5000 }); } catch {}
@@ -2232,12 +2303,118 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    // Fetch departments data server-side (same logic as getDepartments)
+    const [ob, user] = await Promise.all([
+      Onboarding.findOne(wsFilter).lean().exec(),
+      User.findById(userId).lean().exec(),
+    ]);
+    const a = ob?.answers || {};
+    const assignments = a.actionAssignments || {};
+    const label = (k) => ({
+      marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability'
+    }[k] || k);
+    const parseDate = (s) => { const m=String(s||'').match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:''; };
+    const pctForItem = (it) => {
+      const v = Number(it?.progress);
+      if (isFinite(v)) return Math.max(0, Math.min(100, Math.round(v)));
+      const st = String(it?.status || '').toLowerCase();
+      if (/done|complete|completed/.test(st)) return 100;
+      if (/in[ _-]*progress/.test(st)) return 50;
+      if (/not[ _-]*started/.test(st)) return 0;
+      return 0;
+    };
+    const statusFromProgress = (p) => {
+      if (p >= 80) return 'on-track';
+      if (p >= 50) return 'in-progress';
+      return 'at-risk';
+    };
+    const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+    const canon = (s) => String(s || '').trim().toLowerCase();
+    const deptMap = new Map();
+    const sections = Array.isArray(a.actionSections) && a.actionSections.length
+      ? a.actionSections.map((s)=>({ key: String(s?.key||'').trim(), name: String(s?.label||'').trim() || label(String(s?.key||'')) })).filter((s)=>s.key)
+      : null;
+    if (sections && sections.length) {
+      for (const s of sections) {
+        const name = s.name || label(s.key);
+        const arr = assignments[s.key] || [];
+        const dates = (arr || []).filter((u) => pctForItem(u) < 100).map((u)=>parseDate(u?.dueWhen)).filter(Boolean).sort();
+        const dueDate = dates[0] || '-';
+        deptMap.set(canon(name), { key: s.key, name, dueDate });
+      }
+    } else {
+      for (const k of Object.keys(assignments || {})) {
+        const name = label(k);
+        const arr = assignments[k] || [];
+        const dates = (arr || []).filter((u) => pctForItem(u) < 100).map((u)=>parseDate(u?.dueWhen)).filter(Boolean).sort();
+        const dueDate = dates[0] || '-';
+        deptMap.set(canon(name), { key: k, name, dueDate });
+      }
+    }
+    const headFor = (deptName) => {
+      const candidates = org.filter((p) => canon(p.department) === canon(deptName));
+      if (!candidates.length) return null;
+      const byId = new Map((org || []).map((p) => [String(p.id || ''), p]));
+      const isTopOfDept = (p) => {
+        const parentId = p.parentId == null ? null : String(p.parentId);
+        if (!parentId) return true;
+        const parent = byId.get(parentId);
+        if (!parent) return true;
+        return canon(parent.department) !== canon(deptName);
+      };
+      const top = candidates.filter(isTopOfDept);
+      const pool = top.length ? top : candidates;
+      const score = (title = '') => {
+        const t = String(title).toLowerCase();
+        if (/\bchief\b|\bvp\b|vice president/.test(t)) return 5;
+        if (/head of|\bhead\b/.test(t)) return 4;
+        if (/director/.test(t)) return 3;
+        if (/lead/.test(t)) return 2;
+        if (/manager/.test(t)) return 1;
+        return 0;
+      };
+      const sorted = pool.slice().sort((a,b)=> score(b.position)-score(a.position));
+      const pick = sorted[0] || pool[0];
+      return `${pick?.name || ''}`.trim() || null;
+    };
+    const fallbackOwner = (user?.fullName || '').trim() || '-';
+    const stored = await Department.find(wsFilter).lean().exec();
+    const byName = new Map((stored || []).map((d) => [d.name, d]));
+    const departments = Array.from(deptMap.values()).map((r) => {
+      const s = byName.get(r.name);
+      const deptKey = r.key || Object.keys(assignments || {}).find((k) => canon(label(k)) === canon(r.name));
+      let progress = 0;
+      if (deptKey && Array.isArray(assignments[deptKey])) {
+        const arr = assignments[deptKey];
+        const total = arr.length || 0;
+        if (total > 0) {
+          const sum = arr.reduce((acc, it) => acc + pctForItem(it), 0);
+          progress = Math.round(sum / total);
+        }
+      }
+      const owner = (s?.owner && String(s.owner).trim()) ? s.owner : (headFor(r.name) || fallbackOwner);
+      const dueDate = r.dueDate || '-';
+      const status = statusFromProgress(progress);
+      return { key: r.key, name: r.name, owner, dueDate, progress, status };
+    });
+    const businessName = String(ob?.businessProfile?.businessName || '');
+
+    // Store print data with temporary token (same approach as plan export)
+    const crypto = require('crypto');
+    const printToken = crypto.randomBytes(32).toString('hex');
+    const printData = { departments, businessName };
+    if (!global._printDataCache) global._printDataCache = new Map();
+    global._printDataCache.set(printToken, { data: printData, expires: Date.now() + 5 * 60 * 1000 });
+    // Clean up expired entries
+    for (const [key, val] of global._printDataCache.entries()) {
+      if (val.expires < Date.now()) global._printDataCache.delete(key);
+    }
+
     const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
-    const url = `${frontend}/dashboard/departments/print?print=1`;
-    const authHeader = req.headers['authorization'] || '';
-    const m = String(authHeader).match(/Bearer\s+(.+)/i);
-    const token = m?.[1] || '';
-    const viewAs = req.headers['x-view-as'] || '';
+    const backendUrl = process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get('host')}`;
+    const url = `${frontend}/dashboard/departments/print?printToken=${printToken}&apiUrl=${encodeURIComponent(backendUrl)}`;
+
     const puppeteer = require('puppeteer');
     const fs = require('fs');
     const path = require('path');
@@ -2269,7 +2446,6 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
     });
     try {
       const page = await browser.newPage();
-      await page.evaluateOnNewDocument((t, va) => { try { localStorage.setItem('pg_token', String(t||'')); if (va) localStorage.setItem('pg_view_as', String(va)); } catch {} }, token, viewAs);
       await page.goto(url, { waitUntil: 'networkidle0', timeout: 60000 });
       await page.emulateMediaType('screen').catch(()=>{});
       try { await page.waitForFunction('window.__PG_PRINT_READY === true', { timeout: 5000 }); } catch {}
@@ -3473,6 +3649,176 @@ exports.syncFinancialFromOnboarding = async (req, res, next) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const snapshot = await financialSnapshotService.syncFromOnboarding(userId, workspaceId);
     return res.json({ ok: true, snapshot });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/notifications/read-ids
+// Returns the list of notification IDs that have been marked as read
+exports.getReadNotificationIds = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const ob = await Onboarding.findOne(wsFilter).select('readNotificationIds').lean().exec();
+    return res.json({ readIds: ob?.readNotificationIds || [] });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/notifications/mark-read
+// Marks the given notification IDs as read and cleans up stale IDs
+// Body: { ids: string[], currentIds?: string[] }
+// - ids: notification IDs to mark as read
+// - currentIds: (optional) all currently valid notification IDs; if provided, stale IDs are removed
+exports.markNotificationsRead = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const { ids, currentIds } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ message: 'ids array is required' });
+    }
+
+    if (Array.isArray(currentIds) && currentIds.length > 0) {
+      // Clean up: only keep IDs that are in currentIds (valid notifications)
+      // and add the new IDs being marked as read
+      const ob = await Onboarding.findOne(wsFilter).select('readNotificationIds').lean().exec();
+      const existingReadIds = new Set(ob?.readNotificationIds || []);
+      const validIds = new Set(currentIds);
+
+      // Keep only read IDs that are still valid, plus the new ones
+      const cleanedIds = [...existingReadIds].filter(id => validIds.has(id));
+      const newReadIds = [...new Set([...cleanedIds, ...ids])];
+
+      await Onboarding.updateOne(
+        wsFilter,
+        { $set: { readNotificationIds: newReadIds } }
+      ).exec();
+    } else {
+      // Just add IDs without cleanup
+      await Onboarding.updateOne(
+        wsFilter,
+        { $addToSet: { readNotificationIds: { $each: ids } } }
+      ).exec();
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/daily-wishes
+// Fetch daily wishes for the current user (most recent first)
+// Query params: limit (default 7), includeViewed (default true)
+exports.getDailyWishes = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const limit = Math.min(parseInt(req.query.limit, 10) || 7, 30);
+    const includeViewed = req.query.includeViewed !== 'false';
+
+    const filter = { user: userId };
+    if (wsFilter.workspace) filter.workspace = wsFilter.workspace;
+    if (!includeViewed) filter.viewed = { $ne: true };
+
+    const wishes = await DailyWish.find(filter)
+      .sort({ wishDate: -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+
+    return res.json({
+      wishes: wishes.map((w) => ({
+        id: w._id.toString(),
+        wishDate: w.wishDate,
+        title: w.title,
+        message: w.message,
+        category: w.category,
+        viewed: !!w.viewed,
+        viewedAt: w.viewedAt || null,
+        createdAt: w.createdAt,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/daily-wishes/today
+// Get today's daily wish (if any)
+exports.getTodayWish = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    // Get today's date in ET timezone
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Toronto',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const todayET = formatter.format(new Date());
+
+    const filter = { user: userId, wishDate: todayET };
+    if (wsFilter.workspace) filter.workspace = wsFilter.workspace;
+
+    const wish = await DailyWish.findOne(filter).lean().exec();
+
+    if (!wish) {
+      return res.json({ wish: null });
+    }
+
+    return res.json({
+      wish: {
+        id: wish._id.toString(),
+        wishDate: wish.wishDate,
+        title: wish.title,
+        message: wish.message,
+        category: wish.category,
+        viewed: !!wish.viewed,
+        viewedAt: wish.viewedAt || null,
+        createdAt: wish.createdAt,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/daily-wishes/:id/view
+// Mark a daily wish as viewed
+exports.markWishViewed = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const wishId = req.params.id;
+    if (!wishId) return res.status(400).json({ message: 'Wish ID is required' });
+
+    const filter = { _id: wishId, user: userId };
+    if (wsFilter.workspace) filter.workspace = wsFilter.workspace;
+
+    const wish = await DailyWish.findOneAndUpdate(
+      filter,
+      { $set: { viewed: true, viewedAt: new Date() } },
+      { new: true }
+    ).lean().exec();
+
+    if (!wish) {
+      return res.status(404).json({ message: 'Wish not found' });
+    }
+
+    return res.json({ ok: true });
   } catch (err) {
     next(err);
   }

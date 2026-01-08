@@ -298,7 +298,7 @@ async function callOpenAI({ type, input, contextText }) {
 }
 
 // New: return an array of n suggestions (default 3)
-async function callOpenAIList({ type, input, contextText, n = 3, nonce }) {
+async function callOpenAIList({ type, input, contextText, n = 3, nonce, avoid = [] }) {
   const client = getOpenAI();
   const system =
     'You are a helpful business planning assistant. ' +
@@ -317,6 +317,12 @@ async function callOpenAIList({ type, input, contextText, n = 3, nonce }) {
     }
   } catch (_) {}
 
+  // Build avoidance text from previous suggestions
+  let avoidText = '';
+  if (Array.isArray(avoid) && avoid.length > 0) {
+    avoidText = `IMPORTANT: Do NOT repeat or rephrase these previous suggestions. Generate completely different ideas:\nPrevious suggestions to avoid: ${avoid.map((s, i) => `"${s}"`).join(', ')}`;
+  }
+
   const userPrompt = [
     contextText || '',
     ragText2 || '',
@@ -324,8 +330,8 @@ async function callOpenAIList({ type, input, contextText, n = 3, nonce }) {
     'Constraints:',
     '- Each option should be 1-2 sentences.',
     '- Be specific and user-centered.',
-    '- Generate fresh, unique suggestions different from any previous responses.',
-    nonce ? `- Request ID: ${nonce}` : '',
+    avoidText,
+    '- Generate fresh, unique suggestions with different angles and perspectives.',
     '- Return ONLY a valid JSON array of strings (length exactly ${n}).',
     '- Do NOT include any extra text before or after the JSON.',
     '',
@@ -336,7 +342,7 @@ async function callOpenAIList({ type, input, contextText, n = 3, nonce }) {
 
   const resp = await client.chat.completions.create({
     model: 'gpt-4o-mini',
-    temperature: 0.8,
+    temperature: avoid.length > 0 ? 1.0 : 0.8,
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: userPrompt },
@@ -1157,7 +1163,7 @@ exports.rewriteMarketPartners = async (req, res) => {
 
 exports.suggestMarketCompetitors = async (req, res) => {
   try {
-    const { input, nonce } = req.body || {};
+    const { input, nonce, previousSuggestions, previousCompetitors } = req.body || {};
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
   const ob = userId ? await Onboarding.findOne(wsFilter) : null;
@@ -1197,12 +1203,20 @@ exports.suggestMarketCompetitors = async (req, res) => {
     const client = getOpenAI();
     const system = 'You are a helpful competitive analyst. Return structured JSON only.';
     const namesText = compNames.length ? ('Competitors to analyze: ' + compNames.join(', ')) : '';
+    // Build avoidance text from previous competitor analysis
+    let avoidCompetitorText = '';
+    if (Array.isArray(previousCompetitors) && previousCompetitors.length > 0) {
+      const prevAnalysis = previousCompetitors.map((c) =>
+        `${c.name}: theyDoBetter="${c.theyDoBetter}", weDoBetter="${c.weDoBetter}"`
+      ).join('; ');
+      avoidCompetitorText = `IMPORTANT: Do NOT repeat these previous insights. Generate completely different analysis:\nPrevious: ${prevAnalysis}`;
+    }
     const userPrompt = [
       contextText || '',
       namesText,
       'Task: For each competitor, provide a one-sentence "they do better" and a one-sentence "we do better".',
-      'Important: Generate fresh, unique insights different from any previous suggestions.',
-      nonce ? `Request ID: ${nonce}` : '',
+      avoidCompetitorText,
+      'Generate fresh, unique insights with different angles and perspectives.',
       'Output format (strict JSON): [ { "name": string, "theyDoBetter": string, "weDoBetter": string } ]',
       'No extra commentary before or after the JSON.'
     ].filter(Boolean).join('\n');
@@ -1210,7 +1224,7 @@ exports.suggestMarketCompetitors = async (req, res) => {
     try {
       const resp = await client.chat.completions.create({
         model: 'gpt-4o-mini',
-        temperature: 0.95,
+        temperature: 1.0,
         messages: [ { role: 'system', content: system }, { role: 'user', content: userPrompt } ],
         max_tokens: 500,
       });
@@ -1225,7 +1239,9 @@ exports.suggestMarketCompetitors = async (req, res) => {
     } catch (_) {}
     // Add any enriched links first
     Object.entries(linkMap).forEach(([name,url])=>{ links.push({ title: name, url }); });
-    const suggestions = await callOpenAIList({ type: 'Competitive differentiation notes', input, contextText, n: 3, nonce });
+    // Build avoidance text for suggestions
+    const avoidSuggestionsArr = Array.isArray(previousSuggestions) ? previousSuggestions.filter(Boolean) : [];
+    const suggestions = await callOpenAIList({ type: 'Competitive differentiation notes', input, contextText, n: 3, nonce, avoid: avoidSuggestionsArr });
     return res.json({ suggestion: suggestions[0] || '', suggestions, links, competitors });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1775,7 +1791,14 @@ exports.suggestActionResources = async (req, res) => {
     const { input } = req.body || {};
     const userId = req.user?.id;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    const suggestion = await callOpenAI({ type: 'resources/tools/budget summary (short phrase)', input, contextText });
+
+    // Dynamic budget prompt based on project context
+    const budgetType = `Estimate a realistic project budget/resources for this specific project.
+Consider the project type, department, scope, and business context.
+Return ONLY a dollar amount (e.g., "$3,500" or "$12,000").
+Be realistic: small tasks $500-$3k, medium projects $3k-$15k, major initiatives $15k-$100k+.`;
+
+    const suggestion = await callOpenAI({ type: budgetType, input, contextText });
     return res.json({ suggestion });
   } catch (err) {
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestion';
@@ -1860,6 +1883,27 @@ exports.suggestCoreProject = async (req, res) => {
 
     const wanted = (typeof n === 'number' && n > 0) ? Math.min(8, Math.max(1, n)) : 4;
 
+    // Calculate example dates for the prompt - starting from current week
+    const now = new Date();
+    const addDays = (d, days) => { const r = new Date(d); r.setDate(r.getDate() + days); return r.toISOString().slice(0, 10); };
+    const week1 = addDays(now, 7);
+    const week2 = addDays(now, 14);
+    const month1 = addDays(now, 30);
+    const month2 = addDays(now, 60);
+    const month4 = addDays(now, 120);
+    const month6 = addDays(now, 180);
+    const month9 = addDays(now, 270);
+    const month12 = addDays(now, 365);
+
+    // Randomize the timing pattern to vary projects - ensures some deliverables are immediate
+    const patterns = [
+      `1st: within 1-2 weeks (~${week1}), 2nd: within 1-2 months (~${month1}), 3rd: around 4 months (~${month4}), 4th+: spread between 6-12 months`,
+      `1st: within 1 week (~${week1}), 2nd: within 3-4 weeks (~${month1}), 3rd: around 2-3 months (~${month2}), 4th+: around 6-9 months`,
+      `1st: within 2 weeks (~${week2}), 2nd: within 5-6 weeks, 3rd: around 3 months, 4th+: around 6-12 months`,
+      `1st: within 1 week (~${week1}), 2nd: around 3-4 weeks, 3rd: around 2 months (~${month2}), 4th+: around 4-6 months (~${month6})`,
+    ];
+    const selectedPattern = patterns[Math.floor(Math.random() * patterns.length)];
+
     const system = [
       'You are a helpful business planning assistant.',
       'Propose a core strategic project based ONLY on the provided business context and input. Do not fabricate external statistics.',
@@ -1867,8 +1911,11 @@ exports.suggestCoreProject = async (req, res) => {
       '{ "title": string, "goal": string, "dueWhen": string(YYYY-MM-DD), "ownerName"?: string, "deliverables": [{ "text": string, "kpi": string, "dueWhen": string(YYYY-MM-DD) }] }',
       'Constraints:',
       `- Deliverables array length: ${wanted}. Each item must have a unique KPI and dueWhen (YYYY-MM-DD).`,
-      `- IMPORTANT: Distribute deliverable due dates evenly across the next 12 months. For example, if there are 4 deliverables, set them at approximately months 3, 6, 9, and 12 from today.`,
-      '- The overall project dueWhen must be at or after the latest deliverable dueWhen (approximately 12 months from today).',
+      `- CRITICAL: The FIRST deliverable MUST be due within the first 1-2 weeks (use dates like ${week1} or ${week2}). Users need immediate action items for their weekly priorities.`,
+      `- Timing pattern for ${wanted} deliverables: ${selectedPattern}`,
+      `- Early deliverables should be quick wins (achievable in days/weeks). Later deliverables are bigger milestones.`,
+      `- DO NOT set all deliverables months away. Spread them: some this week, some this month, some later.`,
+      '- The overall project dueWhen must be at or after the latest deliverable dueWhen.',
       '- Keep title short (3–6 words). Keep KPIs concise (short metric phrase).',
     ].join('\n');
 
@@ -1933,17 +1980,23 @@ exports.suggestCoreProject = async (req, res) => {
       return { ...d, kpi: k };
     });
 
-    // Auto-distribute deliverable dates evenly across 12 months if missing
+    // Auto-distribute deliverable dates starting from current week if missing
     const delCount = out.deliverables.length;
     if (delCount > 0) {
       const now = new Date();
-      const monthsPerDeliverable = Math.floor(12 / delCount);
       out.deliverables = out.deliverables.map((d, i) => {
         if (!d.dueWhen) {
-          // Calculate month offset: distribute evenly across 12 months
-          const monthOffset = monthsPerDeliverable * (i + 1);
+          let daysOffset;
+          if (i === 0) {
+            // First deliverable within 1-2 weeks for immediate priorities
+            daysOffset = 7;
+          } else {
+            // Spread remaining evenly from ~1 month to 12 months
+            const position = i / (delCount - 1 || 1);
+            daysOffset = Math.round(30 + position * (365 - 30));
+          }
           const dueDate = new Date(now);
-          dueDate.setMonth(dueDate.getMonth() + monthOffset);
+          dueDate.setDate(dueDate.getDate() + daysOffset);
           d.dueWhen = dueDate.toISOString().slice(0, 10);
         }
         return d;
@@ -1986,16 +2039,74 @@ exports.suggestActionAll = async (req, res) => {
     const userId = req.user?.id;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
 
+    // Detect department/project type from input for realistic budget ranges
+    const inputLower = String(input || '').toLowerCase();
+    let budgetHint = '';
+    let baseRange = { min: 2000, max: 15000 };
+
+    if (/marketing|brand|campaign|advertis|social media|content/i.test(inputLower)) {
+      budgetHint = 'Marketing projects typically range $2,500-$35,000 depending on campaign scope.';
+      baseRange = { min: 2500, max: 35000 };
+    } else if (/tech|software|app|platform|system|automat|digital|website|mobile/i.test(inputLower)) {
+      budgetHint = 'Technology projects typically range $8,000-$75,000 depending on complexity.';
+      baseRange = { min: 8000, max: 75000 };
+    } else if (/sales|revenue|customer acquisition|pipeline/i.test(inputLower)) {
+      budgetHint = 'Sales initiatives typically range $3,000-$25,000 depending on scope.';
+      baseRange = { min: 3000, max: 25000 };
+    } else if (/hr|human resource|people|hiring|recruit|training|employee/i.test(inputLower)) {
+      budgetHint = 'HR projects typically range $1,500-$12,000 depending on scope.';
+      baseRange = { min: 1500, max: 12000 };
+    } else if (/operations|process|efficiency|workflow|logistics/i.test(inputLower)) {
+      budgetHint = 'Operations projects typically range $2,000-$20,000 depending on scope.';
+      baseRange = { min: 2000, max: 20000 };
+    } else if (/finance|accounting|budget|financial/i.test(inputLower)) {
+      budgetHint = 'Finance projects typically range $1,500-$15,000 depending on scope.';
+      baseRange = { min: 1500, max: 15000 };
+    } else if (/partner|alliance|strategic|expansion/i.test(inputLower)) {
+      budgetHint = 'Partnership initiatives typically range $5,000-$40,000 depending on scope.';
+      baseRange = { min: 5000, max: 40000 };
+    } else if (/community|impact|social|nonprofit/i.test(inputLower)) {
+      budgetHint = 'Community/impact projects typically range $1,000-$10,000 depending on scope.';
+      baseRange = { min: 1000, max: 10000 };
+    }
+
+    // Dynamic budget prompt that considers project type, department, and business context
+    const budgetPrompt = `Estimate a realistic project budget based on the specific project details.
+${budgetHint}
+
+Consider: project type, department, business stage/industry, deliverables scope.
+IMPORTANT: Do NOT always use round numbers like $5,000 or $10,000. Use specific amounts like $3,750, $8,200, $12,500, $17,800.
+
+Return ONLY a single dollar amount.`;
+
     const [goal, rawResources, kpi, rawTitle] = await Promise.all([
       callOpenAI({ type: 'action plan goal (1-2 sentences)', input, contextText }),
-      callOpenAI({ type: 'estimated project budget as a dollar amount (e.g., "$5,000" or "$15,000"). State just the amount.', input, contextText }),
+      callOpenAI({ type: budgetPrompt, input, contextText }),
       callOpenAI({ type: 'KPI metric (short phrase)', input, contextText }),
       callOpenAI({ type: 'project title ONLY (3-6 words max). Examples: "Local Tech Partnerships Initiative", "Customer Feedback System", "Mobile App Development". Return ONLY the title, no descriptions or other fields.', input, contextText }),
     ]);
-    // Extract numeric value from resources - look for dollar amounts or plain numbers
+
+    // Extract numeric value from resources
     const resourcesStr = String(rawResources || '');
     const resourcesMatch = resourcesStr.match(/\$?\s*([\d,]+(?:\.\d+)?)/);
-    const resources = resourcesMatch ? resourcesMatch[1].replace(/,/g, '') : '5000'; // Default to 5000 if no number found
+    let resources;
+
+    if (resourcesMatch) {
+      // Parse the AI-generated amount
+      let amount = parseFloat(resourcesMatch[1].replace(/,/g, ''));
+      // Add slight random variation (±15%) to avoid identical amounts
+      const variation = 0.85 + (Math.random() * 0.3); // 0.85 to 1.15
+      amount = Math.round(amount * variation / 50) * 50; // Round to nearest $50
+      // Ensure within reasonable bounds
+      amount = Math.max(baseRange.min * 0.5, Math.min(baseRange.max * 1.5, amount));
+      resources = String(Math.round(amount));
+    } else {
+      // Generate varied fallback based on detected type
+      const range = baseRange.max - baseRange.min;
+      const randomAmount = baseRange.min + (Math.random() * range);
+      resources = String(Math.round(randomAmount / 50) * 50); // Round to nearest $50
+    }
+
     // Clean title: remove any prefix and extra content after pipe/colon separators
     let title = String(rawTitle || '').replace(/^Title:\s*/i, '').trim();
     // Remove anything after | or : that looks like additional fields
@@ -2043,13 +2154,29 @@ exports.suggestActionDue = async (req, res) => {
     const { input } = req.body || {};
     const userId = req.user?.id;
     const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    // Calculate date range: from today to 12 months from now
+    // Calculate date range with example near-term dates
     const now = new Date();
+    const addDays = (d, days) => { const r = new Date(d); r.setDate(r.getDate() + days); return r.toISOString().slice(0, 10); };
     const minDate = now.toISOString().slice(0, 10);
+    const week1 = addDays(now, 7);
+    const week2 = addDays(now, 14);
+    const month1 = addDays(now, 30);
     const maxDate = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate()).toISOString().slice(0, 10);
+
+    // Randomly suggest different time horizons to vary the distribution
+    const timeHints = [
+      `For quick tasks, use near-term dates (${week1} to ${month1}). For complex tasks, use later dates.`,
+      `Consider if this is a quick win (1-2 weeks: ${week1}-${week2}) or a longer initiative (1-6 months).`,
+      `Simple tasks should be due within 1-4 weeks. Complex projects can span months.`,
+      `Prioritize actionable items with near-term dates when appropriate (${week1} to ${month1}).`,
+    ];
+    const selectedHint = timeHints[Math.floor(Math.random() * timeHints.length)];
+
     const contextText = [
       baseCtx,
-      `Constraints: Return only ISO date (YYYY-MM-DD). Date must be between ${minDate} and ${maxDate} (within the next 12 months). Distribute dates evenly across the year based on project scope and complexity.`
+      `Constraints: Return only ISO date (YYYY-MM-DD). Date must be between ${minDate} and ${maxDate} (within the next 12 months).`,
+      selectedHint,
+      `Choose dates based on task complexity - not all tasks should be months away.`
     ].filter(Boolean).join('\n');
     const suggestion = await callOpenAI({ type: 'due date in ISO format', input, contextText });
     // basic sanitize for date-like

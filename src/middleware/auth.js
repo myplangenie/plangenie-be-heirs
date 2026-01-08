@@ -27,7 +27,18 @@ function auth(required = true) {
     } catch (err) {
       // Differentiate between expired and invalid tokens
       if (err.name === 'TokenExpiredError') {
+        // For optional auth, allow proceeding with null user instead of forcing refresh
+        // This prevents errors when token is stale but user doesn't need to be authenticated
+        if (!required) {
+          req.user = null;
+          return next();
+        }
         return res.status(401).json({ message: 'Token expired', code: 'TOKEN_EXPIRED' });
+      }
+      // For invalid tokens with optional auth, proceed with null user
+      if (!required) {
+        req.user = null;
+        return next();
       }
       return res.status(401).json({ message: 'Invalid token' });
     }

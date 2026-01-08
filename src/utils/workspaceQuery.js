@@ -10,7 +10,7 @@
  * @returns {object} MongoDB query filter { user, workspace }
  */
 function getWorkspaceFilter(req) {
-  const filter = { user: req.user.id };
+  const filter = { user: req.user?.id || null };
   // Always include workspace in filter - either the selected workspace or null
   // If workspace is null, queries will only find legacy null-workspace data (which should be empty after migration)
   filter.workspace = req.workspace?._id || null;

@@ -2,6 +2,7 @@ const express = require('express');
 const requireAdmin = require('../middleware/admin');
 const ctrl = require('../controllers/admin.controller');
 const weeklyNotifications = require('../jobs/weeklyNotifications');
+const dailyWish = require('../jobs/dailyWish');
 
 const router = express.Router();
 
@@ -27,6 +28,18 @@ router.post('/test-weekly-digest', async (req, res) => {
     res.json({ ok: true, message: 'Weekly digest job completed' });
   } catch (err) {
     console.error('[admin] Weekly digest test failed:', err?.message || err);
+    res.status(500).json({ ok: false, message: err?.message || 'Job failed' });
+  }
+});
+
+// Test endpoint to manually trigger daily wish
+router.post('/test-daily-wish', async (req, res) => {
+  try {
+    console.log('[admin] Manually triggering daily wish job...');
+    await dailyWish.runJob();
+    res.json({ ok: true, message: 'Daily wish job completed' });
+  } catch (err) {
+    console.error('[admin] Daily wish test failed:', err?.message || err);
     res.status(500).json({ ok: false, message: err?.message || 'Job failed' });
   }
 });
