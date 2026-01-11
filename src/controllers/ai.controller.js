@@ -1214,7 +1214,9 @@ exports.suggestMarketCompetitors = async (req, res) => {
     const userPrompt = [
       contextText || '',
       namesText,
-      'Task: For each competitor, provide a one-sentence "they do better" and a one-sentence "we do better".',
+      'IMPORTANT: This is a COMPETITOR analysis only. Competitors are businesses that compete with us for the same customers.',
+      'CRITICAL: Do NOT include any partners, suppliers, service providers, or collaborators mentioned in the context. Partners are NOT competitors.',
+      'Task: For each competitor, provide a one-sentence "they do better" (their competitive advantage over us) and a one-sentence "we do better" (our competitive advantage over them).',
       avoidCompetitorText,
       'Generate fresh, unique insights with different angles and perspectives.',
       'Output format (strict JSON): [ { "name": string, "theyDoBetter": string, "weDoBetter": string } ]',
