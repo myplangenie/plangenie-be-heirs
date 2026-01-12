@@ -350,7 +350,30 @@ exports.saveAllAnswers = async (req, res) => {
   }
   const workspaceId = getWorkspaceId(req);
   const ob = await getOrCreate(userId, workspaceId);
-  ob.answers = { ...(ob.answers || {}), ...(answers || {}) };
+  // Smart merge: only skip empty arrays/objects if existing is ALSO empty (no-op)
+  // This allows intentional clearing (user deleted all items) while preventing race condition overwrites
+  const existing = ob.answers || {};
+  const incoming = answers || {};
+  const merged = { ...existing };
+  for (const [key, value] of Object.entries(incoming)) {
+    const existingValue = existing[key];
+    // Skip null/undefined
+    if (value === null || value === undefined) continue;
+    // For arrays: only skip if BOTH are empty (no-op). Allow empty if user intentionally cleared.
+    if (Array.isArray(value) && value.length === 0) {
+      const existingIsEmptyArray = !existingValue || (Array.isArray(existingValue) && existingValue.length === 0);
+      if (existingIsEmptyArray) continue; // Both empty - skip (no change)
+      // Existing has data, incoming is empty - allow (intentional clear)
+    }
+    // For objects: only skip if BOTH are empty
+    if (value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) {
+      const existingIsEmptyObj = !existingValue || (typeof existingValue === 'object' && !Array.isArray(existingValue) && Object.keys(existingValue).length === 0);
+      if (existingIsEmptyObj) continue; // Both empty - skip (no change)
+      // Existing has data, incoming is empty - allow (intentional clear)
+    }
+    merged[key] = value;
+  }
+  ob.answers = merged;
   // Auto-populate forecasting fields in DB when products are present (Pro only)
   try {
     const ent = require('../config/entitlements');
