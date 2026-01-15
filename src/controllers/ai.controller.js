@@ -45,7 +45,31 @@ function buildContextText(ob) {
 function buildAnswersContext(ob) {
   try {
     const a = (ob && ob.answers) || {};
+    const bp = (ob && ob.businessProfile) || {};
+    const up = (ob && ob.userProfile) || {};
     const lines = [];
+
+    // Business Profile from initial onboarding
+    if (bp.businessName) lines.push(`Business Name: ${String(bp.businessName).trim()}`);
+    const industry = bp.industry === 'Other' && bp.industryOther ? bp.industryOther : bp.industry;
+    if (industry) lines.push(`Industry: ${industry}`);
+    if (bp.city && bp.country) lines.push(`Location: ${bp.city}, ${bp.country}`);
+    if (bp.ventureType) lines.push(`Venture Type: ${bp.ventureType}`);
+    if (bp.teamSize) lines.push(`Team Size: ${bp.teamSize}`);
+    if (bp.businessStage) lines.push(`Stage: ${bp.businessStage}`);
+    if (bp.description) lines.push(`Business Description: ${String(bp.description).trim()}`);
+    if (bp.funding) lines.push(`Has Funding: Yes`);
+    if (Array.isArray(bp.tools) && bp.tools.length) lines.push(`Tools Used: ${bp.tools.join(', ')}`);
+
+    // User Profile from initial onboarding
+    const userRole = up.role === 'Other' && up.roleOther ? up.roleOther : up.role;
+    if (userRole) lines.push(`User Role: ${userRole}`);
+    if (up.planningFor) lines.push(`Planning For: ${up.planningFor}`);
+    const planningGoal = up.planningGoal === 'other' && up.planningGoalOther ? up.planningGoalOther : up.planningGoal;
+    if (planningGoal) lines.push(`Planning Goal: ${planningGoal}`);
+    if (up.builtPlanBefore) lines.push(`Has Built Plan Before: ${up.builtPlanBefore}`);
+    if (up.includePersonalPlanning) lines.push(`Include Personal Planning: Yes`);
+
     // Vision & Values
     if (a.ubp) lines.push(`UBP: ${String(a.ubp).trim()}`);
     if (a.purpose) lines.push(`Purpose: ${String(a.purpose).trim()}`);
@@ -61,6 +85,7 @@ function buildAnswersContext(ob) {
     if (a.swotThreats) lines.push(`Threats: ${String(a.swotThreats).trim()}`);
     // Market & Competition
     if (a.marketCustomer) lines.push(`Target Customer: ${String(a.marketCustomer).trim()}`);
+    if (a.custType) lines.push(`Customer Type: ${String(a.custType).trim()}`);
     if (a.partnersDesc) lines.push(`Partners: ${String(a.partnersDesc).trim()}`);
     if (a.compNotes) lines.push(`Competitor Notes: ${String(a.compNotes).trim()}`);
     if (Array.isArray(a.competitorNames) && a.competitorNames.length) {
@@ -69,16 +94,31 @@ function buildAnswersContext(ob) {
     if (Array.isArray(a.competitorAdvantages) && a.competitorAdvantages.length) {
       lines.push(`Competitive Advantages: ${a.competitorAdvantages.slice(0, 8).join(', ')}`);
     }
-    // Products
+    // Products with full details
     if (Array.isArray(a.products) && a.products.length) {
-      const prodNames = a.products.slice(0, 5).map(p => p?.product).filter(Boolean).join(', ');
-      if (prodNames) lines.push(`Products/Services: ${prodNames}`);
+      const productLines = a.products.slice(0, 10).map((p) => {
+        const parts = [
+          p?.product && `Name: ${String(p.product).trim()}`,
+          p?.description && `Desc: ${String(p.description).trim()}`,
+          p?.price && `Price: $${p.price}`,
+          p?.unitCost && `Cost: $${p.unitCost}`,
+          p?.monthlyVolume && `Monthly Volume: ${p.monthlyVolume}`,
+        ].filter(Boolean);
+        return parts.length ? parts.join(' | ') : '';
+      }).filter(Boolean);
+      if (productLines.length) lines.push(`Products/Services: ${productLines.join('; ')}`);
     }
     // Financial summary
     if (a.finStartingCash) lines.push(`Starting Cash: $${a.finStartingCash}`);
+    if (a.finSalesVolume) lines.push(`Monthly Sales Volume: ${a.finSalesVolume} units`);
+    if (a.finAvgUnitCost) lines.push(`Avg Unit Cost: $${a.finAvgUnitCost}`);
     if (a.finFixedOperatingCosts) lines.push(`Monthly Fixed Costs: $${a.finFixedOperatingCosts}`);
     if (a.finPayrollCost) lines.push(`Monthly Payroll: $${a.finPayrollCost}`);
+    if (a.finMarketingSalesSpend) lines.push(`Marketing Spend: $${a.finMarketingSalesSpend}/month`);
     if (a.finTargetProfitMarginPct) lines.push(`Target Margin: ${a.finTargetProfitMarginPct}%`);
+    if (a.finSalesGrowthPct) lines.push(`Expected Sales Growth: ${a.finSalesGrowthPct}%`);
+    if (a.finAdditionalFundingAmount) lines.push(`Additional Funding Expected: $${a.finAdditionalFundingAmount}`);
+    if (a.finIsNonprofit) lines.push(`Organization Type: Non-profit`);
     return lines.length ? `\n\nUser-provided answers:\n- ${lines.join('\n- ')}` : '';
   } catch (_) {
     return '';
@@ -103,16 +143,31 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     const bp = (ob && ob.businessProfile) || {};
     const up = (ob && ob.userProfile) || {};
     const businessName = String(bp.businessName || user?.companyName || '').trim();
+
+    // Determine user role (use roleOther if role is "Other")
+    const userRole = up.role === 'Other' && up.roleOther ? up.roleOther : up.role;
+
+    // Determine industry (use industryOther if industry is "Other")
+    const industry = bp.industry === 'Other' && bp.industryOther ? bp.industryOther : bp.industry;
+
+    // Build profile lines with all onboarding data
     const profileLines = [
       businessName && `Business Name: ${businessName}`,
-      bp.industry && `Industry: ${bp.industry}`,
+      industry && `Industry: ${industry}`,
       bp.city && bp.country && `Location: ${bp.city}, ${bp.country}`,
       bp.ventureType && `Venture Type: ${bp.ventureType}`,
       bp.teamSize && `Team Size: ${bp.teamSize}`,
       bp.businessStage && `Stage: ${bp.businessStage}`,
       bp.description && `Business Description: ${bp.description}`,
       bp.funding && `Has Funding: Yes`,
-      up.role && `User Role: ${up.role}`,
+      // User profile fields from initial onboarding
+      userRole && `User Role: ${userRole}`,
+      up.planningFor && `Planning For: ${up.planningFor}`,
+      up.planningGoal && `Planning Goal: ${up.planningGoal === 'other' && up.planningGoalOther ? up.planningGoalOther : up.planningGoal}`,
+      up.builtPlanBefore && `Has Built Plan Before: ${up.builtPlanBefore}`,
+      up.includePersonalPlanning && `Include Personal Planning: Yes`,
+      // Tools information
+      Array.isArray(bp.tools) && bp.tools.length && `Tools Used: ${bp.tools.join(', ')}`,
     ].filter(Boolean);
     const profileText = profileLines.length ? `Context about the business:\n- ${profileLines.join('\n- ')}` : '';
 
