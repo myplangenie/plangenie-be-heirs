@@ -54,6 +54,34 @@ const PriorityCacheSchema = new mongoose.Schema(
       kpi: { type: String },
       deliverableCount: { type: Number },
     },
+    // Upcoming items (due beyond this week but within 30 days) - shown when weeklyTop3 is empty
+    upcomingItems: [
+      {
+        title: { type: String },
+        dueWhen: { type: String },
+        scores: {
+          goalImportance: { type: Number, default: 0 },
+          dueDateProximity: { type: Number, default: 0 },
+          overdueScore: { type: Number, default: 0 },
+          blockerScore: { type: Number, default: 0 },
+          kpiWeight: { type: Number, default: 0 },
+        },
+        totalScore: { type: Number, default: 0 },
+        source: {
+          type: { type: String, enum: ['project', 'goal', 'deliverable', 'dept_deliverable'], default: 'deliverable' },
+          projectIndex: { type: Number },
+          deliverableIndex: { type: Number },
+          goalIndex: { type: Number },
+          department: { type: String },
+        },
+        projectTitle: { type: String },
+        owner: { type: String },
+        goal: { type: String },
+        kpi: { type: String },
+        deliverableCount: { type: Number },
+        isUpcoming: { type: Boolean, default: true },
+      },
+    ],
     // Track recent actions to avoid suggesting the same thing again
     recentActions: [
       {

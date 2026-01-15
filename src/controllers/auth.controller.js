@@ -6,6 +6,7 @@ const { Resend } = require('resend');
 const User = require('../models/User');
 const Collaboration = require('../models/Collaboration');
 const Workspace = require('../models/Workspace');
+const Onboarding = require('../models/Onboarding');
 const RefreshToken = require('../models/RefreshToken');
 const { effectivePlan, plans } = require('../config/entitlements');
 const {
@@ -13,6 +14,24 @@ const {
   REFRESH_TOKEN_COOKIE,
   clearCookieOptions,
 } = require('../config/cookies');
+
+// Helper to check workspace-specific onboarding completion
+async function getWorkspaceOnboardingStatus(userId, workspaceIdOrWid) {
+  if (!workspaceIdOrWid) return false;
+
+  // workspaceIdOrWid could be either a MongoDB ObjectId or a wid string (like "ws_ea1c091967be")
+  let workspaceId = workspaceIdOrWid;
+
+  // If it looks like a wid string, look up the actual workspace _id
+  if (typeof workspaceIdOrWid === 'string' && workspaceIdOrWid.startsWith('ws_')) {
+    const workspace = await Workspace.findOne({ wid: workspaceIdOrWid }).select('_id').lean().exec();
+    if (!workspace) return false;
+    workspaceId = workspace._id;
+  }
+
+  const onboarding = await Onboarding.findOne({ user: userId, workspace: workspaceId }).lean().exec();
+  return Boolean(onboarding?.onboardingDetailCompleted);
+}
 
 function signToken(userId) {
   return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '30m' });
@@ -99,7 +118,6 @@ exports.register = async (req, res) => {
       password: hashed,
       isVerified: true,
       onboardingDone: true,
-      onboardingDetailCompleted: true,
       isCollaborator: true,
     });
     try {
@@ -111,6 +129,16 @@ exports.register = async (req, res) => {
       collab.acceptToken = null;
       collab.tokenExpires = null;
       await collab.save();
+
+      // Also mark onboarding complete for the owner's workspace (collaborator views owner's data)
+      const owner = await User.findById(collab.owner).select('defaultWorkspace').lean().exec();
+      if (owner?.defaultWorkspace) {
+        await Onboarding.findOneAndUpdate(
+          { user: user._id, workspace: owner.defaultWorkspace },
+          { onboardingDetailCompleted: true },
+          { upsert: true, new: true }
+        );
+      }
     } catch (err) {
       // Non-fatal
       console.error('[collab] Failed to link collaboration on signup:', err?.message || err);
@@ -228,10 +256,20 @@ exports.login = async (req, res) => {
   await issueTokensAndSetCookies(res, user, req);
 
   const safe = user.toSafeJSON();
-  if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
+
+  // Get workspace ID from request (frontend may send it) or use default
+  const requestedWorkspace = req.headers['x-workspace-id'] || req.body?.workspaceId;
+  const workspaceId = requestedWorkspace || user.defaultWorkspace;
+
+  // Check workspace-specific onboarding completion
+  const detailCompleted = workspaceId ? await getWorkspaceOnboardingStatus(user._id, workspaceId) : false;
+  safe.onboardingDetailCompleted = detailCompleted;
+
+  // Flow: onboarding -> workspace-select -> onboarding-detail -> dashboard
+  // After initial onboarding, always route to workspace-select first
   const nextRoute = !safe.onboardingDone
     ? '/onboarding'
-    : (!safe.onboardingDetailCompleted ? '/onboarding-detail' : '/dashboard');
+    : '/workspace-select';
   const planSlug = effectivePlan(user);
   const planName = plans[planSlug]?.name || planSlug;
   // If user is a viewer/collaborator for any accepted collaboration, include default owner to view-as
@@ -256,10 +294,20 @@ exports.me = async (req, res) => {
   const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ message: 'User not found' });
   const safe = user.toSafeJSON();
-  if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
+
+  // Get workspace ID from request or use default
+  const requestedWorkspace = req.headers['x-workspace-id'] || req.query.workspaceId;
+  const workspaceId = requestedWorkspace || user.defaultWorkspace;
+
+  // Check workspace-specific onboarding completion
+  const detailCompleted = workspaceId ? await getWorkspaceOnboardingStatus(user._id, workspaceId) : false;
+  safe.onboardingDetailCompleted = detailCompleted;
+
+  // Flow: onboarding -> workspace-select -> onboarding-detail -> dashboard
+  // After initial onboarding, always route to workspace-select first
   const nextRoute = !safe.onboardingDone
     ? '/onboarding'
-    : (!safe.onboardingDetailCompleted ? '/onboarding-detail' : '/dashboard');
+    : '/workspace-select';
   const planSlug = effectivePlan(user);
   const planName = plans[planSlug]?.name || planSlug;
   // Provide default owner to view-as for collaborators
@@ -293,14 +341,34 @@ exports.markOnboarded = async (req, res) => {
 
 // POST /api/auth/onboarding/detail-done
 exports.markOnboardingDetailDone = async (req, res) => {
-  const user = await User.findByIdAndUpdate(
-    req.user.id,
-    { onboardingDetailCompleted: true },
-    { new: true }
-  );
+  const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ message: 'User not found' });
+
+  // Get workspace ID from header or query, fall back to default
+  let workspaceIdOrWid = req.headers['x-workspace-id'] || req.query.workspaceId || user.defaultWorkspace;
+  if (!workspaceIdOrWid) {
+    return res.status(400).json({ message: 'No workspace selected' });
+  }
+
+  // Convert wid string to workspace _id if needed
+  let workspaceId = workspaceIdOrWid;
+  if (typeof workspaceIdOrWid === 'string' && workspaceIdOrWid.startsWith('ws_')) {
+    const workspace = await Workspace.findOne({ wid: workspaceIdOrWid }).select('_id').lean().exec();
+    if (!workspace) {
+      return res.status(400).json({ message: 'Workspace not found' });
+    }
+    workspaceId = workspace._id;
+  }
+
+  // Update workspace-specific onboarding completion
+  await Onboarding.findOneAndUpdate(
+    { user: req.user.id, workspace: workspaceId },
+    { onboardingDetailCompleted: true },
+    { upsert: true, new: true }
+  );
+
   const safe = user.toSafeJSON();
-  if (typeof safe.onboardingDetailCompleted === 'undefined') safe.onboardingDetailCompleted = false;
+  safe.onboardingDetailCompleted = true;
   return res.json({ user: safe, ok: true });
 };
 

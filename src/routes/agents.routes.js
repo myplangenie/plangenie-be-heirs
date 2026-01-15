@@ -13,6 +13,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const workspaceContext = require('../middleware/workspace');
+const { requireViewer, requireContributor } = require('../middleware/workspaceRole');
 const agents = require('../agents');
 
 // Apply auth first, then workspace context to all agent routes
@@ -25,7 +26,7 @@ router.use(workspaceContext);
  * POST /api/agents/plan-guidance
  * Returns prioritized tasks with AI reasoning
  */
-router.post('/plan-guidance', async (req, res) => {
+router.post('/plan-guidance', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
@@ -53,7 +54,7 @@ router.post('/plan-guidance', async (req, res) => {
  * POST /api/agents/financial-validate
  * Returns validation flags and warnings
  */
-router.post('/financial-validate', async (req, res) => {
+router.post('/financial-validate', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
@@ -79,7 +80,7 @@ router.post('/financial-validate', async (req, res) => {
  * POST /api/agents/strategy-suggest
  * Returns strategy recommendations
  */
-router.post('/strategy-suggest', async (req, res) => {
+router.post('/strategy-suggest', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
@@ -109,7 +110,7 @@ router.post('/strategy-suggest', async (req, res) => {
  * GET /api/agents/progress-status
  * Returns plan completion status
  */
-router.get('/progress-status', async (req, res) => {
+router.get('/progress-status', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
@@ -140,7 +141,7 @@ router.get('/progress-status', async (req, res) => {
  * POST /api/agents/invalidate-cache
  * Clears cached agent responses for the user
  */
-router.post('/invalidate-cache', async (req, res) => {
+router.post('/invalidate-cache', requireContributor, async (req, res) => {
   try {
     const userId = req.user.id;
     const { agentType } = req.body; // Optional: specific agent to invalidate
@@ -167,7 +168,7 @@ router.post('/invalidate-cache', async (req, res) => {
  * GET /api/agents/summary
  * Returns a quick summary from all agents for dashboard display
  */
-router.get('/summary', async (req, res) => {
+router.get('/summary', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;

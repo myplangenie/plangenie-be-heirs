@@ -96,7 +96,7 @@ exports.listUsers = async (req, res) => {
     lastActiveAt: u.lastActiveAt,
     status: u.status,
     onboardingDone: !!u.onboardingDone,
-    onboardingDetailCompleted: !!u.onboardingDetailCompleted,
+    // onboardingDetailCompleted is now per-workspace (stored in Onboarding model)
     planType: subMap.get(String(u._id))?.planType || 'Free',
   }));
   return res.json({ items });

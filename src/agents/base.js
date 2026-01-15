@@ -18,6 +18,7 @@ const Department = require('../models/Department');
 const CACHE_TTL = {
   'plan-guidance': 30 * 60 * 1000,      // 30 minutes - changes frequently
   'financial-validation': 60 * 60 * 1000, // 1 hour - recalculate after edits
+  'financial-insights': 30 * 60 * 1000, // 30 minutes - scenario-aware insights
   'strategy-suggestion': 2 * 60 * 60 * 1000, // 2 hours - strategic advice is stable
   'progress-status': 15 * 60 * 1000,    // 15 minutes - quick status checks
 };

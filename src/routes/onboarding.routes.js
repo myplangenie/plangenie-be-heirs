@@ -5,6 +5,8 @@ const workspaceContext = require('../middleware/workspace');
 const ctrl = require('../controllers/onboarding.controller');
 const ai = require('../controllers/ai.controller');
 const { requireFeature } = require('../middleware/plan');
+const { requireViewer, requireContributor, requireAdmin } = require('../middleware/workspaceRole');
+const { requireAI } = require('../middleware/workspaceAI');
 
 const router = express.Router();
 
@@ -13,11 +15,12 @@ router.use(auth(false));
 router.use(workspaceContext);
 
 // Get current onboarding data
-router.get('/', ctrl.get);
+router.get('/', requireViewer, ctrl.get);
 
 // Save user profile step
 router.post(
   '/user-profile',
+  requireContributor,
   [
     body('fullName').optional().isString().trim(),
     body('role').optional().isString().trim(),
@@ -35,6 +38,7 @@ router.post(
 // Save business profile step
 router.post(
   '/business-profile',
+  requireContributor,
   [
     body('businessName').optional().isString().trim(),
     body('businessStage').optional().isString().trim(),
@@ -53,86 +57,91 @@ router.post(
 // Save vision/purpose step
 router.post(
   '/vision',
+  requireContributor,
   [body('ubp').optional().isString().trim().isLength({ min: 0, max: 5000 })],
   ctrl.saveVision
 );
 
-// AI suggestions for Vision & Purpose
-router.post('/vision/ubp/suggest', ai.suggestUbp);
-router.post('/vision/purpose/suggest', ai.suggestPurpose);
-router.post('/vision/destination/1y/suggest', ai.suggestVision1y);
-router.post('/vision/destination/3y/suggest', ai.suggestVision3y);
-router.post('/vision/destination/bhag/suggest', ai.suggestVisionBhag);
+// AI suggestions for Vision & Purpose (read-only AI operations, require contributor to modify)
+// Workspace AI permissions checked via requireAI middleware
+router.post('/vision/ubp/suggest', requireContributor, requireAI('vision'), ai.suggestUbp);
+router.post('/vision/purpose/suggest', requireContributor, requireAI('vision'), ai.suggestPurpose);
+router.post('/vision/destination/1y/suggest', requireContributor, requireAI('vision'), ai.suggestVision1y);
+router.post('/vision/destination/3y/suggest', requireContributor, requireAI('vision'), ai.suggestVision3y);
+router.post('/vision/destination/bhag/suggest', requireContributor, requireAI('vision'), ai.suggestVisionBhag);
 // Rewrite endpoints (immediate rewrite of current text)
-router.post('/vision/ubp/rewrite', ai.rewriteUbp);
-router.post('/vision/purpose/rewrite', ai.rewritePurpose);
-router.post('/vision/destination/1y/rewrite', ai.rewriteVision1y);
-router.post('/vision/destination/3y/rewrite', ai.rewriteVision3y);
-router.post('/vision/destination/bhag/rewrite', ai.rewriteVisionBhag);
+router.post('/vision/ubp/rewrite', requireContributor, requireAI('vision'), ai.rewriteUbp);
+router.post('/vision/purpose/rewrite', requireContributor, requireAI('vision'), ai.rewritePurpose);
+router.post('/vision/destination/1y/rewrite', requireContributor, requireAI('vision'), ai.rewriteVision1y);
+router.post('/vision/destination/3y/rewrite', requireContributor, requireAI('vision'), ai.rewriteVision3y);
+router.post('/vision/destination/bhag/rewrite', requireContributor, requireAI('vision'), ai.rewriteVisionBhag);
 // Strategic Identity Summary
-router.post('/vision/identity/summary/suggest', ai.suggestIdentitySummary);
-router.post('/vision/identity/summary/rewrite', ai.rewriteIdentitySummary);
-router.post('/values/core/suggest', ai.suggestValuesCore);
-router.post('/values/feeling/suggest', ai.suggestCultureFeeling);
-router.post('/values/core/rewrite', ai.rewriteValuesCore);
-router.post("/values/core/keywords", ai.extractValuesCoreKeywords);
-router.post('/values/feeling/rewrite', ai.rewriteCultureFeeling);
+router.post('/vision/identity/summary/suggest', requireContributor, requireAI('vision'), ai.suggestIdentitySummary);
+router.post('/vision/identity/summary/rewrite', requireContributor, requireAI('vision'), ai.rewriteIdentitySummary);
+// Values suggestions
+router.post('/values/core/suggest', requireContributor, requireAI('values'), ai.suggestValuesCore);
+router.post('/values/feeling/suggest', requireContributor, requireAI('values'), ai.suggestCultureFeeling);
+router.post('/values/core/rewrite', requireContributor, requireAI('values'), ai.rewriteValuesCore);
+router.post("/values/core/keywords", requireContributor, requireAI('values'), ai.extractValuesCoreKeywords);
+router.post('/values/feeling/rewrite', requireContributor, requireAI('values'), ai.rewriteCultureFeeling);
 // SWOT analysis
-router.post('/values/swot/strengths/suggest', ai.suggestSwotStrengths);
-router.post('/values/swot/weaknesses/suggest', ai.suggestSwotWeaknesses);
-router.post('/values/swot/opportunities/suggest', ai.suggestSwotOpportunities);
-router.post('/values/swot/threats/suggest', ai.suggestSwotThreats);
-router.post('/values/swot/strengths/rewrite', ai.rewriteSwotStrengths);
-router.post('/values/swot/weaknesses/rewrite', ai.rewriteSwotWeaknesses);
-router.post('/values/swot/opportunities/rewrite', ai.rewriteSwotOpportunities);
-router.post('/values/swot/threats/rewrite', ai.rewriteSwotThreats);
-router.post('/market/customer/suggest', requireFeature('aiCustomerAnalysis'), ai.suggestMarketCustomer);
-router.post('/market/customer/rewrite', requireFeature('aiCustomerAnalysis'), ai.rewriteMarketCustomer);
-router.post('/market/partners/suggest', ai.suggestMarketPartners);
-router.post('/market/competitors/suggest', requireFeature('aiCompetitors'), ai.suggestMarketCompetitors);
-router.post('/market/competitors/names', requireFeature('aiCompetitors'), ai.suggestCompetitorNames);
-router.post('/market/partners/rewrite', ai.rewriteMarketPartners);
-router.post('/market/competitors/rewrite', requireFeature('aiCompetitors'), ai.rewriteMarketCompetitors);
-router.post('/market/competitors/advantages', requireFeature('aiCompetitors'), ai.suggestCompetitorAdvantages);
-router.post('/financial/forecast/suggest', requireFeature('financials'), ai.suggestFinancialForecast);
-router.post('/financial/number/suggest', requireFeature('financials'), ai.suggestFinancialNumber);
-router.post('/financial/suggest-all', requireFeature('financials'), ai.suggestFinancialAll);
-router.post('/financial/stage/suggest', requireFeature('financials'), ai.suggestFinancialStage);
+router.post('/values/swot/strengths/suggest', requireContributor, requireAI('swot'), ai.suggestSwotStrengths);
+router.post('/values/swot/weaknesses/suggest', requireContributor, requireAI('swot'), ai.suggestSwotWeaknesses);
+router.post('/values/swot/opportunities/suggest', requireContributor, requireAI('swot'), ai.suggestSwotOpportunities);
+router.post('/values/swot/threats/suggest', requireContributor, requireAI('swot'), ai.suggestSwotThreats);
+router.post('/values/swot/strengths/rewrite', requireContributor, requireAI('swot'), ai.rewriteSwotStrengths);
+router.post('/values/swot/weaknesses/rewrite', requireContributor, requireAI('swot'), ai.rewriteSwotWeaknesses);
+router.post('/values/swot/opportunities/rewrite', requireContributor, requireAI('swot'), ai.rewriteSwotOpportunities);
+router.post('/values/swot/threats/rewrite', requireContributor, requireAI('swot'), ai.rewriteSwotThreats);
+// Market analysis
+router.post('/market/customer/suggest', requireContributor, requireAI('market'), requireFeature('aiCustomerAnalysis'), ai.suggestMarketCustomer);
+router.post('/market/customer/rewrite', requireContributor, requireAI('market'), requireFeature('aiCustomerAnalysis'), ai.rewriteMarketCustomer);
+router.post('/market/partners/suggest', requireContributor, requireAI('market'), ai.suggestMarketPartners);
+router.post('/market/competitors/suggest', requireContributor, requireAI('market'), requireFeature('aiCompetitors'), ai.suggestMarketCompetitors);
+router.post('/market/competitors/names', requireContributor, requireAI('market'), requireFeature('aiCompetitors'), ai.suggestCompetitorNames);
+router.post('/market/partners/rewrite', requireContributor, requireAI('market'), ai.rewriteMarketPartners);
+router.post('/market/competitors/rewrite', requireContributor, requireAI('market'), requireFeature('aiCompetitors'), ai.rewriteMarketCompetitors);
+router.post('/market/competitors/advantages', requireContributor, requireAI('market'), requireFeature('aiCompetitors'), ai.suggestCompetitorAdvantages);
+// Financial suggestions
+router.post('/financial/forecast/suggest', requireContributor, requireAI('financial'), requireFeature('financials'), ai.suggestFinancialForecast);
+router.post('/financial/number/suggest', requireContributor, requireAI('financial'), requireFeature('financials'), ai.suggestFinancialNumber);
+router.post('/financial/suggest-all', requireContributor, requireAI('financial'), requireFeature('financials'), ai.suggestFinancialAll);
+router.post('/financial/stage/suggest', requireContributor, requireAI('financial'), requireFeature('financials'), ai.suggestFinancialStage);
 // Action plan field suggestions (single result) and rewrites
-router.post('/actions/goal/suggest', requireFeature('aiActionPlans'), ai.suggestActionGoal);
-router.post('/actions/goal/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionGoal);
-router.post('/actions/milestone/suggest', requireFeature('aiActionPlans'), ai.suggestActionMilestone);
-router.post('/actions/milestone/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionMilestone);
-router.post('/actions/resources/suggest', requireFeature('aiActionPlans'), ai.suggestActionResources);
-router.post('/actions/resources/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionResources);
+router.post('/actions/goal/suggest', requireContributor, requireAI('actions'), requireFeature('aiActionPlans'), ai.suggestActionGoal);
+router.post('/actions/goal/rewrite', requireContributor, requireAI('actions'), requireFeature('aiActionPlans'), ai.rewriteActionGoal);
+router.post('/actions/milestone/suggest', requireContributor, requireAI('actions'), requireFeature('aiActionPlans'), ai.suggestActionMilestone);
+router.post('/actions/milestone/rewrite', requireContributor, requireAI('actions'), requireFeature('aiActionPlans'), ai.rewriteActionMilestone);
+router.post('/actions/resources/suggest', requireContributor, requireAI('actions'), requireFeature('aiActionPlans'), ai.suggestActionResources);
+router.post('/actions/resources/rewrite', requireContributor, requireAI('actions'), requireFeature('aiActionPlans'), ai.rewriteActionResources);
 // Allow Lite users to generate KPI suggestions
-router.post('/actions/kpi/suggest', ai.suggestActionKpi);
-router.post('/actions/kpi/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionKpi);
+router.post('/actions/kpi/suggest', requireContributor, requireAI('actions'), ai.suggestActionKpi);
+router.post('/actions/kpi/rewrite', requireContributor, requireAI('actions'), requireFeature('aiActionPlans'), ai.rewriteActionKpi);
 // Allow Lite users to suggest due dates for core project details
-router.post('/actions/due/suggest', ai.suggestActionDue);
-router.post('/actions/due/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionDue);
+router.post('/actions/due/suggest', requireContributor, requireAI('actions'), ai.suggestActionDue);
+router.post('/actions/due/rewrite', requireContributor, requireAI('actions'), requireFeature('aiActionPlans'), ai.rewriteActionDue);
 // Cost + suggest-all
-router.post('/actions/cost/suggest', requireFeature('aiActionPlans'), ai.suggestActionCost);
-router.post('/actions/cost/rewrite', requireFeature('aiActionPlans'), ai.rewriteActionCost);
+router.post('/actions/cost/suggest', requireContributor, requireAI('actions'), requireFeature('aiActionPlans'), ai.suggestActionCost);
+router.post('/actions/cost/rewrite', requireContributor, requireAI('actions'), requireFeature('aiActionPlans'), ai.rewriteActionCost);
 // Allow Lite users to use the bulk suggest-all for action plan fields
-router.post('/actions/suggest-all', ai.suggestActionAll);
+router.post('/actions/suggest-all', requireContributor, requireAI('actions'), ai.suggestActionAll);
 // Core Strategic Projects deliverables
-router.post('/actions/core/deliverables', requireFeature('aiCoreProjects'), ai.suggestCoreDeliverables);
+router.post('/actions/core/deliverables', requireContributor, requireAI('core'), requireFeature('aiCoreProjects'), ai.suggestCoreDeliverables);
 // Core Strategic Project (full) suggestion
-router.post('/actions/core/project/suggest', requireFeature('aiCoreProjects'), ai.suggestCoreProject);
+router.post('/actions/core/project/suggest', requireContributor, requireAI('core'), requireFeature('aiCoreProjects'), ai.suggestCoreProject);
 // Bulk goals per department/section
 // Allow Lite users to generate section goals used by core projects workflows
-router.post('/actions/sections/goals', ai.suggestDeptGoalsBulk);
-router.post('/financial/forecast/rewrite', requireFeature('financials'), ai.rewriteFinancialForecast);
+router.post('/actions/sections/goals', requireContributor, requireAI('actions'), ai.suggestDeptGoalsBulk);
+router.post('/financial/forecast/rewrite', requireContributor, requireAI('financial'), requireFeature('financials'), ai.rewriteFinancialForecast);
 
 // 1-Year Goals CRUD
-router.get('/vision/destination/1y/goals', ctrl.getVision1yGoals);
-router.post('/vision/destination/1y/goals', ctrl.addVision1yGoal);
-router.patch('/vision/destination/1y/goals/:index', ctrl.updateVision1yGoal);
-router.delete('/vision/destination/1y/goals/:index', ctrl.deleteVision1yGoal);
+router.get('/vision/destination/1y/goals', requireViewer, ctrl.getVision1yGoals);
+router.post('/vision/destination/1y/goals', requireContributor, ctrl.addVision1yGoal);
+router.patch('/vision/destination/1y/goals/:index', requireContributor, ctrl.updateVision1yGoal);
+router.delete('/vision/destination/1y/goals/:index', requireAdmin, ctrl.deleteVision1yGoal);
 
 // Save/load all onboarding answers (optional server persistence)
-router.get('/all', ctrl.getAllAnswers);
-router.post('/all', ctrl.saveAllAnswers);
+router.get('/all', requireViewer, ctrl.getAllAnswers);
+router.post('/all', requireContributor, ctrl.saveAllAnswers);
 
 module.exports = router;

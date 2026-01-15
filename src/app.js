@@ -80,6 +80,8 @@ app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/onboarding', require('./routes/onboarding.routes'));
 app.use('/api/misc', require('./routes/misc.routes'));
 app.use('/api/dashboard', require('./routes/dashboard.routes'));
+app.use('/api/dashboard/revenue-streams', require('./routes/revenueStream.routes'));
+app.use('/api/dashboard/financial-baseline', require('./routes/financialBaseline.routes'));
 app.use('/api/user', require('./routes/user.routes'));
 app.use('/api/collab', require('./routes/collab.routes'));
 // Subscriptions
@@ -98,6 +100,8 @@ if (enableWorkspaces) {
   app.use('/api/workspaces', require('./routes/workspace.routes'));
   // Keep /api/journeys as alias for backward compatibility during migration
   app.use('/api/journeys', require('./routes/workspace.routes'));
+  // Workspace invites (semi-public routes)
+  app.use('/api/workspace-invite', require('./routes/workspaceInvite.routes'));
   // Initialize priority recalculation background job
   require('./jobs/recalculatePriorities').init();
 } else {

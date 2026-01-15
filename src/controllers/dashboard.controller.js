@@ -4,6 +4,7 @@ const User = require('../models/User');
 const DailyWish = require('../models/DailyWish');
 const { hasDepartmentRestriction, filterCompiledPlan, filterActionAssignments } = require('../utils/filterByDepartment');
 const { getWorkspaceFilter, getWorkspaceId, addWorkspaceToDoc } = require('../utils/workspaceQuery');
+const { touchWorkspace } = require('../services/workspaceActivityService');
 const Notification = require('../models/Notification');
 const NotificationSettings = require('../models/NotificationSettings');
 const Department = require('../models/Department');
@@ -471,6 +472,8 @@ exports.updateStrategyCanvas = async (req, res, next) => {
     }
     ob.answers = a;
     await ob.save();
+    // Update workspace lastActivityAt
+    if (ob.workspace) touchWorkspace(ob.workspace);
     return res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -631,6 +634,8 @@ exports.saveCompiledPlan = async (req, res, next) => {
     ob.answers = a;
     try { ob.markModified && ob.markModified('answers'); } catch {}
     await ob.save();
+    // Update workspace lastActivityAt
+    if (ob.workspace) touchWorkspace(ob.workspace);
     // Optionally sync user full name
     if (cp.userProfile && cp.userProfile.fullName) {
       try { await User.findByIdAndUpdate(userId, { fullName: cp.userProfile.fullName }); } catch {}
@@ -1055,6 +1060,8 @@ exports.updateDepartment = async (req, res, next) => {
       dueDate = dates[0] || '-';
     }
     // Shape response consistent with GET
+    // Update workspace lastActivityAt
+    if (req.workspace?._id) touchWorkspace(req.workspace._id);
     return res.json({ department: { name: doc.name, owner: ownerName, dueDate, progress, status } });
   } catch (err) {
     next(err);
@@ -1138,6 +1145,8 @@ exports.updateActionAssignmentStatus = async (req, res, next) => {
     assignments[deptKey] = arr;
     try { ob.markModified && ob.markModified('answers'); } catch {}
     await ob.save();
+    // Update workspace lastActivityAt
+    if (ob.workspace) touchWorkspace(ob.workspace);
     return res.json({ ok: true, item: { ...item, status } });
   } catch (err) {
     next(err);
@@ -1253,6 +1262,8 @@ exports.updateActionAssignmentItem = async (req, res, next) => {
     ob.answers = a;
     try { ob.markModified && ob.markModified('answers'); } catch {}
     await ob.save();
+    // Update workspace lastActivityAt
+    if (ob.workspace) touchWorkspace(ob.workspace);
     return res.json({ ok: true, item: nextItem, key: k, index: idx });
   } catch (err) {
     next(err);
@@ -3193,6 +3204,8 @@ exports.saveProducts = async (req, res, next) => {
     if (avgCost > 0) ob.answers.finAvgUnitCost = String(Math.round(avgCost));
     if (marginPct > 0) ob.answers.finTargetProfitMarginPct = String(marginPct);
     await ob.save();
+    // Update workspace lastActivityAt
+    if (ob.workspace) touchWorkspace(ob.workspace);
     return res.json({ ok: true, items });
   } catch (err) {
     next(err);
@@ -3254,6 +3267,8 @@ exports.saveFinancialActuals = async (req, res, next) => {
       if (fixArr) ob.answers.finActualFixed = fixArr;
     }
     await ob.save();
+    // Update workspace lastActivityAt
+    if (ob.workspace) touchWorkspace(ob.workspace);
     return res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -3329,6 +3344,8 @@ exports.importFinancialsCSV = async (req, res, next) => {
     setIfAny('finActualFunding', funding);
     setIfAny('finActualNewCustomers', newCust);
     await ob.save();
+    // Update workspace lastActivityAt
+    if (ob.workspace) touchWorkspace(ob.workspace);
     return res.json({ ok: true, rows: updates });
   } catch (err) {
     next(err);

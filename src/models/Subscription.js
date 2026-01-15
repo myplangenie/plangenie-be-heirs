@@ -18,6 +18,15 @@ const SubscriptionSchema = new mongoose.Schema(
     stripePriceId: { type: String },
     stripeProductId: { type: String },
 
+    // Workspace add-on tracking
+    workspaceSlots: {
+      included: { type: Number, default: 1 },    // Base slots included with plan
+      purchased: { type: Number, default: 0 },   // Add-on slots purchased
+      total: { type: Number, default: 1 },       // Computed: included + purchased
+    },
+    stripeWorkspaceAddonSubscriptionId: { type: String, index: true },
+    stripeWorkspaceAddonPriceId: { type: String },
+
     // Lifecycle timeline
     currentPeriodStart: { type: Date },
     currentPeriodEnd: { type: Date },

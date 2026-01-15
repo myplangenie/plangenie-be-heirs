@@ -53,6 +53,8 @@ const OnboardingSchema = new mongoose.Schema(
     answers: { type: mongoose.Schema.Types.Mixed, default: {} },
     // Track which notification IDs have been read by the user
     readNotificationIds: { type: [String], default: [] },
+    // Workspace-specific onboarding completion (7-step business canvas)
+    onboardingDetailCompleted: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

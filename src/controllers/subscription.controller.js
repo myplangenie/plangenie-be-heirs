@@ -2,6 +2,7 @@ const Stripe = require('stripe');
 const Subscription = require('../models/Subscription');
 const SubscriptionHistory = require('../models/SubscriptionHistory');
 const User = require('../models/User');
+const Workspace = require('../models/Workspace');
 
 function requireEnv(name) {
   const v = process.env[name];
@@ -300,6 +301,152 @@ exports.getMySubscription = async (req, res) => {
   }
 };
 
+// Get workspace slots allocation
+exports.getWorkspaceSlots = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const subscription = await Subscription.findOne({ user: user._id });
+    const workspaceCount = await Workspace.countDocuments({ user: user._id });
+
+    const included = subscription?.workspaceSlots?.included || 1;
+    const purchased = subscription?.workspaceSlots?.purchased || 0;
+    const total = subscription?.workspaceSlots?.total || 1;
+
+    res.json({
+      slots: {
+        included,
+        purchased,
+        total,
+        used: workspaceCount,
+        available: Math.max(0, total - workspaceCount),
+      },
+    });
+  } catch (err) {
+    console.error('getWorkspaceSlots error', err);
+    res.status(500).json({ message: 'Failed to fetch workspace slots' });
+  }
+};
+
+// Get billing summary for workspace settings
+exports.getBillingSummary = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const subscription = await Subscription.findOne({ user: user._id });
+    const workspaceCount = await Workspace.countDocuments({ user: user._id });
+
+    const included = subscription?.workspaceSlots?.included || 1;
+    const purchased = subscription?.workspaceSlots?.purchased || 0;
+    const total = subscription?.workspaceSlots?.total || 1;
+
+    res.json({
+      plan: {
+        type: subscription?.planType || 'Free',
+        status: subscription?.status || 'none',
+        currentPeriodEnd: subscription?.currentPeriodEnd || null,
+        cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd || false,
+      },
+      workspaceSlots: {
+        included,
+        purchased,
+        total,
+        used: workspaceCount,
+        available: Math.max(0, total - workspaceCount),
+      },
+      billing: {
+        stripeCustomerId: user.stripeCustomerId || null,
+        hasPaymentMethod: !!user.stripeCustomerId,
+      },
+    });
+  } catch (err) {
+    console.error('getBillingSummary error', err);
+    res.status(500).json({ message: 'Failed to fetch billing summary' });
+  }
+};
+
+// Resolve workspace add-on price ID by interval
+function resolveWorkspaceAddonPriceId(interval) {
+  const i = interval === 'year' ? 'year' : 'month';
+  if (i === 'year') {
+    return process.env.STRIPE_PRICE_ID_WORKSPACE_ADDON_YEAR || '';
+  }
+  return process.env.STRIPE_PRICE_ID_WORKSPACE_ADDON_MONTH || '';
+}
+
+// Create checkout session for workspace add-on slots
+exports.createWorkspaceAddonCheckout = async (req, res) => {
+  try {
+    const appWebUrl = process.env.APP_WEB_URL || 'http://localhost:3000';
+    const quantity = Number(req.body?.quantity) || 1;
+    const interval = (req.body?.interval) || 'month';
+
+    if (quantity < 1 || quantity > 100) {
+      return res.status(400).json({ message: 'Invalid quantity. Must be between 1 and 100.' });
+    }
+
+    const priceId = resolveWorkspaceAddonPriceId(interval);
+    if (!priceId) {
+      console.error('Workspace addon price ID not configured for interval:', interval);
+      return res.status(500).json({ message: 'Workspace addon pricing not configured' });
+    }
+
+    const stripe = getStripe();
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Ensure Stripe customer exists
+    let customerId = user.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        name: user.fullName || [user.firstName, user.lastName].filter(Boolean).join(' ') || undefined,
+        metadata: { userId: String(user._id) },
+      });
+      customerId = customer.id;
+      user.stripeCustomerId = customerId;
+      await user.save();
+    }
+
+    const subscription = await ensureSubscriptionForUser(user);
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: customerId,
+      line_items: [
+        {
+          price: priceId,
+          quantity: quantity,
+        },
+      ],
+      success_url: `${appWebUrl}/billing/return?status=success&type=workspace_addon&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appWebUrl}/billing/return?status=cancelled&type=workspace_addon`,
+      metadata: {
+        userId: String(user._id),
+        subscriptionId: String(subscription._id),
+        type: 'workspace_addon',
+        quantity: String(quantity),
+      },
+    });
+
+    await SubscriptionHistory.create({
+      user: user._id,
+      subscription: subscription._id,
+      event: 'initialized',
+      stripeCustomerId: customerId,
+      stripeSessionId: session.id,
+      meta: { type: 'workspace_addon', quantity },
+    });
+
+    res.json({ url: session.url, sessionId: session.id });
+  } catch (err) {
+    console.error('createWorkspaceAddonCheckout error', err);
+    res.status(500).json({ message: 'Failed to create workspace addon checkout' });
+  }
+};
+
 // Webhook handler (mounted with express.raw in app.js)
 exports.webhook = async (req, res) => {
   const stripe = getStripe();
@@ -318,7 +465,7 @@ exports.webhook = async (req, res) => {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
-        const { userId, subscriptionId } = session.metadata || {};
+        const { userId, subscriptionId, type: checkoutType, quantity: addonQuantity } = session.metadata || {};
         const stripeCustomerId = session.customer;
         const stripeSubscriptionId = session.subscription;
 
@@ -338,6 +485,33 @@ exports.webhook = async (req, res) => {
         }
 
         if (subscriptionDoc) {
+          // Handle workspace add-on purchase
+          if (checkoutType === 'workspace_addon') {
+            const qty = Number(addonQuantity) || 1;
+            const currentPurchased = subscriptionDoc.workspaceSlots?.purchased || 0;
+            const currentIncluded = subscriptionDoc.workspaceSlots?.included || 1;
+
+            subscriptionDoc.workspaceSlots = {
+              included: currentIncluded,
+              purchased: currentPurchased + qty,
+              total: currentIncluded + currentPurchased + qty,
+            };
+            subscriptionDoc.stripeWorkspaceAddonSubscriptionId = stripeSubscriptionId;
+            await subscriptionDoc.save();
+
+            await SubscriptionHistory.create({
+              user: user ? user._id : subscriptionDoc.user,
+              subscription: subscriptionDoc._id,
+              event: 'completed',
+              stripeCustomerId,
+              stripeSubscriptionId,
+              stripeSessionId: session.id,
+              meta: { type: 'workspace_addon', quantity: qty },
+            });
+            break;
+          }
+
+          // Standard subscription checkout
           // Fetch Stripe subscription to get period window and final status
           let stripeSub = null;
           if (stripeSubscriptionId) {

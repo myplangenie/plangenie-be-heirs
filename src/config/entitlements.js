@@ -21,6 +21,7 @@ const plans = {
     limits: {
       maxPlans: 1,
       maxJourneys: 1,
+      maxWorkspaces: 1,
       maxGoals: 3,
       maxCoreProjects: 3,
       reviewsPerMonth: 2,
@@ -45,6 +46,7 @@ const plans = {
     limits: {
       maxPlans: 1000,
       maxJourneys: 1000,
+      maxWorkspaces: 1000,
       maxGoals: 1000,
       maxCoreProjects: 1000,
       reviewsPerMonth: 100000,
@@ -69,4 +71,19 @@ function getLimit(user, key) {
   return typeof v === 'number' ? v : 0;
 }
 
-module.exports = { plans, effectivePlan, hasFeature, getLimit };
+/**
+ * Get workspace limit considering purchased add-on slots.
+ * @param {Object} user - User object with hasActiveSubscription flag
+ * @param {Object} subscription - Subscription object with workspaceSlots
+ * @returns {number} Total allowed workspaces (base + purchased)
+ */
+function getWorkspaceLimit(user, subscription) {
+  // If subscription has explicit slot tracking, use that
+  if (subscription?.workspaceSlots?.total) {
+    return subscription.workspaceSlots.total;
+  }
+  // Fall back to plan-based limit
+  return getLimit(user, 'maxWorkspaces');
+}
+
+module.exports = { plans, effectivePlan, hasFeature, getLimit, getWorkspaceLimit };

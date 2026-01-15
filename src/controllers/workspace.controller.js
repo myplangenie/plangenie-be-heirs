@@ -1,6 +1,7 @@
 const Workspace = require('../models/Workspace');
 const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
+const Subscription = require('../models/Subscription');
 const PriorityCache = require('../models/PriorityCache');
 const AgentCache = require('../models/AgentCache');
 const Department = require('../models/Department');
@@ -36,12 +37,14 @@ exports.list = async (req, res, next) => {
           User.findById(userId).lean().exec(),
         ]);
         const businessName = ob?.businessProfile?.businessName || user?.companyName || `${user?.firstName || 'My'}'s Workspace`;
+        const industry = ob?.businessProfile?.industry || '';
 
         const wid = ensureId();
         const workspace = await Workspace.create({
           user: userId,
           wid,
           name: businessName,
+          industry,
           defaultWorkspace: true,
         });
         items = [workspace.toObject()];
@@ -49,6 +52,41 @@ exports.list = async (req, res, next) => {
         console.error('[workspace.list] Auto-create failed:', autoCreateErr?.message || autoCreateErr);
       }
     }
+
+    // Enrich items with onboarding status
+    const workspaceIds = items.map(w => w._id);
+    const onboardings = await Onboarding.find({
+      user: userId,
+      workspace: { $in: workspaceIds }
+    }).select('workspace onboardingDetailCompleted businessProfile').lean().exec();
+
+    const onboardingMap = {};
+    onboardings.forEach(ob => {
+      onboardingMap[String(ob.workspace)] = ob;
+    });
+
+    // Add computed fields to each workspace
+    items = items.map(ws => {
+      const ob = onboardingMap[String(ws._id)];
+      const onboardingComplete = !!ob?.onboardingDetailCompleted;
+
+      // Compute display status: onboarding (if not complete), or actual status
+      let displayStatus = ws.status || 'active';
+      if (!onboardingComplete && ws.status === 'active') {
+        displayStatus = 'onboarding';
+      }
+
+      // Try to get industry from onboarding if not set on workspace
+      const industry = ws.industry || ob?.businessProfile?.industry || '';
+
+      return {
+        ...ws,
+        industry,
+        displayStatus,
+        onboardingComplete,
+        lastActivityAt: ws.lastActivityAt || ws.updatedAt || ws.createdAt,
+      };
+    });
 
     return res.json({ items });
   } catch (err) {
@@ -64,17 +102,35 @@ exports.create = async (req, res, next) => {
     const name = String(req.body?.name || '').trim();
     const description = String(req.body?.description || '').trim();
     if (!name) return res.status(400).json({ message: 'Name is required' });
-    // Simple plan limit: allow 1 free workspace
+
+    // Check workspace slot limits
     try {
       const ent = require('../config/entitlements');
-      const User = require('../models/User');
       const user = await User.findById(userId).lean().exec();
-      const limit = ent.getLimit(user, 'maxWorkspaces') || ent.getLimit(user, 'maxJourneys') || 0;
-      if (limit > 0) {
-        const count = await Workspace.countDocuments({ user: userId });
-        if (count >= limit) return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Upgrade to create more Workspaces', limitKey: 'maxWorkspaces', limit, plan: ent.effectivePlan(user) });
+      const subscription = await Subscription.findOne({ user: userId }).lean().exec();
+
+      // Get workspace limit from slots or fall back to plan-based limit
+      const limit = ent.getWorkspaceLimit(user, subscription);
+      const usedSlots = await Workspace.countDocuments({ user: userId });
+      const availableSlots = Math.max(0, limit - usedSlots);
+
+      if (usedSlots >= limit) {
+        return res.status(402).json({
+          code: 'WORKSPACE_SLOTS_EXHAUSTED',
+          message: 'Purchase additional workspace slots to create more workspaces',
+          slots: {
+            total: limit,
+            used: usedSlots,
+            available: availableSlots,
+            included: subscription?.workspaceSlots?.included || 1,
+            purchased: subscription?.workspaceSlots?.purchased || 0,
+          },
+          plan: ent.effectivePlan(user),
+        });
       }
-    } catch {}
+    } catch (limitErr) {
+      console.error('[workspace.create] Limit check error:', limitErr?.message || limitErr);
+    }
     const wid = ensureId();
     const count = await Workspace.countDocuments({ user: userId });
     const doc = await Workspace.create({ user: userId, wid, name, description, defaultWorkspace: count === 0 });
@@ -98,7 +154,7 @@ exports.get = async (req, res, next) => {
   }
 };
 
-// PATCH /api/workspaces/:wid  { name?, description?, status?, defaultWorkspace?, reviewCadence? }
+// PATCH /api/workspaces/:wid  { name?, description?, industry?, status?, defaultWorkspace?, reviewCadence? }
 exports.patch = async (req, res, next) => {
   try {
     const userId = req.user?.id;
@@ -107,10 +163,17 @@ exports.patch = async (req, res, next) => {
     const doc = await Workspace.findOne({ user: userId, wid });
     if (!doc) return res.status(404).json({ message: 'Workspace not found' });
 
-    const { name, description, status, defaultWorkspace, reviewCadence } = req.body || {};
+    const { name, description, industry, status, defaultWorkspace, reviewCadence } = req.body || {};
     if (typeof name !== 'undefined') doc.name = String(name || '');
     if (typeof description !== 'undefined') doc.description = String(description || '');
-    if (typeof status !== 'undefined') doc.status = String(status || 'active');
+    if (typeof industry !== 'undefined') doc.industry = String(industry || '');
+    if (typeof status !== 'undefined') {
+      const validStatuses = ['active', 'paused', 'archived'];
+      const newStatus = String(status || 'active');
+      if (validStatuses.includes(newStatus)) {
+        doc.status = newStatus;
+      }
+    }
     if (reviewCadence && typeof reviewCadence === 'object') {
       doc.reviewCadence = { ...doc.reviewCadence.toObject?.() || doc.reviewCadence || {}, ...reviewCadence };
     }
@@ -119,6 +182,10 @@ exports.patch = async (req, res, next) => {
       await Workspace.updateMany({ user: userId, _id: { $ne: doc._id } }, { $set: { defaultWorkspace: false } });
       doc.defaultWorkspace = true;
     }
+
+    // Update last activity timestamp
+    doc.lastActivityAt = new Date();
+
     await doc.save();
     return res.json({ workspace: doc });
   } catch (err) {
@@ -171,6 +238,23 @@ exports.delete = async (req, res, next) => {
     }
 
     return res.json({ ok: true, message: 'Workspace and all associated data deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/workspaces/:wid/touch
+// Update lastActivityAt when user accesses workspace (e.g., on login/select)
+exports.touch = async (req, res, next) => {
+  try {
+    const wid = String(req.params?.wid || '').trim();
+    const ws = await Workspace.findOne({ wid });
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+
+    ws.lastActivityAt = new Date();
+    await ws.save();
+
+    return res.json({ ok: true, lastActivityAt: ws.lastActivityAt });
   } catch (err) {
     next(err);
   }
@@ -286,6 +370,7 @@ exports.getDecisionStrip = async (req, res, next) => {
         decisionStrip: {
           summary: 'No priorities calculated yet. Complete your onboarding to see insights.',
           weeklyFocus: [],
+          upcomingItems: [],
           monthlyThrust: null,
           risks: [],
           clusters: [],
@@ -324,6 +409,7 @@ exports.getDecisionStrip = async (req, res, next) => {
       decisionStrip: {
         summary,
         weeklyFocus: cache.weeklyTop3 || [],
+        upcomingItems: cache.upcomingItems || [],
         monthlyThrust: cache.monthlyThrust || null,
         risks: cache.risks || [],
         clusters: cache.clusters || [],
@@ -933,3 +1019,266 @@ function buildFallbackSummary(weeklyTop3, monthlyThrust, risks) {
     ? parts.join('. ') + '.'
     : 'Complete your onboarding to get personalized insights.';
 }
+
+// GET /api/workspaces/:wid/ai-settings
+// Get workspace AI settings
+exports.getAISettings = async (req, res, next) => {
+  try {
+    const wid = String(req.params?.wid || '').trim();
+    const ws = await Workspace.findOne({ wid }).select('aiSettings').lean();
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+
+    // Return settings with defaults if not set
+    const aiSettings = ws.aiSettings || {
+      enabled: true,
+      features: {
+        visionSuggestions: true,
+        valueSuggestions: true,
+        swotAnalysis: true,
+        marketAnalysis: true,
+        financialSuggestions: true,
+        actionPlanSuggestions: true,
+        coreProjectSuggestions: true,
+      },
+    };
+
+    return res.json({ aiSettings });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/workspaces/:wid/ai-settings
+// Update workspace AI settings (admin only)
+exports.updateAISettings = async (req, res, next) => {
+  try {
+    const wid = String(req.params?.wid || '').trim();
+    const ws = await Workspace.findOne({ wid });
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+
+    const { enabled, features } = req.body || {};
+
+    // Update enabled toggle
+    if (typeof enabled === 'boolean') {
+      ws.aiSettings = ws.aiSettings || {};
+      ws.aiSettings.enabled = enabled;
+    }
+
+    // Update individual features
+    if (features && typeof features === 'object') {
+      ws.aiSettings = ws.aiSettings || {};
+      ws.aiSettings.features = ws.aiSettings.features || {};
+
+      const allowedFeatures = [
+        'visionSuggestions',
+        'valueSuggestions',
+        'swotAnalysis',
+        'marketAnalysis',
+        'financialSuggestions',
+        'actionPlanSuggestions',
+        'coreProjectSuggestions',
+      ];
+
+      for (const key of allowedFeatures) {
+        if (typeof features[key] === 'boolean') {
+          ws.aiSettings.features[key] = features[key];
+        }
+      }
+    }
+
+    ws.markModified('aiSettings');
+    await ws.save();
+
+    return res.json({ aiSettings: ws.aiSettings });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/workspaces/:wid/notification-preferences
+// Get workspace notification preferences
+exports.getNotificationPreferences = async (req, res, next) => {
+  try {
+    const wid = String(req.params?.wid || '').trim();
+    const ws = await Workspace.findOne({ wid }).select('notificationPreferences').lean();
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+
+    // Return preferences with defaults if not set
+    const notificationPreferences = ws.notificationPreferences || {
+      email: {
+        weeklyDigest: true,
+        dailyWish: true,
+        reviewReminders: true,
+        deadlineAlerts: true,
+        teamActivity: true,
+      },
+      inApp: {
+        taskUpdates: true,
+        reviewReminders: true,
+        deadlineAlerts: true,
+        teamActivity: true,
+        aiInsights: true,
+      },
+      timing: {
+        digestDay: 5,
+        digestHour: 9,
+        quietHoursStart: null,
+        quietHoursEnd: null,
+      },
+    };
+
+    return res.json({ notificationPreferences });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/workspaces/:wid/notification-preferences
+// Update workspace notification preferences (admin only)
+exports.updateNotificationPreferences = async (req, res, next) => {
+  try {
+    const wid = String(req.params?.wid || '').trim();
+    const ws = await Workspace.findOne({ wid });
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+
+    const { email, inApp, timing } = req.body || {};
+
+    // Initialize if needed
+    ws.notificationPreferences = ws.notificationPreferences || {};
+
+    // Update email preferences
+    if (email && typeof email === 'object') {
+      ws.notificationPreferences.email = ws.notificationPreferences.email || {};
+      const allowedEmailPrefs = ['weeklyDigest', 'dailyWish', 'reviewReminders', 'deadlineAlerts', 'teamActivity'];
+      for (const key of allowedEmailPrefs) {
+        if (typeof email[key] === 'boolean') {
+          ws.notificationPreferences.email[key] = email[key];
+        }
+      }
+    }
+
+    // Update in-app preferences
+    if (inApp && typeof inApp === 'object') {
+      ws.notificationPreferences.inApp = ws.notificationPreferences.inApp || {};
+      const allowedInAppPrefs = ['taskUpdates', 'reviewReminders', 'deadlineAlerts', 'teamActivity', 'aiInsights'];
+      for (const key of allowedInAppPrefs) {
+        if (typeof inApp[key] === 'boolean') {
+          ws.notificationPreferences.inApp[key] = inApp[key];
+        }
+      }
+    }
+
+    // Update timing preferences
+    if (timing && typeof timing === 'object') {
+      ws.notificationPreferences.timing = ws.notificationPreferences.timing || {};
+
+      if (typeof timing.digestDay === 'number' && timing.digestDay >= 0 && timing.digestDay <= 6) {
+        ws.notificationPreferences.timing.digestDay = timing.digestDay;
+      }
+      if (typeof timing.digestHour === 'number' && timing.digestHour >= 0 && timing.digestHour <= 23) {
+        ws.notificationPreferences.timing.digestHour = timing.digestHour;
+      }
+      if (timing.quietHoursStart === null || (typeof timing.quietHoursStart === 'number' && timing.quietHoursStart >= 0 && timing.quietHoursStart <= 23)) {
+        ws.notificationPreferences.timing.quietHoursStart = timing.quietHoursStart;
+      }
+      if (timing.quietHoursEnd === null || (typeof timing.quietHoursEnd === 'number' && timing.quietHoursEnd >= 0 && timing.quietHoursEnd <= 23)) {
+        ws.notificationPreferences.timing.quietHoursEnd = timing.quietHoursEnd;
+      }
+    }
+
+    ws.markModified('notificationPreferences');
+    await ws.save();
+
+    return res.json({ notificationPreferences: ws.notificationPreferences });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/workspaces/:wid/export-settings
+// Get workspace export settings
+exports.getExportSettings = async (req, res, next) => {
+  try {
+    const wid = String(req.params?.wid || '').trim();
+    const ws = await Workspace.findOne({ wid }).select('exportSettings').lean();
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+
+    // Return settings with defaults if not set
+    const exportSettings = ws.exportSettings || {
+      enabled: true,
+      formats: {
+        pdf: true,
+        docx: true,
+        csv: true,
+      },
+      minRole: null,
+      content: {
+        plan: true,
+        strategyCanvas: true,
+        departments: true,
+        financials: true,
+      },
+    };
+
+    return res.json({ exportSettings });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/workspaces/:wid/export-settings
+// Update workspace export settings (admin only)
+exports.updateExportSettings = async (req, res, next) => {
+  try {
+    const wid = String(req.params?.wid || '').trim();
+    const ws = await Workspace.findOne({ wid });
+    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
+
+    const { enabled, formats, minRole, content } = req.body || {};
+
+    // Initialize if needed
+    ws.exportSettings = ws.exportSettings || {};
+
+    // Update enabled toggle
+    if (typeof enabled === 'boolean') {
+      ws.exportSettings.enabled = enabled;
+    }
+
+    // Update format controls
+    if (formats && typeof formats === 'object') {
+      ws.exportSettings.formats = ws.exportSettings.formats || {};
+      const allowedFormats = ['pdf', 'docx', 'csv'];
+      for (const key of allowedFormats) {
+        if (typeof formats[key] === 'boolean') {
+          ws.exportSettings.formats[key] = formats[key];
+        }
+      }
+    }
+
+    // Update minimum role requirement
+    if (minRole !== undefined) {
+      const allowedRoles = ['viewer', 'contributor', 'admin', 'owner', null];
+      if (allowedRoles.includes(minRole)) {
+        ws.exportSettings.minRole = minRole;
+      }
+    }
+
+    // Update content controls
+    if (content && typeof content === 'object') {
+      ws.exportSettings.content = ws.exportSettings.content || {};
+      const allowedContent = ['plan', 'strategyCanvas', 'departments', 'financials'];
+      for (const key of allowedContent) {
+        if (typeof content[key] === 'boolean') {
+          ws.exportSettings.content[key] = content[key];
+        }
+      }
+    }
+
+    ws.markModified('exportSettings');
+    await ws.save();
+
+    return res.json({ exportSettings: ws.exportSettings });
+  } catch (err) {
+    next(err);
+  }
+};

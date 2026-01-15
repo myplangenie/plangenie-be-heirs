@@ -30,7 +30,8 @@
     "pdf-parse": "^2.4.5",
     "puppeteer": "^23.7.1",
     "resend": "^4.0.0",
-    "stripe": "^16.0.0"
+    "stripe": "^16.0.0",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

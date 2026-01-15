@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Workspace = require('../models/Workspace');
 const crypto = require('crypto');
 const { getWorkspaceFilter, getWorkspaceId, addWorkspaceToDoc } = require('../utils/workspaceQuery');
+const { touchWorkspace } = require('../services/workspaceActivityService');
 
 function ynToBool(v) {
   if (typeof v === 'boolean') return v;
@@ -115,6 +116,8 @@ exports.saveUserProfile = async (req, res) => {
   if (Object.prototype.hasOwnProperty.call(req.body, 'planningFor')) up.planningFor = planningFor;
   ob.userProfile = up;
   await ob.save();
+  // Update workspace lastActivityAt
+  if (ob.workspace) touchWorkspace(ob.workspace);
 
   // Optionally sync fullName onto User
   if (fullName) {
@@ -219,6 +222,8 @@ exports.saveBusinessProfile = async (req, res) => {
       console.error('[onboarding] Failed to sync workspace:', wsErr?.message || wsErr);
     }
   }
+  // Update workspace lastActivityAt
+  if (ob.workspace) touchWorkspace(ob.workspace);
 
   return res.json({ onboarding: ob });
 };
@@ -244,6 +249,8 @@ exports.saveVision = async (req, res) => {
   if (Object.prototype.hasOwnProperty.call(req.body, 'ubp')) vv.ubp = ubp;
   ob.vision = vv;
   await ob.save();
+  // Update workspace lastActivityAt
+  if (ob.workspace) touchWorkspace(ob.workspace);
   return res.json({ onboarding: ob });
 };
 
@@ -403,6 +410,8 @@ exports.saveAllAnswers = async (req, res) => {
     }
   } catch {}
   await ob.save();
+  // Update workspace lastActivityAt
+  if (ob.workspace) touchWorkspace(ob.workspace);
   return res.json({ ok: true, answers: ob.answers });
 };
 
