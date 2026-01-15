@@ -46,6 +46,7 @@ function buildAnswersContext(ob) {
   try {
     const a = (ob && ob.answers) || {};
     const lines = [];
+    // Vision & Values
     if (a.ubp) lines.push(`UBP: ${String(a.ubp).trim()}`);
     if (a.purpose) lines.push(`Purpose: ${String(a.purpose).trim()}`);
     if (a.visionBhag) lines.push(`Long-Term Strategic Vision (BHAG): ${String(a.visionBhag).trim()}`);
@@ -53,6 +54,31 @@ function buildAnswersContext(ob) {
     if (a.vision3y) lines.push(`3-Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
     if (a.valuesCore) lines.push(`Core Values: ${String(a.valuesCore).trim()}`);
     if (a.cultureFeeling) lines.push(`Culture & Behaviors: ${String(a.cultureFeeling).trim()}`);
+    // SWOT
+    if (a.swotStrengths) lines.push(`Strengths: ${String(a.swotStrengths).trim()}`);
+    if (a.swotWeaknesses) lines.push(`Weaknesses: ${String(a.swotWeaknesses).trim()}`);
+    if (a.swotOpportunities) lines.push(`Opportunities: ${String(a.swotOpportunities).trim()}`);
+    if (a.swotThreats) lines.push(`Threats: ${String(a.swotThreats).trim()}`);
+    // Market & Competition
+    if (a.marketCustomer) lines.push(`Target Customer: ${String(a.marketCustomer).trim()}`);
+    if (a.partnersDesc) lines.push(`Partners: ${String(a.partnersDesc).trim()}`);
+    if (a.compNotes) lines.push(`Competitor Notes: ${String(a.compNotes).trim()}`);
+    if (Array.isArray(a.competitorNames) && a.competitorNames.length) {
+      lines.push(`Competitors: ${a.competitorNames.slice(0, 8).join(', ')}`);
+    }
+    if (Array.isArray(a.competitorAdvantages) && a.competitorAdvantages.length) {
+      lines.push(`Competitive Advantages: ${a.competitorAdvantages.slice(0, 8).join(', ')}`);
+    }
+    // Products
+    if (Array.isArray(a.products) && a.products.length) {
+      const prodNames = a.products.slice(0, 5).map(p => p?.product).filter(Boolean).join(', ');
+      if (prodNames) lines.push(`Products/Services: ${prodNames}`);
+    }
+    // Financial summary
+    if (a.finStartingCash) lines.push(`Starting Cash: $${a.finStartingCash}`);
+    if (a.finFixedOperatingCosts) lines.push(`Monthly Fixed Costs: $${a.finFixedOperatingCosts}`);
+    if (a.finPayrollCost) lines.push(`Monthly Payroll: $${a.finPayrollCost}`);
+    if (a.finTargetProfitMarginPct) lines.push(`Target Margin: ${a.finTargetProfitMarginPct}%`);
     return lines.length ? `\n\nUser-provided answers:\n- ${lines.join('\n- ')}` : '';
   } catch (_) {
     return '';
@@ -84,6 +110,8 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
       bp.ventureType && `Venture Type: ${bp.ventureType}`,
       bp.teamSize && `Team Size: ${bp.teamSize}`,
       bp.businessStage && `Stage: ${bp.businessStage}`,
+      bp.description && `Business Description: ${bp.description}`,
+      bp.funding && `Has Funding: Yes`,
       up.role && `User Role: ${up.role}`,
     ].filter(Boolean);
     const profileText = profileLines.length ? `Context about the business:\n- ${profileLines.join('\n- ')}` : '';
@@ -97,18 +125,64 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     if (answers.vision1y) vvParts.push(`1-Year Goals: ${String(answers.vision1y).trim().split('\n').filter(Boolean).join('; ')}`);
     if (answers.vision3y) vvParts.push(`3-Year Goals: ${String(answers.vision3y).trim().split('\n').filter(Boolean).join('; ')}`);
     if (answers.valuesCore) vvParts.push(`Core Values: ${String(answers.valuesCore).trim()}`);
+    if (answers.cultureFeeling) vvParts.push(`Culture & Behaviors: ${String(answers.cultureFeeling).trim()}`);
     const vvText = vvParts.length ? `\n\nVision & Values:\n- ${vvParts.join('\n- ')}` : '';
+
+    // SWOT Analysis
+    const swotLines = [];
+    if (answers.swotStrengths) swotLines.push(`Strengths: ${String(answers.swotStrengths).trim()}`);
+    if (answers.swotWeaknesses) swotLines.push(`Weaknesses: ${String(answers.swotWeaknesses).trim()}`);
+    if (answers.swotOpportunities) swotLines.push(`Opportunities: ${String(answers.swotOpportunities).trim()}`);
+    if (answers.swotThreats) swotLines.push(`Threats: ${String(answers.swotThreats).trim()}`);
+    const swotText = swotLines.length ? `\n\nSWOT Analysis:\n- ${swotLines.join('\n- ')}` : '';
 
     // Market & Competition
     const marketLines = [];
-    if (answers.marketCustomer) marketLines.push(`Customer: ${String(answers.marketCustomer).trim()}`);
+    if (answers.marketCustomer) marketLines.push(`Target Customer: ${String(answers.marketCustomer).trim()}`);
+    if (answers.custType) marketLines.push(`Customer Type: ${String(answers.custType).trim()}`);
     if (answers.partnersDesc) marketLines.push(`Partners: ${String(answers.partnersDesc).trim()}`);
     if (answers.compNotes) marketLines.push(`Competitors Notes: ${String(answers.compNotes).trim()}`);
     if (Array.isArray(answers.competitorNames) && answers.competitorNames.length) {
       const names = answers.competitorNames.map(String).map((s) => s.trim()).filter(Boolean).slice(0, 8).join(', ');
       if (names) marketLines.push(`Competitor Names: ${names}`);
     }
+    if (Array.isArray(answers.competitorAdvantages) && answers.competitorAdvantages.length) {
+      const advantages = answers.competitorAdvantages.map(String).map((s) => s.trim()).filter(Boolean).slice(0, 8).join(', ');
+      if (advantages) marketLines.push(`Competitive Advantages: ${advantages}`);
+    }
     const marketText = marketLines.length ? `\n\nMarket & Competition:\n- ${marketLines.join('\n- ')}` : '';
+
+    // Products & Services
+    let productsText = '';
+    try {
+      if (Array.isArray(answers.products) && answers.products.length) {
+        const productLines = answers.products.slice(0, 10).map((p) => {
+          const parts = [
+            p?.product && `Name: ${String(p.product).trim()}`,
+            p?.description && `Desc: ${String(p.description).trim()}`,
+            p?.price && `Price: $${p.price}`,
+            p?.unitCost && `Cost: $${p.unitCost}`,
+            p?.monthlyVolume && `Monthly Volume: ${p.monthlyVolume}`,
+          ].filter(Boolean);
+          return parts.length ? '- ' + parts.join(' | ') : '';
+        }).filter(Boolean);
+        if (productLines.length) productsText = `\n\nProducts & Services:\n${productLines.join('\n')}`;
+      }
+    } catch {}
+
+    // Financial Overview
+    const finLines = [];
+    if (answers.finStartingCash) finLines.push(`Starting Cash: $${answers.finStartingCash}`);
+    if (answers.finSalesVolume) finLines.push(`Monthly Sales Volume: ${answers.finSalesVolume} units`);
+    if (answers.finAvgUnitCost) finLines.push(`Avg Unit Cost: $${answers.finAvgUnitCost}`);
+    if (answers.finFixedOperatingCosts) finLines.push(`Fixed Operating Costs: $${answers.finFixedOperatingCosts}/month`);
+    if (answers.finPayrollCost) finLines.push(`Payroll Cost: $${answers.finPayrollCost}/month`);
+    if (answers.finMarketingSalesSpend) finLines.push(`Marketing Spend: $${answers.finMarketingSalesSpend}/month`);
+    if (answers.finTargetProfitMarginPct) finLines.push(`Target Profit Margin: ${answers.finTargetProfitMarginPct}%`);
+    if (answers.finSalesGrowthPct) finLines.push(`Expected Sales Growth: ${answers.finSalesGrowthPct}%`);
+    if (answers.finAdditionalFundingAmount) finLines.push(`Additional Funding Expected: $${answers.finAdditionalFundingAmount}`);
+    if (answers.finIsNonprofit) finLines.push(`Organization Type: Non-profit`);
+    const finText = finLines.length ? `\n\nFinancial Overview:\n- ${finLines.join('\n- ')}` : '';
 
     // Existing Core Strategic Projects (to avoid duplicates and leverage context)
     let coreProjectsText = '';
@@ -157,7 +231,7 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
       if (lines.length) teamText = `\n\nTeam Members (Active):\n${lines.join('\n')}`;
     } catch {}
 
-    return [profileText, vvText, marketText, coreProjectsText, departmentsText, teamText].filter(Boolean).join('\n\n');
+    return [profileText, vvText, swotText, marketText, productsText, finText, coreProjectsText, departmentsText, teamText].filter(Boolean).join('\n\n');
   } catch (_) {
     return '';
   }
