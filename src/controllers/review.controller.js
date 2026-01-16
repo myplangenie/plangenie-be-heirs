@@ -42,7 +42,8 @@ exports.create = async (req, res, next) => {
       rid: id(),
       cadence: ['weekly','monthly','quarterly'].includes(String(payload.cadence)) ? String(payload.cadence) : 'weekly',
       notes: String(payload.notes || ''),
-      attendees: Array.isArray(payload.attendees) ? payload.attendees.map(String) : [],
+      projects: Array.isArray(payload.projects) ? payload.projects.map((p) => ({ index: Number(p?.index) || 0, title: String(p?.title || '').trim() })).filter((p) => p.title) : [],
+      attendees: Array.isArray(payload.attendees) ? payload.attendees.map((a) => ({ id: String(a?.id || '').trim(), name: String(a?.name || '').trim(), email: String(a?.email || '').trim() })).filter((a) => a.id && a.name) : [],
       actionItems: Array.isArray(payload.actionItems) ? payload.actionItems.map((ai) => ({ text: String(ai?.text||'').trim(), owner: String(ai?.owner||'').trim(), dueWhen: String(ai?.dueWhen||'').trim(), status: ['Not started','In progress','Completed'].includes(ai?.status) ? ai.status : 'Not started' })).filter((ai)=> ai.text) : [],
     });
     return res.status(201).json({ review: doc });
@@ -75,7 +76,12 @@ exports.patch = async (req, res, next) => {
     if (!doc) return res.status(404).json({ message: 'Review not found' });
     const payload = req.body || {};
     if (typeof payload.notes !== 'undefined') doc.notes = String(payload.notes || '');
-    if (Array.isArray(payload.attendees)) doc.attendees = payload.attendees.map(String);
+    if (Array.isArray(payload.projects)) {
+      doc.projects = payload.projects.map((p) => ({ index: Number(p?.index) || 0, title: String(p?.title || '').trim() })).filter((p) => p.title);
+    }
+    if (Array.isArray(payload.attendees)) {
+      doc.attendees = payload.attendees.map((a) => ({ id: String(a?.id || '').trim(), name: String(a?.name || '').trim(), email: String(a?.email || '').trim() })).filter((a) => a.id && a.name);
+    }
     if (Array.isArray(payload.actionItems)) {
       doc.actionItems = payload.actionItems.map((ai) => ({ text: String(ai?.text||'').trim(), owner: String(ai?.owner||'').trim(), dueWhen: String(ai?.dueWhen||'').trim(), status: ['Not started','In progress','Completed'].includes(ai?.status) ? ai.status : 'Not started' })).filter((ai)=> ai.text);
     }

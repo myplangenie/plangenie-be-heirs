@@ -10,6 +10,23 @@ const ActionItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const ReviewProjectSchema = new mongoose.Schema(
+  {
+    index: { type: Number, required: true },
+    title: { type: String, required: true },
+  },
+  { _id: false }
+);
+
+const ReviewAttendeeSchema = new mongoose.Schema(
+  {
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    email: { type: String },
+  },
+  { _id: false }
+);
+
 const ReviewSessionSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -20,7 +37,8 @@ const ReviewSessionSchema = new mongoose.Schema(
     endedAt: { type: Date },
     status: { type: String, enum: ['open','closed'], default: 'open', index: true },
     notes: { type: String, default: '' },
-    attendees: [{ type: String }],
+    projects: [ReviewProjectSchema],
+    attendees: [ReviewAttendeeSchema],
     actionItems: [ActionItemSchema],
     decisions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Decision' }],
   },

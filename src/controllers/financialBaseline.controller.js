@@ -62,7 +62,13 @@ exports.updateWorkCosts = async (req, res) => {
     const workspaceId = req.workspace?._id || null;
     const { total, contractors, materials, commissions, shipping, other } = req.body;
 
-    const baseline = await FinancialBaseline.getOrCreate(userId, workspaceId);
+    let baseline;
+    try {
+      baseline = await FinancialBaseline.getOrCreate(userId, workspaceId);
+    } catch (getErr) {
+      console.error('[financialBaseline.updateWorkCosts] getOrCreate failed:', getErr?.message || getErr);
+      return res.status(500).json({ message: `Failed to get/create baseline: ${getErr?.message || 'Unknown error'}` });
+    }
 
     // Update work-related costs
     if (total !== undefined) baseline.workRelatedCosts.total = total;
@@ -83,12 +89,17 @@ exports.updateWorkCosts = async (req, res) => {
         (breakdown.other || 0);
     }
 
-    await baseline.save();
+    try {
+      await baseline.save();
+    } catch (saveErr) {
+      console.error('[financialBaseline.updateWorkCosts] save failed:', saveErr?.message || saveErr);
+      return res.status(500).json({ message: `Failed to save work costs: ${saveErr?.message || 'Unknown error'}` });
+    }
 
     return res.json({ baseline: baseline.toObject() });
   } catch (err) {
     console.error('[financialBaseline.updateWorkCosts]', err?.message || err);
-    return res.status(500).json({ message: 'Failed to update work costs' });
+    return res.status(500).json({ message: `Failed to update work costs: ${err?.message || 'Unknown error'}` });
   }
 };
 
@@ -104,7 +115,13 @@ exports.updateFixedCosts = async (req, res) => {
     const workspaceId = req.workspace?._id || null;
     const { total, salaries, rent, software, insurance, utilities, marketing, other } = req.body;
 
-    const baseline = await FinancialBaseline.getOrCreate(userId, workspaceId);
+    let baseline;
+    try {
+      baseline = await FinancialBaseline.getOrCreate(userId, workspaceId);
+    } catch (getErr) {
+      console.error('[financialBaseline.updateFixedCosts] getOrCreate failed:', getErr?.message || getErr);
+      return res.status(500).json({ message: `Failed to get/create baseline: ${getErr?.message || 'Unknown error'}` });
+    }
 
     // Update fixed costs
     if (total !== undefined) baseline.fixedCosts.total = total;
@@ -129,12 +146,17 @@ exports.updateFixedCosts = async (req, res) => {
         (breakdown.other || 0);
     }
 
-    await baseline.save();
+    try {
+      await baseline.save();
+    } catch (saveErr) {
+      console.error('[financialBaseline.updateFixedCosts] save failed:', saveErr?.message || saveErr);
+      return res.status(500).json({ message: `Failed to save fixed costs: ${saveErr?.message || 'Unknown error'}` });
+    }
 
     return res.json({ baseline: baseline.toObject() });
   } catch (err) {
     console.error('[financialBaseline.updateFixedCosts]', err?.message || err);
-    return res.status(500).json({ message: 'Failed to update fixed costs' });
+    return res.status(500).json({ message: `Failed to update fixed costs: ${err?.message || 'Unknown error'}` });
   }
 };
 
