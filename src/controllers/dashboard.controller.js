@@ -11,6 +11,8 @@ const Department = require('../models/Department');
 const Financials = require('../models/Financials');
 const Plan = require('../models/Plan');
 const PlanSection = require('../models/PlanSection');
+const RevenueStream = require('../models/RevenueStream');
+const FinancialBaseline = require('../models/FinancialBaseline');
 const TeamMember = require('../models/TeamMember');
 const financialSnapshotService = require('../services/financialSnapshotService');
 const nodeCrypto = require('crypto');
@@ -1955,12 +1957,34 @@ exports.exportPlanPdf = async (req, res, next) => {
       if (snapshot) financialData = snapshot;
     } catch {}
 
+    // Fetch v2 data: RevenueStreams and FinancialBaseline
+    let revenueStreamsV2 = [];
+    let revenueAggregateV2 = null;
+    let financialBaselineV2 = null;
+    try {
+      const streamFilter = { user: userId, isActive: true };
+      if (wsFilter.workspace) streamFilter.workspace = wsFilter.workspace;
+      revenueStreamsV2 = await RevenueStream.find(streamFilter).lean().exec();
+      revenueAggregateV2 = await RevenueStream.getAggregate(userId, wsFilter.workspace);
+    } catch (e) {
+      console.error('PDF export: Error fetching revenue streams v2:', e);
+    }
+    try {
+      financialBaselineV2 = await FinancialBaseline.findOne({ user: userId, workspace: wsFilter.workspace }).lean().exec();
+    } catch (e) {
+      console.error('PDF export: Error fetching financial baseline v2:', e);
+    }
+
     // Store print data with a temporary token (avoids URI_TOO_LONG error)
     const printData = {
       plan: { companyLogoUrl: compiledPlan.companyLogoUrl || '' },
       compiled: compiledPlan,
       prose: proseData,
       financial: financialData,
+      // V2 data for new layout
+      revenueStreamsV2,
+      revenueAggregateV2,
+      financialBaselineV2,
     };
     const crypto = require('crypto');
     const printToken = crypto.randomBytes(32).toString('hex');
@@ -2515,6 +2539,24 @@ exports.exportPlanDocx = async (req, res, next) => {
     const marketProse = typeof prose.marketStatement === 'string' ? prose.marketStatement : '';
     const financialProse = typeof prose.financialStatement === 'string' ? prose.financialStatement : '';
 
+    // Fetch v2 data: RevenueStreams and FinancialBaseline (outside org chart try block for docx use)
+    let revenueStreamsV2 = [];
+    let revenueAggregateV2 = null;
+    let financialBaselineV2 = null;
+    try {
+      const streamFilter = { user: userId, isActive: true };
+      if (wsFilter.workspace) streamFilter.workspace = wsFilter.workspace;
+      revenueStreamsV2 = await RevenueStream.find(streamFilter).lean().exec();
+      revenueAggregateV2 = await RevenueStream.getAggregate(userId, wsFilter.workspace);
+    } catch (e) {
+      console.error('DOCX export: Error fetching revenue streams v2:', e);
+    }
+    try {
+      financialBaselineV2 = await FinancialBaseline.findOne({ user: userId, workspace: wsFilter.workspace }).lean().exec();
+    } catch (e) {
+      console.error('DOCX export: Error fetching financial baseline v2:', e);
+    }
+
     // Optionally capture Org Chart as an image using the same token approach as PDF
     let orgB64 = null;
     try {
@@ -2529,6 +2571,10 @@ exports.exportPlanDocx = async (req, res, next) => {
         compiled: plan,
         prose: { executiveSummary: execProse, marketStatement: marketProse, financialStatement: financialProse },
         financial: snapshot,
+        // V2 data for new layout
+        revenueStreamsV2,
+        revenueAggregateV2,
+        financialBaselineV2,
       };
       if (!global._printDataCache) global._printDataCache = new Map();
       global._printDataCache.set(printToken, { data: printData, expires: Date.now() + 5 * 60 * 1000 });
@@ -2695,12 +2741,37 @@ exports.exportPlanDocx = async (req, res, next) => {
       const margin = 1080; // 0.75in
       const contentWidth = convertInchesToTwip(8.5) - (margin * 2);
 
-      // Products table
+      // Products table - use v2 RevenueStreams if available, fallback to old data
       const productRows = [];
-      productRows.push(new TableRow({ tableHeader: true, children: ['Product/Service','Description','Unit Cost','Price','Monthly Volume'].map((h)=> new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })] })] })) }));
-      (plan.products || []).forEach((pItem) => {
-        productRows.push(new TableRow({ children: [ pItem.product || '—', pItem.description || '—', pItem.unitCost || pItem.pricing || '—', pItem.price || pItem.pricing || '—', pItem.monthlyVolume || '—' ].map((v)=> new TableCell({ children: [p(String(v))] })) }));
-      });
+      const streamTypeLabels = {
+        one_off_project: 'One-Off Project',
+        ongoing_retainer: 'Retainer',
+        time_based: 'Time-Based',
+        product_sales: 'Product Sales',
+        program_cohort: 'Program/Cohort',
+        grants_donations: 'Grants/Donations',
+        mixed_unsure: 'Mixed/Other',
+      };
+      if (revenueStreamsV2 && revenueStreamsV2.length > 0) {
+        // V2 layout: Name, Type, Monthly Revenue, Delivery Cost, Gross Margin
+        productRows.push(new TableRow({ tableHeader: true, children: ['Product/Service','Type','Monthly Revenue','Delivery Cost','Gross Margin'].map((h)=> new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })] })] })) }));
+        revenueStreamsV2.forEach((stream) => {
+          const norm = stream.normalized || {};
+          productRows.push(new TableRow({ children: [
+            stream.name || '—',
+            streamTypeLabels[stream.type] || stream.type || '—',
+            norm.estimatedMonthlyRevenue ? `$${norm.estimatedMonthlyRevenue.toLocaleString()}` : '—',
+            norm.estimatedMonthlyDeliveryCost ? `$${norm.estimatedMonthlyDeliveryCost.toLocaleString()}` : '—',
+            norm.grossMarginPercent != null ? `${norm.grossMarginPercent}%` : '—',
+          ].map((v)=> new TableCell({ children: [p(String(v))] })) }));
+        });
+      } else {
+        // Fallback to old data structure
+        productRows.push(new TableRow({ tableHeader: true, children: ['Product/Service','Description','Unit Cost','Price','Monthly Volume'].map((h)=> new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: h, bold: true })] })] })) }));
+        (plan.products || []).forEach((pItem) => {
+          productRows.push(new TableRow({ children: [ pItem.product || '—', pItem.description || '—', pItem.unitCost || pItem.pricing || '—', pItem.price || pItem.pricing || '—', pItem.monthlyVolume || '—' ].map((v)=> new TableCell({ children: [p(String(v))] })) }));
+        });
+      }
       if (productRows.length === 1) productRows.push(new TableRow({ children: [new TableCell({ children: [p('—')], columnSpan: 5 })] }));
       const pW1 = Math.floor(contentWidth * 0.18);
       const pW2 = Math.floor(contentWidth * 0.34);
@@ -2713,41 +2784,99 @@ exports.exportPlanDocx = async (req, res, next) => {
         layout: TableLayoutType.FIXED,
       });
 
-      // Financials table (2 columns) - using new FinancialSnapshot structure
-      const fs = plan.financialSnapshot || {};
+      // Financials table (2 columns) - use v2 FinancialBaseline if available, fallback to old FinancialSnapshot
       const fmtCurrency = (v) => {
         const n = Number(v);
         return Number.isFinite(n) && n !== 0 ? `$${n.toLocaleString()}` : '—';
       };
       const fmtPct = (v) => {
         const n = Number(v);
-        return Number.isFinite(n) && n !== 0 ? `${n}%` : '—';
+        return Number.isFinite(n) && n !== 0 ? `${Math.round(n * 10) / 10}%` : '—';
       };
-      const fmtFundingDate = () => {
-        const m = fs.cash?.fundingMonth;
-        const y = fs.cash?.fundingYear;
-        if (!m || !y) return '—';
-        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return `${months[m - 1] || m} ${y}`;
-      };
-      const finPairs = [
-        ['Monthly Revenue', fmtCurrency(fs.revenue?.monthlyRevenue)],
-        ['Revenue Growth Rate', fmtPct(fs.revenue?.revenueGrowthPct)],
-        ['Recurring Revenue', fs.revenue?.isRecurring ? `Yes (${fmtPct(fs.revenue?.recurringPct)})` : 'No'],
-        ['Monthly Costs', fmtCurrency(fs.costs?.monthlyCosts)],
-        ['Fixed Costs', fmtCurrency(fs.costs?.fixedCosts)],
-        ['Variable Costs', fmtPct(fs.costs?.variableCostsPct)],
-        ['Biggest Cost Category', Array.isArray(fs.costs?.biggestCostCategory) ? fs.costs.biggestCostCategory.join(', ') : (fs.costs?.biggestCostCategory || '—')],
-        ['Current Cash', fmtCurrency(fs.cash?.currentCash)],
-        ['Monthly Burn Rate', fmtCurrency(fs.cash?.monthlyBurn)],
-        ['Expected Funding', fmtCurrency(fs.cash?.expectedFunding)],
-        ['Funding Date', fmtFundingDate()],
-        ['Net Profit', fmtCurrency(fs.metrics?.netProfit)],
-        ['Profit Margin', fmtPct(fs.metrics?.profitMarginPct)],
-        ['Months of Runway', fs.metrics?.monthsOfRunway != null ? `${fs.metrics.monthsOfRunway} months` : '—'],
-        ['Break-Even Month', fs.metrics?.breakEvenMonth != null ? `Month ${fs.metrics.breakEvenMonth}` : '—'],
-      ];
-      const finRows = finPairs.map(([k,v]) => new TableRow({ children: [ new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: k, bold: true })] })] }), new TableCell({ children: [p(v)] }) ] }));
+      let finPairs = [];
+      if (financialBaselineV2) {
+        // V2 layout: Revenue, Costs, Cash sections
+        const fb = financialBaselineV2;
+        const rev = fb.revenue || {};
+        const workCosts = fb.workRelatedCosts || {};
+        const fixCosts = fb.fixedCosts || {};
+        const cash = fb.cash || {};
+        const metrics = fb.metrics || {};
+        const fmtFundingDateV2 = () => {
+          if (!cash.fundingDate) return '—';
+          const d = new Date(cash.fundingDate);
+          return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        };
+        const fmtRunway = (m) => {
+          if (m == null) return '—';
+          if (m >= 999) return 'Profitable (no burn)';
+          return `${m} month${m === 1 ? '' : 's'}`;
+        };
+        finPairs = [
+          // Revenue Section
+          ['REVENUE', ''],
+          ['Total Monthly Revenue', fmtCurrency(rev.totalMonthlyRevenue)],
+          ['Monthly Delivery Cost', fmtCurrency(rev.totalMonthlyDeliveryCost)],
+          ['Revenue Streams', rev.streamCount != null ? `${rev.streamCount}` : '—'],
+          // Costs Section
+          ['COSTS', ''],
+          ['Work-Related Costs', fmtCurrency(workCosts.total)],
+          ['  - Contractors', fmtCurrency(workCosts.contractors)],
+          ['  - Materials', fmtCurrency(workCosts.materials)],
+          ['  - Commissions', fmtCurrency(workCosts.commissions)],
+          ['  - Shipping', fmtCurrency(workCosts.shipping)],
+          ['  - Other Work Costs', fmtCurrency(workCosts.other)],
+          ['Fixed Costs', fmtCurrency(fixCosts.total)],
+          ['  - Salaries', fmtCurrency(fixCosts.salaries)],
+          ['  - Rent', fmtCurrency(fixCosts.rent)],
+          ['  - Software', fmtCurrency(fixCosts.software)],
+          ['  - Insurance', fmtCurrency(fixCosts.insurance)],
+          ['  - Utilities', fmtCurrency(fixCosts.utilities)],
+          ['  - Marketing', fmtCurrency(fixCosts.marketing)],
+          ['  - Other Fixed Costs', fmtCurrency(fixCosts.other)],
+          // Cash Section
+          ['CASH', ''],
+          ['Current Cash Balance', fmtCurrency(cash.currentBalance)],
+          ['Expected Funding', fmtCurrency(cash.expectedFunding)],
+          ['Expected Funding Date', fmtFundingDateV2()],
+          ['Cash Runway', fmtRunway(metrics.cashRunwayMonths)],
+          // Summary Metrics
+          ['SUMMARY METRICS', ''],
+          ['Monthly Net Surplus', fmtCurrency(metrics.monthlyNetSurplus)],
+          ['Gross Profit', fmtCurrency(metrics.grossProfit)],
+          ['Gross Margin', fmtPct(metrics.grossMarginPercent)],
+          ['Net Margin', fmtPct(metrics.netMarginPercent)],
+          ['Monthly Burn Rate', fmtCurrency(metrics.monthlyBurnRate)],
+        ];
+      } else {
+        // Fallback to old FinancialSnapshot
+        const fs = plan.financialSnapshot || {};
+        const fmtFundingDate = () => {
+          const m = fs.cash?.fundingMonth;
+          const y = fs.cash?.fundingYear;
+          if (!m || !y) return '—';
+          const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+          return `${months[m - 1] || m} ${y}`;
+        };
+        finPairs = [
+          ['Monthly Revenue', fmtCurrency(fs.revenue?.monthlyRevenue)],
+          ['Revenue Growth Rate', fmtPct(fs.revenue?.revenueGrowthPct)],
+          ['Recurring Revenue', fs.revenue?.isRecurring ? `Yes (${fmtPct(fs.revenue?.recurringPct)})` : 'No'],
+          ['Monthly Costs', fmtCurrency(fs.costs?.monthlyCosts)],
+          ['Fixed Costs', fmtCurrency(fs.costs?.fixedCosts)],
+          ['Variable Costs', fmtPct(fs.costs?.variableCostsPct)],
+          ['Biggest Cost Category', Array.isArray(fs.costs?.biggestCostCategory) ? fs.costs.biggestCostCategory.join(', ') : (fs.costs?.biggestCostCategory || '—')],
+          ['Current Cash', fmtCurrency(fs.cash?.currentCash)],
+          ['Monthly Burn Rate', fmtCurrency(fs.cash?.monthlyBurn)],
+          ['Expected Funding', fmtCurrency(fs.cash?.expectedFunding)],
+          ['Funding Date', fmtFundingDate()],
+          ['Net Profit', fmtCurrency(fs.metrics?.netProfit)],
+          ['Profit Margin', fmtPct(fs.metrics?.profitMarginPct)],
+          ['Months of Runway', fs.metrics?.monthsOfRunway != null ? `${fs.metrics.monthsOfRunway} months` : '—'],
+          ['Break-Even Month', fs.metrics?.breakEvenMonth != null ? `Month ${fs.metrics.breakEvenMonth}` : '—'],
+        ];
+      }
+      const finRows = finPairs.map(([k,v]) => new TableRow({ children: [ new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: k, bold: k === k.toUpperCase() })] })] }), new TableCell({ children: [p(v)] }) ] }));
       const finW1 = Math.floor(contentWidth * 0.45);
       const finW2 = contentWidth - finW1;
       const financialsTable = new Table({
