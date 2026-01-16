@@ -35,7 +35,7 @@ function calculateKeyMetrics(baseline) {
   const netSurplus = baseline.metrics?.monthlyNetSurplus || 0;
   const runway = baseline.metrics?.cashRunwayMonths;
   const breakEven = baseline.metrics?.breakEvenRevenue || 0;
-  const currentCash = baseline.cashPosition?.currentBalance || 0;
+  const currentCash = baseline.cash?.currentBalance || 0;
 
   // Calculate ratios
   const grossMargin = revenue > 0 ? ((revenue - deliveryCost) / revenue) * 100 : 0;
