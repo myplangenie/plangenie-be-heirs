@@ -22,6 +22,8 @@ router.get('/:jid/reviews', review.list);
 router.post('/:jid/reviews', review.create);
 router.get('/:jid/reviews/:rid', review.get);
 router.patch('/:jid/reviews/:rid', review.patch);
+router.post('/:jid/reviews/:rid/send-actions', review.sendActions);
+router.post('/:jid/reviews/:rid/insights', review.generateInsights);
 
 // Decisions
 const decision = require('../controllers/decision.controller');

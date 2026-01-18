@@ -37,6 +37,8 @@ router.get('/:wid/reviews', requireViewer, review.list);
 router.post('/:wid/reviews', requireContributor, review.create);
 router.get('/:wid/reviews/:rid', requireViewer, review.get);
 router.patch('/:wid/reviews/:rid', requireContributor, review.patch);
+router.post('/:wid/reviews/:rid/send-actions', requireContributor, review.sendActions);
+router.post('/:wid/reviews/:rid/insights', requireViewer, review.generateInsights);
 
 // Decisions
 const decision = require('../controllers/decision.controller');

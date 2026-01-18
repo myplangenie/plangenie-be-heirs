@@ -6,6 +6,7 @@
 const PRIMARY_COLOR = '#1D4374';
 const ACCENT_COLOR = '#F59E0B';
 const BG_COLOR = '#F8FAFC';
+const LOGO_URL = 'https://logos.plangenie.com/logo.png';
 
 // Category colors and icons
 const CATEGORY_STYLES = {
@@ -64,10 +65,8 @@ function generateDailyWish(data) {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <h1 style="margin: 0; color: #FFFFFF; font-size: 24px; font-weight: 700;">
-                      Plan Genie
-                    </h1>
-                    <p style="margin: 8px 0 0 0; color: rgba(255, 255, 255, 0.8); font-size: 14px;">
+                    <img src="${LOGO_URL}" alt="Plan Genie" style="height: 40px; width: auto; display: block;" />
+                    <p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.8); font-size: 14px;">
                       Your Daily Wish
                     </p>
                   </td>

@@ -115,6 +115,9 @@ require('./jobs/weeklyNotifications').init();
 // Initialize daily wish job (runs daily at 12 noon Eastern / 17:00 UTC)
 require('./jobs/dailyWish').init();
 
+// Initialize review reminders job (runs daily at 8 AM Eastern / 13:00 UTC)
+require('./jobs/reviewReminders').init();
+
 // Error handler
 app.use(errorHandler);
 
