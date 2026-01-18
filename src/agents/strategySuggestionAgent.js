@@ -1,6 +1,7 @@
 /**
  * Strategy Suggestion Agent
  * Recommends business models, positioning tweaks, and strategic improvements.
+ * Uses v2 data: RevenueStreams + FinancialBaseline
  *
  * Analyzes:
  * - Current business model
@@ -19,7 +20,7 @@ const {
 } = require('./base');
 
 /**
- * Assess current strategy completeness and quality
+ * Assess current strategy completeness and quality using v2 data
  */
 function assessStrategyCompleteness(context) {
   const scores = {
@@ -28,32 +29,42 @@ function assessStrategyCompleteness(context) {
     market: 0,
     competitive: 0,
     product: 0,
+    financial: 0,
   };
 
-  // Vision & Purpose (0-25)
-  if (context.ubp) scores.vision += 10;
-  if (context.purpose) scores.vision += 5;
-  if (context.vision1y) scores.vision += 5;
-  if (context.vision3y) scores.vision += 5;
+  // Vision & Purpose (0-20)
+  if (context.ubp) scores.vision += 8;
+  if (context.purpose) scores.vision += 4;
+  if (context.vision1y) scores.vision += 4;
+  if (context.vision3y) scores.vision += 4;
 
   // Positioning (0-20)
   if (context.ubp && context.ubp.length > 50) scores.positioning += 10;
   if (context.competitorAdvantages) scores.positioning += 10;
 
-  // Market Understanding (0-25)
-  if (context.marketCustomer) scores.market += 10;
-  if (context.marketPartners) scores.market += 5;
-  if (context.swot?.opportunities) scores.market += 5;
-  if (context.swot?.threats) scores.market += 5;
+  // Market Understanding (0-20)
+  if (context.marketCustomer) scores.market += 8;
+  if (context.marketPartners) scores.market += 4;
+  if (context.swot?.opportunities) scores.market += 4;
+  if (context.swot?.threats) scores.market += 4;
 
   // Competitive Analysis (0-15)
   if (context.marketCompetitors) scores.competitive += 10;
   if (context.swot?.strengths) scores.competitive += 2.5;
   if (context.swot?.weaknesses) scores.competitive += 2.5;
 
-  // Product Strategy (0-15)
-  if (context.products && context.products.length > 0) scores.product += 10;
-  if (context.products && context.products.some(p => p.price)) scores.product += 5;
+  // Product Strategy - v2 RevenueStreams (0-15)
+  const streams = context.revenueStreams || [];
+  if (streams.length > 0) scores.product += 8;
+  if (streams.length > 2) scores.product += 4;
+  if (streams.some(s => s.metrics?.grossMarginPercent > 0)) scores.product += 3;
+
+  // Financial Health - v2 FinancialBaseline (0-10)
+  const baseline = context.financialBaseline;
+  const revenueAggregate = context.revenueAggregate;
+  if (revenueAggregate?.totalMonthlyRevenue > 0) scores.financial += 4;
+  if (baseline?.workRelatedCosts?.total > 0 || baseline?.fixedCosts?.total > 0) scores.financial += 3;
+  if (baseline?.cash?.currentBalance > 0) scores.financial += 3;
 
   const total = Object.values(scores).reduce((a, b) => a + b, 0);
 
@@ -61,13 +72,13 @@ function assessStrategyCompleteness(context) {
     total: Math.round(total),
     breakdown: scores,
     gaps: Object.entries(scores)
-      .filter(([_, score]) => score < 10)
+      .filter(([_, score]) => score < 8)
       .map(([area]) => area),
   };
 }
 
 /**
- * Generate strategy suggestions
+ * Generate strategy suggestions using v2 data
  * @param {string} userId - User ID
  * @param {Object} options - Optional parameters (workspaceId, forceRefresh, focusArea)
  * @returns {Object} Strategy suggestions and recommendations
@@ -75,16 +86,21 @@ function assessStrategyCompleteness(context) {
 async function generateStrategySuggestions(userId, options = {}) {
   const { forceRefresh = false, focusArea = null, workspaceId = null } = options;
 
-  // Build context
+  // Build context (includes v2 data)
   const context = await buildAgentContext(userId, workspaceId);
 
-  // Create cache key
+  const streams = context.revenueStreams || [];
+  const baseline = context.financialBaseline;
+  const revenueAggregate = context.revenueAggregate;
+
+  // Create cache key using v2 data
   const inputHash = hashInput({
     ubp: context.ubp,
     purpose: context.purpose,
     industry: context.industry,
     competitors: context.marketCompetitors,
-    products: context.products?.length,
+    streamCount: streams.length,
+    hasFinancialBaseline: !!baseline,
     focus: focusArea,
   });
 
@@ -99,11 +115,31 @@ async function generateStrategySuggestions(userId, options = {}) {
   // Assess current strategy
   const strategyAssessment = assessStrategyCompleteness(context);
 
+  // Build products/services section from v2 data
+  const productsSection = streams.length > 0
+    ? `PRODUCTS/SERVICES (${streams.length} offerings):
+${streams.slice(0, 5).map(s => `- ${s.name} (${s.type}): $${s.metrics?.estimatedMonthlyRevenue?.toLocaleString() || 0}/mo, ${s.metrics?.grossMarginPercent?.toFixed(0) || 0}% margin`).join('\n')}`
+    : 'PRODUCTS/SERVICES: Not yet defined';
+
+  // Build financial section from v2 data
+  const financialSection = revenueAggregate || baseline
+    ? `FINANCIAL POSITION:
+- Monthly Revenue: $${revenueAggregate?.totalMonthlyRevenue?.toLocaleString() || 0}
+- Gross Margin: ${revenueAggregate?.grossMarginPercent?.toFixed(1) || 0}%
+- Monthly Costs: $${((baseline?.workRelatedCosts?.total || 0) + (baseline?.fixedCosts?.total || 0)).toLocaleString()}
+- Cash Position: $${baseline?.cash?.currentBalance?.toLocaleString() || 0}
+- Runway: ${baseline?.metrics?.cashRunwayMonths || 'N/A'} months`
+    : 'FINANCIAL POSITION: Not yet defined';
+
   // Build comprehensive prompt
   const contextStr = formatContextForPrompt(context);
   const prompt = `You are a strategic business consultant analyzing a company's business strategy.
 
 ${contextStr}
+
+${productsSection}
+
+${financialSection}
 
 SWOT ANALYSIS:
 - Strengths: ${context.swot?.strengths || 'Not defined'}

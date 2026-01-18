@@ -2201,42 +2201,32 @@ exports.suggestActionAll = async (req, res) => {
       baseRange = { min: 1000, max: 10000 };
     }
 
-    // Dynamic budget prompt that considers project type, department, and business context
-    const budgetPrompt = `Estimate a realistic project budget based on the specific project details.
-${budgetHint}
+    // Generate a truly dynamic budget based on project type rather than relying on AI
+    // This ensures varied, realistic amounts for each project
+    const generateDynamicBudget = () => {
+      const range = baseRange.max - baseRange.min;
+      // Use weighted random to favor middle-range budgets but allow extremes
+      const weightedRandom = Math.pow(Math.random(), 0.8); // Slightly favor higher values
+      const baseAmount = baseRange.min + (weightedRandom * range);
+      // Add random variation (±20%)
+      const variation = 0.8 + (Math.random() * 0.4);
+      let amount = baseAmount * variation;
+      // Round to varied increments ($50, $100, $250, $500) based on size
+      let roundTo = 50;
+      if (amount > 5000) roundTo = 100;
+      if (amount > 10000) roundTo = 250;
+      if (amount > 25000) roundTo = 500;
+      return Math.round(amount / roundTo) * roundTo;
+    };
 
-Consider: project type, department, business stage/industry, deliverables scope.
-IMPORTANT: Do NOT always use round numbers like $5,000 or $10,000. Use specific amounts like $3,750, $8,200, $12,500, $17,800.
-
-Return ONLY a single dollar amount.`;
-
-    const [goal, rawResources, kpi, rawTitle] = await Promise.all([
+    const [goal, kpi, rawTitle] = await Promise.all([
       callOpenAI({ type: 'action plan goal (1-2 sentences)', input, contextText }),
-      callOpenAI({ type: budgetPrompt, input, contextText }),
       callOpenAI({ type: 'KPI metric (short phrase)', input, contextText }),
       callOpenAI({ type: 'project title ONLY (3-6 words max). Examples: "Local Tech Partnerships Initiative", "Customer Feedback System", "Mobile App Development". Return ONLY the title, no descriptions or other fields.', input, contextText }),
     ]);
 
-    // Extract numeric value from resources
-    const resourcesStr = String(rawResources || '');
-    const resourcesMatch = resourcesStr.match(/\$?\s*([\d,]+(?:\.\d+)?)/);
-    let resources;
-
-    if (resourcesMatch) {
-      // Parse the AI-generated amount
-      let amount = parseFloat(resourcesMatch[1].replace(/,/g, ''));
-      // Add slight random variation (±15%) to avoid identical amounts
-      const variation = 0.85 + (Math.random() * 0.3); // 0.85 to 1.15
-      amount = Math.round(amount * variation / 50) * 50; // Round to nearest $50
-      // Ensure within reasonable bounds
-      amount = Math.max(baseRange.min * 0.5, Math.min(baseRange.max * 1.5, amount));
-      resources = String(Math.round(amount));
-    } else {
-      // Generate varied fallback based on detected type
-      const range = baseRange.max - baseRange.min;
-      const randomAmount = baseRange.min + (Math.random() * range);
-      resources = String(Math.round(randomAmount / 50) * 50); // Round to nearest $50
-    }
+    // Generate dynamic budget based on detected project type
+    const resources = String(generateDynamicBudget());
 
     // Clean title: remove any prefix and extra content after pipe/colon separators
     let title = String(rawTitle || '').replace(/^Title:\s*/i, '').trim();
@@ -2615,7 +2605,7 @@ exports.extractValuesCoreKeywords = async (req, res) => {
 // Short-phrase helpers for SWOT generation
 async function callOpenAIListPhrases({ type, input, contextText, n = 3 }) {
   const client = getOpenAI();
-  const system = 'You are a helpful business planning assistant. Return short, concrete phrases.';
+  const system = 'You are a creative business planning assistant. Generate fresh, unique suggestions each time. Return short, concrete phrases.';
   let ragText = '';
   try {
     if (process.env.RAG_ENABLE !== 'false') {
@@ -2623,20 +2613,25 @@ async function callOpenAIListPhrases({ type, input, contextText, n = 3 }) {
       if (results && results.length) ragText = 'Additional guidance from Business Trainer (internal knowledge):\n' + results.map((r)=>r.text).join('\n\n---\n\n');
     }
   } catch(_){}
+  // Add randomization hint to encourage variety
+  const randomSeed = Math.random().toString(36).substring(2, 8);
   const userPrompt = [
     contextText || '',
     ragText || '',
-    `Task: Generate exactly ${n} concise options for the ${type}.`,
+    `Task: Generate exactly ${n} NEW and UNIQUE concise options for the ${type}.`,
     'Constraints:',
     '- Each option must be a short phrase (1–4 words), no sentences.',
+    '- Be creative and varied - do NOT repeat common/generic phrases.',
+    '- Think of specific, actionable items relevant to THIS business.',
     '- Avoid punctuation except hyphens when necessary.',
     `- Output ONLY a strict JSON array of strings (length exactly ${n}).`,
     '',
-    input ? `User input: ${input}` : 'User input: (none provided)'
+    input ? `User input: ${input}` : 'User input: (none provided)',
+    `[Variation hint: ${randomSeed}]`
   ].filter(Boolean).join('\n');
   const resp = await client.chat.completions.create({
     model: 'gpt-4o-mini',
-    temperature: 0.7,
+    temperature: 0.9,
     messages: [ { role: 'system', content: system }, { role: 'user', content: userPrompt } ],
     max_tokens: 200,
   });

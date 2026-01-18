@@ -276,8 +276,9 @@ function getWeeklyTop3(scoredItems) {
 }
 
 /**
- * Get upcoming items (due beyond this week but within next 30 days)
+ * Get upcoming items (due beyond this week)
  * Used when weeklyFocus is empty to always show something
+ * Prioritizes items within 30 days, but extends to all future items if none found
  */
 function getUpcomingItems(scoredItems, limit = 5) {
   const now = new Date();
@@ -290,27 +291,22 @@ function getUpcomingItems(scoredItems, limit = 5) {
   endOfWeek.setDate(startOfWeek.getDate() + 6);
   endOfWeek.setHours(23, 59, 59, 999);
 
-  // Get items due after this week but within next 30 days
-  const thirtyDaysOut = new Date(now);
-  thirtyDaysOut.setDate(now.getDate() + 30);
-
-  const upcoming = scoredItems.filter((item) => {
+  // Get ALL items due after this week (with valid due dates)
+  const allUpcoming = scoredItems.filter((item) => {
     const due = parseDate(item.dueWhen);
     if (!due) return false;
-
-    // Must be after this week and within 30 days
-    return due > endOfWeek && due <= thirtyDaysOut;
+    return due > endOfWeek;
   });
 
   // Sort by due date ascending (soonest first)
-  upcoming.sort((a, b) => {
+  allUpcoming.sort((a, b) => {
     const dateA = parseDate(a.dueWhen);
     const dateB = parseDate(b.dueWhen);
     return dateA - dateB;
   });
 
   // Mark as upcoming for frontend display
-  return upcoming.slice(0, limit).map((item) => ({
+  return allUpcoming.slice(0, limit).map((item) => ({
     ...item,
     isUpcoming: true,
   }));

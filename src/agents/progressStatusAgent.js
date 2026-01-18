@@ -1,6 +1,7 @@
 /**
  * Progress and Plan Status Agent
  * Assesses how complete a business plan is and suggests next steps.
+ * Uses v2 data: RevenueStreams + FinancialBaseline
  *
  * Evaluates:
  * - Section completeness
@@ -57,15 +58,15 @@ const PLAN_SECTIONS = {
   products: {
     name: 'Products & Services',
     weight: 10,
-    requiresArray: 'products',
+    checkV2: 'revenueStreams', // Uses v2 RevenueStreams
     minItems: 1,
-    description: 'Your product/service offerings',
+    description: 'Your product/service offerings with pricing',
   },
   financial: {
     name: 'Financial Projections',
     weight: 10,
-    fields: ['salesVolume', 'avgUnitCost', 'fixedOperatingCosts'],
-    description: 'Revenue and cost projections',
+    checkV2Financial: true, // Uses v2 FinancialBaseline
+    description: 'Revenue, costs, and cash position',
   },
   projects: {
     name: 'Strategic Projects',
@@ -77,7 +78,7 @@ const PLAN_SECTIONS = {
 };
 
 /**
- * Calculate completion for each section
+ * Calculate completion for each section using v2 data
  */
 function calculateSectionCompletion(context) {
   const sections = [];
@@ -90,6 +91,7 @@ function calculateSectionCompletion(context) {
     const missingFields = [];
 
     if (config.fields) {
+      // Regular field checks
       total = config.fields.length;
       for (const field of config.fields) {
         const value = answers[field] ||
@@ -102,6 +104,34 @@ function calculateSectionCompletion(context) {
           missingFields.push(field);
         }
       }
+    } else if (config.checkV2) {
+      // Check v2 RevenueStreams
+      total = config.minItems || 1;
+      const arr = context[config.checkV2] || [];
+      filled = Math.min(arr.length, total);
+      if (arr.length === 0) {
+        missingFields.push('products/services');
+      }
+    } else if (config.checkV2Financial) {
+      // Check v2 FinancialBaseline
+      const baseline = context.financialBaseline;
+      const revenueAggregate = context.revenueAggregate;
+      const streams = context.revenueStreams || [];
+
+      // Check for revenue data (from RevenueStreams)
+      const hasRevenue = streams.length > 0 || (revenueAggregate?.totalMonthlyRevenue > 0);
+      // Check for costs data
+      const hasCosts = (baseline?.workRelatedCosts?.total > 0) || (baseline?.fixedCosts?.total > 0);
+      // Check for cash data
+      const hasCash = (baseline?.cash?.currentBalance > 0);
+
+      total = 3; // Revenue, Costs, Cash
+      if (hasRevenue) filled++;
+      else missingFields.push('revenue (products/services)');
+      if (hasCosts) filled++;
+      else missingFields.push('costs');
+      if (hasCash) filled++;
+      else missingFields.push('cash position');
     } else if (config.requiresArray) {
       total = config.minItems || 1;
       const arr = context[config.requiresArray] || [];
@@ -181,7 +211,7 @@ function determineNextSteps(sections) {
 }
 
 /**
- * Generate progress status report
+ * Generate progress status report using v2 data
  * @param {string} userId - User ID
  * @param {Object} options - Optional parameters (workspaceId, forceRefresh, includeAIFeedback)
  * @returns {Object} Progress report with sections and recommendations
@@ -189,14 +219,15 @@ function determineNextSteps(sections) {
 async function getProgressStatus(userId, options = {}) {
   const { forceRefresh = false, includeAIFeedback = true, workspaceId = null } = options;
 
-  // Build context
+  // Build context (includes v2 data)
   const context = await buildAgentContext(userId, workspaceId);
 
-  // Create cache key
+  // Create cache key using v2 data
   const inputHash = hashInput({
     businessName: context.businessName,
     answersKeys: Object.keys(context._rawAnswers || {}),
-    productsCount: context.products?.length || 0,
+    revenueStreamsCount: context.revenueStreams?.length || 0,
+    hasFinancialBaseline: !!context.financialBaseline,
     projectsCount: context.coreProjectDetails?.length || 0,
   });
 
@@ -234,6 +265,16 @@ async function getProgressStatus(userId, options = {}) {
     const completeSections = sections.filter(s => s.status === 'complete').map(s => s.name);
     const incompleteSections = sections.filter(s => s.status !== 'complete').map(s => `${s.name} (${s.percentage}%)`);
 
+    // Include v2 financial data in prompt
+    const revenueAggregate = context.revenueAggregate;
+    const baseline = context.financialBaseline;
+    const financialSummary = revenueAggregate || baseline ? `
+Financial Summary:
+- Revenue Streams: ${context.revenueStreams?.length || 0}
+- Monthly Revenue: $${revenueAggregate?.totalMonthlyRevenue?.toLocaleString() || 0}
+- Total Costs: $${((baseline?.workRelatedCosts?.total || 0) + (baseline?.fixedCosts?.total || 0)).toLocaleString()}
+- Cash Position: $${baseline?.cash?.currentBalance?.toLocaleString() || 0}` : '';
+
     const prompt = `You are reviewing a business plan's progress.
 
 Business: ${context.businessName || 'Unnamed Business'}
@@ -248,6 +289,7 @@ ${incompleteSections.join(', ') || 'None'}
 
 UBP: ${context.ubp || 'Not defined'}
 Purpose: ${context.purpose || 'Not defined'}
+${financialSummary}
 
 IMPORTANT TONE GUIDELINES:
 - Be specific - reference actual section names and percentages

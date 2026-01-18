@@ -33,6 +33,7 @@ async function recalculateForUserWorkspace(userId, workspaceId) {
 
     // Get priorities
     const weeklyTop3 = scoringService.getWeeklyTop3(scoredItems);
+    const upcomingItems = scoringService.getUpcomingItems(scoredItems);
     const monthlyThrust = scoringService.getMonthlyThrust(scoredItems);
 
     // Detect risks
@@ -45,6 +46,7 @@ async function recalculateForUserWorkspace(userId, workspaceId) {
         user: userId,
         workspace: workspaceId,
         weeklyTop3,
+        upcomingItems,
         monthlyThrust,
         risks,
         clusters,

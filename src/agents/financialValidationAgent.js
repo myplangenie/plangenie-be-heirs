@@ -1,10 +1,10 @@
 /**
  * Financial Validation Agent
  * Analyzes financial data and flags numbers that are unrealistic or inconsistent.
+ * Uses v2 data: FinancialBaseline + RevenueStreams
  *
  * Checks for:
  * - Revenue vs cost ratios
- * - Growth rate realism
  * - Margin consistency
  * - Cash flow sustainability
  * - Industry benchmarks
@@ -24,65 +24,50 @@ const BENCHMARKS = {
   default: {
     grossMarginMin: 20,
     grossMarginMax: 80,
-    growthRateMax: 200, // 200% YoY is very aggressive
-    burnMultipleMax: 3, // Burn rate vs growth
+    burnMultipleMax: 3,
   },
   saas: {
     grossMarginMin: 60,
     grossMarginMax: 90,
-    growthRateMax: 300,
   },
   retail: {
     grossMarginMin: 20,
     grossMarginMax: 50,
-    growthRateMax: 100,
   },
   services: {
     grossMarginMin: 40,
     grossMarginMax: 70,
-    growthRateMax: 100,
   },
 };
 
 /**
- * Parse a number from various formats
+ * Run basic validation rules using v2 data (FinancialBaseline + RevenueStreams)
  */
-function parseNumber(val) {
-  if (typeof val === 'number') return val;
-  if (!val) return 0;
-  const str = String(val).replace(/[^0-9.\-]/g, '');
-  const num = parseFloat(str);
-  return isNaN(num) ? 0 : num;
-}
-
-/**
- * Run basic validation rules (no AI needed)
- */
-function runBasicValidation(financial, products, context) {
+function runBasicValidation(context) {
   const warnings = [];
   const errors = [];
   const suggestions = [];
 
-  // Extract financial metrics
-  const monthlyRevenue = parseNumber(financial.salesVolume) * parseNumber(financial.avgPrice || products?.[0]?.price || 0);
-  const monthlyCosts = parseNumber(financial.fixedOperatingCosts) +
-    parseNumber(financial.marketingSalesSpend) +
-    parseNumber(financial.payrollCost) +
-    parseNumber(financial.avgUnitCost) * parseNumber(financial.salesVolume);
-  const growthRate = parseNumber(financial.salesGrowthPct);
-  const startingCash = parseNumber(financial.startingCash);
-  const additionalFunding = parseNumber(financial.additionalFundingAmount);
+  const baseline = context.financialBaseline;
+  const revenueStreams = context.revenueStreams || [];
+  const revenueAggregate = context.revenueAggregate;
 
-  const grossMargin = monthlyRevenue > 0
-    ? ((monthlyRevenue - (parseNumber(financial.avgUnitCost) * parseNumber(financial.salesVolume))) / monthlyRevenue) * 100
-    : 0;
+  // Extract metrics from v2 data
+  const monthlyRevenue = baseline?.revenue?.totalMonthlyRevenue || revenueAggregate?.totalMonthlyRevenue || 0;
+  const deliveryCost = baseline?.revenue?.totalMonthlyDeliveryCost || revenueAggregate?.totalMonthlyDeliveryCost || 0;
+  const workCosts = baseline?.workRelatedCosts?.total || 0;
+  const fixedCosts = baseline?.fixedCosts?.total || 0;
+  const monthlyCosts = deliveryCost + workCosts + fixedCosts;
 
-  const netMargin = monthlyRevenue > 0
-    ? ((monthlyRevenue - monthlyCosts) / monthlyRevenue) * 100
-    : 0;
+  const grossMargin = revenueAggregate?.grossMarginPercent ||
+    (monthlyRevenue > 0 ? ((monthlyRevenue - deliveryCost) / monthlyRevenue) * 100 : 0);
+  const netMargin = monthlyRevenue > 0 ? ((monthlyRevenue - monthlyCosts) / monthlyRevenue) * 100 : 0;
 
+  const currentCash = baseline?.cash?.currentBalance || 0;
+  const expectedFunding = baseline?.cash?.expectedFunding || 0;
   const monthlyBurn = Math.max(0, monthlyCosts - monthlyRevenue);
-  const runway = monthlyBurn > 0 ? Math.round((startingCash + additionalFunding) / monthlyBurn) : null;
+  const runway = baseline?.metrics?.cashRunwayMonths ||
+    (monthlyBurn > 0 ? Math.round((currentCash + expectedFunding) / monthlyBurn) : null);
 
   // Get industry benchmarks
   const industry = (context.industry || '').toLowerCase();
@@ -108,7 +93,7 @@ function runBasicValidation(financial, products, context) {
         field: 'grossMargin',
         message: `Gross margin (${grossMargin.toFixed(1)}%) is below typical ${industry || 'industry'} range (${benchmarks.grossMarginMin}%+)`,
         severity: 'warning',
-        suggestion: 'Consider increasing prices or reducing unit costs',
+        suggestion: 'Consider increasing prices or reducing delivery costs',
       });
     }
 
@@ -124,17 +109,6 @@ function runBasicValidation(financial, products, context) {
     }
   }
 
-  // Growth rate checks
-  if (growthRate > benchmarks.growthRateMax) {
-    warnings.push({
-      type: 'high_growth',
-      field: 'salesGrowthPct',
-      message: `Growth rate of ${growthRate}% is very aggressive`,
-      severity: 'warning',
-      suggestion: 'Consider if this growth rate is achievable with your resources',
-    });
-  }
-
   // Runway checks
   if (runway !== null && runway < 6 && monthlyBurn > 0) {
     errors.push({
@@ -147,44 +121,57 @@ function runBasicValidation(financial, products, context) {
   }
 
   // Missing data checks
-  if (!financial.salesVolume && !financial.monthlyRevenue) {
+  if (monthlyRevenue === 0 && revenueStreams.length === 0) {
     suggestions.push({
       type: 'missing_revenue',
-      field: 'salesVolume',
-      message: 'No revenue projections entered',
+      field: 'revenue',
+      message: 'No revenue data entered',
       severity: 'info',
-      suggestion: 'Add your expected sales volume to get better financial insights',
+      suggestion: 'Add your products/services with pricing to get better financial insights',
     });
   }
 
-  if (!financial.fixedOperatingCosts && !financial.payrollCost) {
+  if (monthlyCosts === 0) {
     suggestions.push({
       type: 'missing_costs',
       field: 'costs',
       message: 'No operating costs entered',
       severity: 'info',
-      suggestion: 'Add your expected costs for more accurate projections',
+      suggestion: 'Add your work-related and fixed costs for more accurate projections',
     });
   }
 
-  // Product pricing consistency
-  if (products && products.length > 0) {
-    const prices = products.map(p => parseNumber(p.price)).filter(p => p > 0);
-    const costs = products.map(p => parseNumber(p.unitCost)).filter(c => c > 0);
+  // Revenue stream margin checks
+  if (revenueStreams.length > 0) {
+    const negativeMarginStreams = revenueStreams.filter(s => {
+      const margin = s.metrics?.grossMarginPercent || 0;
+      return margin < 0;
+    });
 
-    if (prices.length > 0 && costs.length > 0) {
-      const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
-      const avgCost = costs.reduce((a, b) => a + b, 0) / costs.length;
+    if (negativeMarginStreams.length > 0) {
+      errors.push({
+        type: 'negative_stream_margin',
+        field: 'revenueStreams',
+        message: `${negativeMarginStreams.length} product(s)/service(s) have negative margins`,
+        severity: 'error',
+        suggestion: 'Review pricing - delivery costs exceed revenue for some offerings',
+      });
+    }
 
-      if (avgCost >= avgPrice) {
-        errors.push({
-          type: 'negative_unit_margin',
-          field: 'products',
-          message: 'Your average unit cost equals or exceeds your average price',
-          severity: 'error',
-          suggestion: 'Review your pricing strategy - you may be selling at a loss',
-        });
-      }
+    // Check for low margin streams
+    const lowMarginStreams = revenueStreams.filter(s => {
+      const margin = s.metrics?.grossMarginPercent || 0;
+      return margin > 0 && margin < 20;
+    });
+
+    if (lowMarginStreams.length > 0) {
+      warnings.push({
+        type: 'low_stream_margin',
+        field: 'revenueStreams',
+        message: `${lowMarginStreams.length} product(s)/service(s) have margins below 20%`,
+        severity: 'warning',
+        suggestion: 'Consider if these offerings are worth the effort at current margins',
+      });
     }
   }
 
@@ -195,17 +182,22 @@ function runBasicValidation(financial, products, context) {
     metrics: {
       monthlyRevenue,
       monthlyCosts,
+      deliveryCost,
+      workCosts,
+      fixedCosts,
       grossMargin: grossMargin.toFixed(1),
       netMargin: netMargin.toFixed(1),
       monthlyBurn,
       runway,
-      growthRate,
+      currentCash,
+      expectedFunding,
+      streamCount: revenueStreams.length,
     },
   };
 }
 
 /**
- * Generate comprehensive financial validation
+ * Generate comprehensive financial validation using v2 data
  * @param {string} userId - User ID
  * @param {Object} options - Optional parameters (workspaceId, forceRefresh)
  * @returns {Object} Validation results with errors, warnings, and suggestions
@@ -213,15 +205,25 @@ function runBasicValidation(financial, products, context) {
 async function validateFinancials(userId, options = {}) {
   const { forceRefresh = false, workspaceId = null } = options;
 
-  // Build context
+  // Build context (includes v2 data)
   const context = await buildAgentContext(userId, workspaceId);
-  const financial = context.financial || context._rawAnswers?.financial || {};
-  const products = context.products || [];
 
-  // Create cache key from financial data
+  const financialBaseline = context.financialBaseline;
+  const revenueStreams = context.revenueStreams || [];
+  const revenueAggregate = context.revenueAggregate;
+
+  // Create cache key from v2 data
   const inputHash = hashInput({
-    financial,
-    products: products.map(p => ({ price: p.price, unitCost: p.unitCost })),
+    baseline: financialBaseline ? {
+      revenue: financialBaseline.revenue,
+      workRelatedCosts: financialBaseline.workRelatedCosts,
+      fixedCosts: financialBaseline.fixedCosts,
+      cash: financialBaseline.cash,
+      metrics: financialBaseline.metrics,
+    } : null,
+    revenueAggregate,
+    streamCount: revenueStreams.length,
+    streamIds: revenueStreams.map(s => s._id?.toString()),
   });
 
   // Check cache
@@ -233,26 +235,50 @@ async function validateFinancials(userId, options = {}) {
   }
 
   // Run basic validation
-  const basicValidation = runBasicValidation(financial, products, context);
+  const basicValidation = runBasicValidation(context);
 
   // If there are significant issues, get AI analysis
   let aiAnalysis = null;
   let generationTimeMs = 0;
 
-  const hasData = Object.values(financial).some(v => v && v !== '0');
+  // Check if we have any v2 data
+  const hasData = (revenueAggregate?.totalMonthlyRevenue > 0) ||
+    (financialBaseline?.workRelatedCosts?.total > 0) ||
+    (financialBaseline?.fixedCosts?.total > 0) ||
+    (financialBaseline?.cash?.currentBalance > 0) ||
+    revenueStreams.length > 0;
+
   const hasIssues = basicValidation.errors.length > 0 || basicValidation.warnings.length > 0;
 
   if (hasData && (hasIssues || forceRefresh)) {
     const contextStr = formatContextForPrompt(context);
+
+    const financialDataSection = `FINANCIAL DATA:
+Revenue:
+- Monthly Revenue: $${revenueAggregate?.totalMonthlyRevenue?.toLocaleString() || 0}
+- Monthly Delivery Cost: $${revenueAggregate?.totalMonthlyDeliveryCost?.toLocaleString() || 0}
+- Gross Margin: ${revenueAggregate?.grossMarginPercent?.toFixed(1) || 0}%
+- Revenue Streams: ${revenueStreams.length}
+
+Costs:
+- Work-Related Costs: $${financialBaseline?.workRelatedCosts?.total?.toLocaleString() || 0}/month
+- Fixed Costs: $${financialBaseline?.fixedCosts?.total?.toLocaleString() || 0}/month
+- Total Monthly Costs: $${basicValidation.metrics.monthlyCosts?.toLocaleString() || 0}
+
+Cash Position:
+- Current Balance: $${financialBaseline?.cash?.currentBalance?.toLocaleString() || 0}
+- Expected Funding: $${financialBaseline?.cash?.expectedFunding?.toLocaleString() || 0}
+- Cash Runway: ${financialBaseline?.metrics?.cashRunwayMonths || 'N/A'} months
+- Break-even Revenue: $${financialBaseline?.metrics?.breakEvenRevenue?.toLocaleString() || 0}
+
+PRODUCTS/SERVICES:
+${revenueStreams.slice(0, 5).map(s => `- ${s.name} (${s.type}): $${s.metrics?.estimatedMonthlyRevenue?.toLocaleString() || 0}/mo, ${s.metrics?.grossMarginPercent?.toFixed(0) || 0}% margin`).join('\n') || 'No products/services added yet'}`;
+
     const prompt = `You are a financial analyst reviewing a business plan's financial projections.
 
 ${contextStr}
 
-FINANCIAL DATA:
-${JSON.stringify(financial, null, 2)}
-
-PRODUCTS/SERVICES:
-${JSON.stringify(products.slice(0, 5), null, 2)}
+${financialDataSection}
 
 CALCULATED METRICS:
 ${JSON.stringify(basicValidation.metrics, null, 2)}
@@ -310,7 +336,7 @@ Respond in JSON format:
       overallAssessment: basicValidation.errors.length > 0 ? 'concerning' : 'healthy',
       realism: { score: hasData ? 7 : 0, explanation: hasData ? 'Numbers appear reasonable' : 'No financial data entered yet' },
       consistencyIssues: [],
-      topRecommendations: hasData ? [] : ['Start by entering your revenue projections'],
+      topRecommendations: hasData ? [] : ['Start by adding your products/services in the Financial Forecasting section'],
       positives: [],
     },
     generatedAt: new Date().toISOString(),

@@ -3,47 +3,59 @@ const { ACCESS_TOKEN_COOKIE } = require('../config/cookies');
 
 function auth(required = true) {
   return (req, res, next) => {
-    // Priority: 1) Cookie, 2) Authorization header (for backward compatibility during migration)
     let token = req.cookies?.[ACCESS_TOKEN_COOKIE.name];
 
-    // Fallback to Authorization header for backward compatibility
     if (!token) {
       const header = req.headers['authorization'];
-      token = header && header.startsWith('Bearer ')
-        ? header.slice(7)
-        : null;
+      if (header && header.startsWith('Bearer ')) {
+        token = header.slice(7);
+      }
     }
 
+    // No token present
     if (!token) {
-      if (required) return res.status(401).json({ message: 'Authorization token missing' });
-      req.user = null;
-      return next();
+      if (!required) {
+        req.user = null;
+        return next();
+      }
+
+      // IMPORTANT: token missing is a *refreshable* state
+      return res.status(401).json({
+        message: 'Authorization token missing',
+        code: 'TOKEN_MISSING',
+      });
     }
 
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
       req.user = { id: payload.id };
-      next();
+      return next();
     } catch (err) {
-      // Differentiate between expired and invalid tokens
+      // Token expired = normal refresh flow
       if (err.name === 'TokenExpiredError') {
-        // For optional auth, allow proceeding with null user instead of forcing refresh
-        // This prevents errors when token is stale but user doesn't need to be authenticated
         if (!required) {
           req.user = null;
           return next();
         }
-        return res.status(401).json({ message: 'Token expired', code: 'TOKEN_EXPIRED' });
+
+        return res.status(401).json({
+          message: 'Token expired',
+          code: 'TOKEN_EXPIRED',
+        });
       }
-      // For invalid tokens with optional auth, proceed with null user
+
+      // Invalid token — still refreshable
       if (!required) {
         req.user = null;
         return next();
       }
-      return res.status(401).json({ message: 'Invalid token' });
+
+      return res.status(401).json({
+        message: 'Invalid token',
+        code: 'TOKEN_INVALID',
+      });
     }
   };
 }
 
 module.exports = auth;
-

@@ -211,8 +211,14 @@ exports.login = async (req, res) => {
     return res.status(400).json({ message: 'Invalid input', details: errors.array() });
   }
   const { email, password } = req.body;
+  const requestedWorkspace = req.headers['x-workspace-id'] || req.body?.workspaceId;
+  console.log(`[auth.login] attempt email=${email} requestedWorkspace=${requestedWorkspace || 'none'}`);
+
   const user = await User.findOne({ email }).select('+password');
-  if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+  if (!user) {
+    console.log(`[auth.login] failed - user not found email=${email}`);
+    return res.status(401).json({ message: 'Invalid credentials' });
+  }
   const match = await user.comparePassword(password);
   if (!match) return res.status(401).json({ message: 'Invalid credentials' });
   if (!user.isVerified) {
@@ -257,8 +263,7 @@ exports.login = async (req, res) => {
 
   const safe = user.toSafeJSON();
 
-  // Get workspace ID from request (frontend may send it) or use default
-  const requestedWorkspace = req.headers['x-workspace-id'] || req.body?.workspaceId;
+  // Use workspace ID from request (already extracted above) or use default
   const workspaceId = requestedWorkspace || user.defaultWorkspace;
 
   // Check workspace-specific onboarding completion
@@ -286,6 +291,10 @@ exports.login = async (req, res) => {
       if (owners && owners.length) viewAsOwnerId = String(owners[0]._id);
     }
   } catch {}
+
+  // [DATA TRACKING] Log successful login
+  console.log(`[auth.login] success user=${user._id} email=${email} workspace=${workspaceId || 'none'} defaultWorkspace=${user.defaultWorkspace || 'none'} nextRoute=${nextRoute}`);
+
   // Return user data (no token in response body - it's in httpOnly cookie)
   return res.json({ user: safe, nextRoute, plan: { slug: planSlug, name: planName }, viewAsOwnerId });
 };
@@ -444,71 +453,91 @@ exports.resendOtp = async (req, res) => {
   }
 };
 
-// POST /api/auth/refresh - Refresh access token using refresh token
 exports.refresh = async (req, res) => {
   const refreshTokenValue = req.cookies[REFRESH_TOKEN_COOKIE.name];
+  const requestedWorkspace = req.headers['x-workspace-id'];
 
   if (!refreshTokenValue) {
-    return res.status(401).json({ message: 'No refresh token provided' });
+    return res.status(401).json({
+      message: 'No refresh token provided',
+      code: 'REFRESH_MISSING',
+    });
   }
 
-  // Find the refresh token in DB
   const tokenDoc = await RefreshToken.findOne({ token: refreshTokenValue });
 
   if (!tokenDoc) {
-    // Token doesn't exist - might be stolen and already rotated
-    return res.status(401).json({ message: 'Invalid refresh token' });
+    return res.status(401).json({
+      message: 'Invalid refresh token',
+      code: 'REFRESH_INVALID',
+    });
   }
 
-  // Check if token is expired
+  // Expired refresh token → logout
   if (tokenDoc.expiresAt < new Date()) {
     await RefreshToken.deleteOne({ _id: tokenDoc._id });
-    return res.status(401).json({ message: 'Refresh token expired' });
+    return res.status(401).json({
+      message: 'Refresh token expired',
+      code: 'REFRESH_EXPIRED',
+    });
   }
 
-  // Check if token was already used (replay attack detection)
+  /**
+   * Graceful reuse handling
+   * Allow reuse within a short window (browser concurrency)
+   */
   if (tokenDoc.used) {
-    // Potential token theft! Invalidate entire token family
-    await RefreshToken.deleteMany({ family: tokenDoc.family });
-    // Clear cookies
-    res.cookie(ACCESS_TOKEN_COOKIE.name, '', clearCookieOptions(ACCESS_TOKEN_COOKIE));
-    res.cookie(REFRESH_TOKEN_COOKIE.name, '', clearCookieOptions(REFRESH_TOKEN_COOKIE));
-    return res.status(401).json({ message: 'Token reuse detected. All sessions invalidated.' });
+    const reusedWithinGrace =
+      Date.now() - tokenDoc.updatedAt.getTime() < 20_000;
+
+    if (!reusedWithinGrace) {
+      console.warn(
+        `[auth.refresh] suspicious reuse user=${tokenDoc.user} family=${tokenDoc.family}`
+      );
+
+      // Soft-fail: do NOT destroy family immediately
+      return res.status(401).json({
+        message: 'Refresh token already used',
+        code: 'REFRESH_REUSED',
+      });
+    }
   }
 
-  // Mark current token as used
+  // Mark token as used (atomic intent)
   tokenDoc.used = true;
   await tokenDoc.save();
 
-  // Get user
   const user = await User.findById(tokenDoc.user);
   if (!user) {
     await RefreshToken.deleteOne({ _id: tokenDoc._id });
-    return res.status(401).json({ message: 'User not found' });
+    return res.status(401).json({
+      message: 'User not found',
+      code: 'USER_NOT_FOUND',
+    });
   }
 
-  // Generate new access token
+  // Issue new tokens
   const accessToken = signToken(user._id);
-
-  // Generate new refresh token (rotation)
   const newRefreshTokenValue = RefreshToken.generateToken();
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   await RefreshToken.create({
     token: newRefreshTokenValue,
     user: user._id,
-    expiresAt,
-    family: tokenDoc.family, // Same family for rotation tracking
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    family: tokenDoc.family,
     userAgent: req.get('User-Agent') || '',
-    ipAddress: req.ip || req.connection?.remoteAddress || '',
+    ipAddress: req.ip,
   });
 
-  // Set new cookies
   res.cookie(ACCESS_TOKEN_COOKIE.name, accessToken, ACCESS_TOKEN_COOKIE.options);
-  res.cookie(REFRESH_TOKEN_COOKIE.name, newRefreshTokenValue, REFRESH_TOKEN_COOKIE.options);
+  res.cookie(
+    REFRESH_TOKEN_COOKIE.name,
+    newRefreshTokenValue,
+    REFRESH_TOKEN_COOKIE.options
+  );
 
-  // Update lastActiveAt (non-blocking)
-  try { await User.findByIdAndUpdate(user._id, { lastActiveAt: new Date() }); } catch {}
+  // Non-blocking activity update
+  User.findByIdAndUpdate(user._id, { lastActiveAt: new Date() }).catch(() => {});
 
   return res.json({ ok: true });
 };
@@ -516,14 +545,19 @@ exports.refresh = async (req, res) => {
 // POST /api/auth/logout - Clear cookies and invalidate refresh token
 exports.logout = async (req, res) => {
   const refreshTokenValue = req.cookies[REFRESH_TOKEN_COOKIE.name];
+  const requestedWorkspace = req.headers['x-workspace-id'];
+  let userId = 'unknown';
 
   if (refreshTokenValue) {
     // Find and get the family, then delete all tokens in that family
     const tokenDoc = await RefreshToken.findOne({ token: refreshTokenValue });
     if (tokenDoc) {
+      userId = tokenDoc.user;
       await RefreshToken.deleteMany({ family: tokenDoc.family });
     }
   }
+
+  console.log(`[auth.logout] user=${userId} workspace=${requestedWorkspace || 'none'}`);
 
   // Clear cookies
   res.cookie(ACCESS_TOKEN_COOKIE.name, '', clearCookieOptions(ACCESS_TOKEN_COOKIE));

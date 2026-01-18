@@ -13,6 +13,7 @@ router.get('/overview', ctrl.overview);
 
 router.get('/users', ctrl.listUsers);
 router.get('/users/:id', ctrl.getUser);
+router.get('/users/:id/full-data', ctrl.getUserFullData);
 router.patch('/users/:id/status', ctrl.updateUserStatus);
 router.delete('/users/:id', ctrl.deleteUser);
 

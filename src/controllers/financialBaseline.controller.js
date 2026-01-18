@@ -170,7 +170,7 @@ exports.updateCash = async (req, res) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     const workspaceId = req.workspace?._id || null;
-    const { currentBalance, expectedFunding, fundingDate } = req.body;
+    const { currentBalance, expectedFunding, fundingDate, fundingType } = req.body;
 
     const baseline = await FinancialBaseline.getOrCreate(userId, workspaceId);
 
@@ -178,6 +178,7 @@ exports.updateCash = async (req, res) => {
     if (currentBalance !== undefined) baseline.cash.currentBalance = currentBalance;
     if (expectedFunding !== undefined) baseline.cash.expectedFunding = expectedFunding;
     if (fundingDate !== undefined) baseline.cash.fundingDate = fundingDate ? new Date(fundingDate) : null;
+    if (fundingType !== undefined) baseline.cash.fundingType = fundingType;
 
     await baseline.save();
 

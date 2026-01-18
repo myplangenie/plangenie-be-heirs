@@ -64,6 +64,7 @@ const FinancialBaselineSchema = new mongoose.Schema({
     currentBalance: { type: Number, default: 0 },
     expectedFunding: { type: Number, default: 0 },
     fundingDate: { type: Date, default: null },
+    fundingType: { type: String, enum: ['investment', 'loan', 'grant', null], default: null },
   },
 
   // Calculated Metrics (computed on save/sync)

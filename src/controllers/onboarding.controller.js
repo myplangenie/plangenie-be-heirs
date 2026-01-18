@@ -357,11 +357,19 @@ exports.saveAllAnswers = async (req, res) => {
   }
   const workspaceId = getWorkspaceId(req);
   const ob = await getOrCreate(userId, workspaceId);
+
+  // [DATA TRACKING] Log incoming save request
+  const incomingKeys = Object.keys(answers || {});
+  console.log(`[saveAllAnswers] user=${userId} workspace=${workspaceId} incomingKeys=${incomingKeys.join(',')}`);
+
   // Smart merge: only skip empty arrays/objects if existing is ALSO empty (no-op)
   // This allows intentional clearing (user deleted all items) while preventing race condition overwrites
   const existing = ob.answers || {};
   const incoming = answers || {};
   const merged = { ...existing };
+  const changes = []; // Track what's changing
+  const potentialDataLoss = []; // Track potential data loss (non-empty -> empty)
+
   for (const [key, value] of Object.entries(incoming)) {
     const existingValue = existing[key];
     // Skip null/undefined
@@ -370,16 +378,33 @@ exports.saveAllAnswers = async (req, res) => {
     if (Array.isArray(value) && value.length === 0) {
       const existingIsEmptyArray = !existingValue || (Array.isArray(existingValue) && existingValue.length === 0);
       if (existingIsEmptyArray) continue; // Both empty - skip (no change)
-      // Existing has data, incoming is empty - allow (intentional clear)
+      // Existing has data, incoming is empty - POTENTIAL DATA LOSS
+      const existingLen = Array.isArray(existingValue) ? existingValue.length : 0;
+      potentialDataLoss.push({ key, existingLen, newLen: 0 });
     }
     // For objects: only skip if BOTH are empty
     if (value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) {
       const existingIsEmptyObj = !existingValue || (typeof existingValue === 'object' && !Array.isArray(existingValue) && Object.keys(existingValue).length === 0);
       if (existingIsEmptyObj) continue; // Both empty - skip (no change)
-      // Existing has data, incoming is empty - allow (intentional clear)
+      // Existing has data, incoming is empty - POTENTIAL DATA LOSS
+      const existingKeyCount = existingValue ? Object.keys(existingValue).length : 0;
+      potentialDataLoss.push({ key, existingKeys: existingKeyCount, newKeys: 0 });
+    }
+    // Track the change
+    if (JSON.stringify(existingValue) !== JSON.stringify(value)) {
+      changes.push(key);
     }
     merged[key] = value;
   }
+
+  // [DATA TRACKING] Log changes and potential data loss
+  if (changes.length > 0) {
+    console.log(`[saveAllAnswers] user=${userId} workspace=${workspaceId} changedKeys=${changes.join(',')}`);
+  }
+  if (potentialDataLoss.length > 0) {
+    console.warn(`[saveAllAnswers] POTENTIAL DATA LOSS user=${userId} workspace=${workspaceId}`, JSON.stringify(potentialDataLoss));
+  }
+
   ob.answers = merged;
   // Auto-populate forecasting fields in DB when products are present (Pro only)
   try {
@@ -419,7 +444,17 @@ exports.saveAllAnswers = async (req, res) => {
 exports.getAllAnswers = async (req, res) => {
   const userId = req.user?.id;
   if (!userId) return res.json({ answers: null });
+  const workspaceId = getWorkspaceId(req);
   const wsFilter = getWorkspaceFilter(req);
   const ob = await Onboarding.findOne(wsFilter);
-  return res.json({ answers: ob?.answers || null });
+
+  // [DATA TRACKING] Log data fetch with summary
+  const answers = ob?.answers || null;
+  const answerKeys = answers ? Object.keys(answers) : [];
+  const hasProducts = answers?.products?.length > 0;
+  const hasCoreProjects = answers?.coreProjectDetails?.length > 0;
+  const hasUbp = !!answers?.ubp;
+  console.log(`[getAllAnswers] user=${userId} workspace=${workspaceId} found=${!!ob} keys=${answerKeys.length} hasUbp=${hasUbp} hasProducts=${hasProducts} hasCoreProjects=${hasCoreProjects}`);
+
+  return res.json({ answers });
 };

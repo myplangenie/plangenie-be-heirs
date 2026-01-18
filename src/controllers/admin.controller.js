@@ -3,6 +3,12 @@ const User = require('../models/User');
 const Subscription = require('../models/Subscription');
 const Collaboration = require('../models/Collaboration');
 const SystemLog = require('../models/SystemLog');
+const Onboarding = require('../models/Onboarding');
+const Workspace = require('../models/Workspace');
+const RevenueStream = require('../models/RevenueStream');
+const FinancialBaseline = require('../models/FinancialBaseline');
+const TeamMember = require('../models/TeamMember');
+const Department = require('../models/Department');
 
 function toName(u) {
   const name = (u.fullName && String(u.fullName).trim()) || [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
@@ -109,6 +115,160 @@ exports.getUser = async (req, res) => {
   if (!user) return res.status(404).json({ message: 'Not found' });
   const sub = await Subscription.findOne({ user: id }).lean().exec();
   return res.json({ user: { ...user, _id: String(user._id), subscription: sub ? { planType: sub.planType, renewalDate: sub.renewalDate, paymentStatus: sub.paymentStatus, amountCents: sub.amountCents } : null } });
+};
+
+/**
+ * Get comprehensive user data - all related records across models
+ */
+exports.getUserFullData = async (req, res) => {
+  const id = req.params.id;
+  if (!mongoose.Types.ObjectId.isValid(id)) return res.status(400).json({ message: 'Invalid id' });
+
+  const user = await User.findById(id).lean().exec();
+  if (!user) return res.status(404).json({ message: 'Not found' });
+
+  // Fetch all related data in parallel
+  const [
+    subscription,
+    workspaces,
+    onboardings,
+    revenueStreams,
+    financialBaselines,
+    teamMembers,
+    departments,
+    collaborationsAsOwner,
+    collaborationsAsViewer,
+  ] = await Promise.all([
+    Subscription.findOne({ user: id }).lean().exec(),
+    Workspace.find({ user: id }).lean().exec(),
+    Onboarding.find({ user: id }).lean().exec(),
+    RevenueStream.find({ user: id }).lean().exec(),
+    FinancialBaseline.find({ user: id }).lean().exec(),
+    TeamMember.find({ user: id }).lean().exec(),
+    Department.find({ user: id }).lean().exec(),
+    Collaboration.find({ owner: id }).populate('viewer', 'email fullName').lean().exec(),
+    Collaboration.find({ viewer: id }).populate('owner', 'email fullName').lean().exec(),
+  ]);
+
+  // Build workspace map for onboarding data
+  const workspaceMap = new Map(workspaces.map(w => [String(w._id), w]));
+
+  // Enrich onboarding data with workspace names
+  const enrichedOnboardings = onboardings.map(ob => {
+    const ws = ob.workspace ? workspaceMap.get(String(ob.workspace)) : null;
+    return {
+      ...ob,
+      _id: String(ob._id),
+      workspaceName: ws?.name || 'Unknown Workspace',
+      workspaceWid: ws?.wid || null,
+    };
+  });
+
+  // Format response
+  return res.json({
+    user: {
+      _id: String(user._id),
+      email: user.email,
+      fullName: user.fullName,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      companyName: user.companyName,
+      status: user.status,
+      isVerified: user.isVerified,
+      isAdmin: user.isAdmin,
+      isCollaborator: user.isCollaborator,
+      onboardingDone: user.onboardingDone,
+      lastActiveAt: user.lastActiveAt,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    },
+    subscription: subscription ? {
+      _id: String(subscription._id),
+      planType: subscription.planType,
+      billingCycle: subscription.billingCycle,
+      paymentStatus: subscription.paymentStatus,
+      renewalDate: subscription.renewalDate,
+      amountCents: subscription.amountCents,
+      stripeCustomerId: subscription.stripeCustomerId,
+      stripeSubscriptionId: subscription.stripeSubscriptionId,
+      trialEndsAt: subscription.trialEndsAt,
+      createdAt: subscription.createdAt,
+    } : null,
+    workspaces: workspaces.map(w => ({
+      _id: String(w._id),
+      wid: w.wid,
+      name: w.name,
+      defaultWorkspace: w.defaultWorkspace,
+      lastActivityAt: w.lastActivityAt,
+      createdAt: w.createdAt,
+    })),
+    onboardings: enrichedOnboardings,
+    revenueStreams: revenueStreams.map(rs => ({
+      _id: String(rs._id),
+      name: rs.name,
+      type: rs.type,
+      description: rs.description,
+      isActive: rs.isActive,
+      metrics: rs.normalized || rs.metrics || {},
+      stability: rs.normalized?.stability || 'moderate',
+      workspaceId: rs.workspace ? String(rs.workspace) : null,
+      createdAt: rs.createdAt,
+    })),
+    financialBaselines: financialBaselines.map(fb => ({
+      _id: String(fb._id),
+      workRelatedCosts: fb.workRelatedCosts,
+      fixedCosts: fb.fixedCosts,
+      cash: fb.cash,
+      metrics: fb.metrics,
+      workspaceId: fb.workspace ? String(fb.workspace) : null,
+      createdAt: fb.createdAt,
+      updatedAt: fb.updatedAt,
+    })),
+    teamMembers: teamMembers.map(tm => ({
+      _id: String(tm._id),
+      name: tm.name,
+      email: tm.email,
+      role: tm.role,
+      department: tm.department,
+      status: tm.status,
+      workspaceId: tm.workspace ? String(tm.workspace) : null,
+    })),
+    departments: departments.map(d => ({
+      _id: String(d._id),
+      name: d.name,
+      status: d.status,
+      owner: d.owner,
+      dueDate: d.dueDate,
+      progress: d.progress,
+      workspaceId: d.workspace ? String(d.workspace) : null,
+    })),
+    collaborations: {
+      asOwner: collaborationsAsOwner.map(c => ({
+        _id: String(c._id),
+        viewerEmail: c.viewer?.email || c.email,
+        viewerName: c.viewer?.fullName || null,
+        status: c.status,
+        permissions: c.permissions,
+        createdAt: c.createdAt,
+      })),
+      asViewer: collaborationsAsViewer.map(c => ({
+        _id: String(c._id),
+        ownerEmail: c.owner?.email || null,
+        ownerName: c.owner?.fullName || null,
+        status: c.status,
+        permissions: c.permissions,
+        createdAt: c.createdAt,
+      })),
+    },
+    summary: {
+      workspaceCount: workspaces.length,
+      revenueStreamCount: revenueStreams.length,
+      teamMemberCount: teamMembers.length,
+      departmentCount: departments.length,
+      collaboratorCount: collaborationsAsOwner.length,
+      viewingCount: collaborationsAsViewer.length,
+    },
+  });
 };
 
 exports.updateUserStatus = async (req, res) => {

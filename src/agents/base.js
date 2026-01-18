@@ -13,6 +13,8 @@ const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
 const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
+const RevenueStream = require('../models/RevenueStream');
+const FinancialBaseline = require('../models/FinancialBaseline');
 
 // Cache TTL configurations (in milliseconds)
 const CACHE_TTL = {
@@ -119,16 +121,38 @@ async function buildAgentContext(userId, workspaceId = null) {
   const tmFilter = { user: userId, status: 'Active' };
   if (workspaceId) tmFilter.workspace = workspaceId;
 
-  const [ob, user, departments, teamMembers] = await Promise.all([
+  const streamFilter = { user: userId, isActive: true };
+  if (workspaceId) streamFilter.workspace = workspaceId;
+
+  const baselineFilter = { user: userId };
+  if (workspaceId) baselineFilter.workspace = workspaceId;
+
+  const [ob, user, departments, teamMembers, revenueStreams, financialBaseline] = await Promise.all([
     Onboarding.findOne(obFilter).lean(),
     User.findById(userId).lean(),
     Department.find(deptFilter).select('name status owner dueDate progress').limit(50).lean(),
     TeamMember.find(tmFilter).select('name role department').limit(100).lean(),
+    RevenueStream.find(streamFilter).lean(),
+    FinancialBaseline.findOne(baselineFilter).lean(),
   ]);
 
   const bp = ob?.businessProfile || {};
   const up = ob?.userProfile || {};
   const answers = ob?.answers || {};
+
+  // Calculate v2 aggregate for revenue streams
+  let revenueAggregate = null;
+  if (revenueStreams && revenueStreams.length > 0) {
+    revenueAggregate = {
+      totalMonthlyRevenue: revenueStreams.reduce((sum, s) => sum + (s.metrics?.estimatedMonthlyRevenue || 0), 0),
+      totalMonthlyDeliveryCost: revenueStreams.reduce((sum, s) => sum + (s.metrics?.estimatedMonthlyDeliveryCost || 0), 0),
+      streamCount: revenueStreams.length,
+    };
+    revenueAggregate.grossProfit = revenueAggregate.totalMonthlyRevenue - revenueAggregate.totalMonthlyDeliveryCost;
+    revenueAggregate.grossMarginPercent = revenueAggregate.totalMonthlyRevenue > 0
+      ? (revenueAggregate.grossProfit / revenueAggregate.totalMonthlyRevenue) * 100
+      : 0;
+  }
 
   return {
     // User profile
@@ -158,12 +182,12 @@ async function buildAgentContext(userId, workspaceId = null) {
     marketCompetitors: answers.marketCompetitors || '',
     competitorAdvantages: answers.competitorAdvantages || '',
 
-    // Products
-    products: answers.products || [],
+    // Products/Services - v2 data (RevenueStreams)
+    revenueStreams: revenueStreams || [],
+    revenueAggregate,
 
-    // Financial data
-    financial: answers.financial || {},
-    financialForecast: answers.financialForecast || {},
+    // Financial data - v2 data (FinancialBaseline)
+    financialBaseline: financialBaseline || null,
 
     // Projects & Action Plans
     coreProjectDetails: answers.coreProjectDetails || [],
@@ -266,13 +290,13 @@ function formatContextForPrompt(context) {
   if (context.marketCompetitors) lines.push(`Competitors: ${context.marketCompetitors}`);
   if (context.competitorAdvantages) lines.push(`Competitive Advantages: ${context.competitorAdvantages}`);
 
-  // Products summary
-  if (context.products?.length > 0) {
-    const productList = context.products
+  // Products/Services summary - v2 RevenueStreams only
+  if (context.revenueStreams?.length > 0) {
+    const streamList = context.revenueStreams
       .slice(0, 5)
-      .map(p => `${p.product || p.name || 'Product'}: ${p.description || ''}`.trim())
+      .map(s => `${s.name || 'Service'}: $${s.metrics?.estimatedMonthlyRevenue?.toLocaleString() || 0}/mo`.trim())
       .join('; ');
-    lines.push(`\nProducts/Services: ${productList}`);
+    lines.push(`\nProducts/Services: ${streamList}`);
   }
 
   // Projects summary
