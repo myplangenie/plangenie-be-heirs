@@ -514,6 +514,7 @@ exports.saveCompiledPlan = async (req, res, next) => {
       if (typeof cp.vision.threeYear !== 'undefined') a.vision3y = Array.isArray(cp.vision.threeYear) ? cp.vision.threeYear.join('\n') : String(cp.vision.threeYear || '');
       if (typeof cp.vision.ubp !== 'undefined') a.ubp = String(cp.vision.ubp || '');
       if (typeof cp.vision.purpose !== 'undefined') a.purpose = String(cp.vision.purpose || '');
+      if (typeof cp.vision.bhag !== 'undefined') a.visionBhag = String(cp.vision.bhag || '');
     }
     if (cp.values) {
       if (typeof cp.values.core !== 'undefined') a.valuesCore = String(cp.values.core || '');
@@ -664,7 +665,7 @@ exports.getCompiledPlan = async (req, res, next) => {
     const plan = {
       userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
       businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '', ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '' },
-      vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
+      vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', bhag: a.visionBhag || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
       values: { core: a.valuesCore || '', culture: a.cultureFeeling || '', traits: Array.isArray(a.valuesCoreKeywords) ? a.valuesCoreKeywords.filter((t)=> typeof t === 'string' && t.trim()).slice(0, 3) : [] },
       market: { customer: a.marketCustomer || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
       products: Array.isArray(a.products) ? a.products : [],
@@ -1842,10 +1843,10 @@ exports.uploadCompanyLogo = async (req, res, next) => {
     base = base.replace(/\/$/, '');
     const url = `${base}/${key}`;
 
-    // Save on the user's Plan document
+    // Save on the user's Plan document (workspace-aware)
     const updated = await Plan.findOneAndUpdate(
-      { user: userId },
-      { $set: { companyLogoUrl: url }, $setOnInsert: { user: userId } },
+      wsFilter,
+      { $set: { companyLogoUrl: url }, $setOnInsert: { user: userId, workspace: getWorkspaceId(req) } },
       { new: true, upsert: true }
     ).lean().exec();
 
@@ -1914,7 +1915,7 @@ exports.exportPlanPdf = async (req, res, next) => {
           companyLogoUrl: logoUrl || a.companyLogoUrl || ob.companyLogoUrl || '',
           userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
           businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '', ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '' },
-          vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
+          vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', bhag: a.visionBhag || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
           values: { core: a.valuesCore || '', culture: a.cultureFeeling || '', traits: Array.isArray(a.valuesCoreKeywords) ? a.valuesCoreKeywords.filter((t)=> typeof t === 'string' && t.trim()).slice(0, 3) : [] },
           goals: { shortTerm: (a.goalsShortTerm || '').split('\n').filter(Boolean), midTerm: (a.goalsMidTerm || '').split('\n').filter(Boolean), longTerm: (a.goalsLongTerm || '').split('\n').filter(Boolean) },
           market: { customer: a.marketCustomer || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
@@ -2517,7 +2518,7 @@ exports.exportPlanDocx = async (req, res, next) => {
 
     const plan = {
       businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '' },
-      vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
+      vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', bhag: a.visionBhag || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
       values: { core: a.valuesCore || '', culture: a.cultureFeeling || '' },
       market: { customer: a.marketCustomer || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
       products: Array.isArray(a.products) ? a.products : [],
