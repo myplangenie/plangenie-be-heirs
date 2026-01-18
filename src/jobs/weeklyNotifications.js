@@ -49,6 +49,27 @@ function getDueThisWeekItems(scoredItems) {
 }
 
 /**
+ * Check if digest should be sent based on frequency setting
+ * @param {string} frequency - 'daily', 'weekly', 'monthly', 'never'
+ * @returns {boolean} - true if should send today
+ */
+function shouldSendDigestByFrequency(frequency) {
+  if (!frequency || frequency === 'weekly') return true; // Weekly is default for digest
+  if (frequency === 'never') return false;
+  if (frequency === 'daily') return true; // If they want daily, send on weekly schedule too
+
+  if (frequency === 'monthly') {
+    // Send only on the first Friday of the month
+    const now = new Date();
+    const dayOfMonth = now.getDate();
+    // First Friday is between 1-7
+    return dayOfMonth <= 7;
+  }
+
+  return true; // Default to sending
+}
+
+/**
  * Format due date for display in email
  */
 function formatDueDate(dueWhen) {
@@ -84,10 +105,22 @@ function formatDueDate(dueWhen) {
  */
 async function sendDigestToUser(user, resend, fromAddress, dashboardUrl) {
   try {
-    // Get user's default workspace
+    // Get user's default workspace with notification preferences
     const workspace = await Workspace.findOne({ user: user._id, defaultWorkspace: true }).lean();
     if (!workspace) {
       return { sent: false, reason: 'no_workspace' };
+    }
+
+    // Check notification frequency preference
+    const frequency = workspace.notificationPreferences?.emailFrequency?.digest || 'weekly';
+    if (!shouldSendDigestByFrequency(frequency)) {
+      return { sent: false, reason: 'frequency_skip' };
+    }
+
+    // Check if digest emails are disabled entirely
+    const digestEnabled = workspace.notificationPreferences?.email?.weeklyDigest;
+    if (digestEnabled === false) {
+      return { sent: false, reason: 'disabled' };
     }
 
     // Get user's onboarding data for their default workspace
@@ -186,7 +219,7 @@ async function processBatch(users, resend, fromAddress, dashboardUrl) {
       if (r.sent) {
         sent++;
         console.log(`[weeklyNotifications] Sent to ${users[index].email}: ${r.overdueCount} overdue, ${r.dueThisWeekCount} due this week`);
-      } else if (r.reason === 'no_items') {
+      } else if (r.reason === 'no_items' || r.reason === 'no_workspace' || r.reason === 'frequency_skip' || r.reason === 'disabled') {
         skipped++;
       } else {
         errors++;

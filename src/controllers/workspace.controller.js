@@ -1104,26 +1104,33 @@ exports.getNotificationPreferences = async (req, res, next) => {
     if (!ws) return res.status(404).json({ message: 'Workspace not found' });
 
     // Return preferences with defaults if not set
-    const notificationPreferences = ws.notificationPreferences || {
+    const notificationPreferences = {
       email: {
-        weeklyDigest: true,
-        dailyWish: true,
-        reviewReminders: true,
-        deadlineAlerts: true,
-        teamActivity: true,
+        weeklyDigest: ws.notificationPreferences?.email?.weeklyDigest ?? true,
+        dailyWish: ws.notificationPreferences?.email?.dailyWish ?? true,
+        reviewReminders: ws.notificationPreferences?.email?.reviewReminders ?? true,
+        deadlineAlerts: ws.notificationPreferences?.email?.deadlineAlerts ?? true,
+        teamActivity: ws.notificationPreferences?.email?.teamActivity ?? true,
+      },
+      emailFrequency: {
+        digest: ws.notificationPreferences?.emailFrequency?.digest || 'weekly',
+        dailyWish: ws.notificationPreferences?.emailFrequency?.dailyWish || 'daily',
+        reviewReminders: ws.notificationPreferences?.emailFrequency?.reviewReminders || 'weekly',
+        deadlineAlerts: ws.notificationPreferences?.emailFrequency?.deadlineAlerts || 'daily',
+        teamActivity: ws.notificationPreferences?.emailFrequency?.teamActivity || 'weekly',
       },
       inApp: {
-        taskUpdates: true,
-        reviewReminders: true,
-        deadlineAlerts: true,
-        teamActivity: true,
-        aiInsights: true,
+        taskUpdates: ws.notificationPreferences?.inApp?.taskUpdates ?? true,
+        reviewReminders: ws.notificationPreferences?.inApp?.reviewReminders ?? true,
+        deadlineAlerts: ws.notificationPreferences?.inApp?.deadlineAlerts ?? true,
+        teamActivity: ws.notificationPreferences?.inApp?.teamActivity ?? true,
+        aiInsights: ws.notificationPreferences?.inApp?.aiInsights ?? true,
       },
       timing: {
-        digestDay: 5,
-        digestHour: 9,
-        quietHoursStart: null,
-        quietHoursEnd: null,
+        digestDay: ws.notificationPreferences?.timing?.digestDay ?? 5,
+        digestHour: ws.notificationPreferences?.timing?.digestHour ?? 9,
+        quietHoursStart: ws.notificationPreferences?.timing?.quietHoursStart ?? null,
+        quietHoursEnd: ws.notificationPreferences?.timing?.quietHoursEnd ?? null,
       },
     };
 
@@ -1141,18 +1148,30 @@ exports.updateNotificationPreferences = async (req, res, next) => {
     const ws = await Workspace.findOne({ wid });
     if (!ws) return res.status(404).json({ message: 'Workspace not found' });
 
-    const { email, inApp, timing } = req.body || {};
+    const { email, emailFrequency, inApp, timing } = req.body || {};
 
     // Initialize if needed
     ws.notificationPreferences = ws.notificationPreferences || {};
 
-    // Update email preferences
+    // Update email preferences (boolean on/off)
     if (email && typeof email === 'object') {
       ws.notificationPreferences.email = ws.notificationPreferences.email || {};
       const allowedEmailPrefs = ['weeklyDigest', 'dailyWish', 'reviewReminders', 'deadlineAlerts', 'teamActivity'];
       for (const key of allowedEmailPrefs) {
         if (typeof email[key] === 'boolean') {
           ws.notificationPreferences.email[key] = email[key];
+        }
+      }
+    }
+
+    // Update email frequency preferences (daily, weekly, monthly, never)
+    if (emailFrequency && typeof emailFrequency === 'object') {
+      ws.notificationPreferences.emailFrequency = ws.notificationPreferences.emailFrequency || {};
+      const allowedFrequencyPrefs = ['digest', 'dailyWish', 'reviewReminders', 'deadlineAlerts', 'teamActivity'];
+      const validFrequencies = ['daily', 'weekly', 'monthly', 'never'];
+      for (const key of allowedFrequencyPrefs) {
+        if (typeof emailFrequency[key] === 'string' && validFrequencies.includes(emailFrequency[key])) {
+          ws.notificationPreferences.emailFrequency[key] = emailFrequency[key];
         }
       }
     }
@@ -1189,7 +1208,38 @@ exports.updateNotificationPreferences = async (req, res, next) => {
     ws.markModified('notificationPreferences');
     await ws.save();
 
-    return res.json({ notificationPreferences: ws.notificationPreferences });
+    // Return with defaults applied
+    const notificationPreferences = {
+      email: {
+        weeklyDigest: ws.notificationPreferences?.email?.weeklyDigest ?? true,
+        dailyWish: ws.notificationPreferences?.email?.dailyWish ?? true,
+        reviewReminders: ws.notificationPreferences?.email?.reviewReminders ?? true,
+        deadlineAlerts: ws.notificationPreferences?.email?.deadlineAlerts ?? true,
+        teamActivity: ws.notificationPreferences?.email?.teamActivity ?? true,
+      },
+      emailFrequency: {
+        digest: ws.notificationPreferences?.emailFrequency?.digest || 'weekly',
+        dailyWish: ws.notificationPreferences?.emailFrequency?.dailyWish || 'daily',
+        reviewReminders: ws.notificationPreferences?.emailFrequency?.reviewReminders || 'weekly',
+        deadlineAlerts: ws.notificationPreferences?.emailFrequency?.deadlineAlerts || 'daily',
+        teamActivity: ws.notificationPreferences?.emailFrequency?.teamActivity || 'weekly',
+      },
+      inApp: {
+        taskUpdates: ws.notificationPreferences?.inApp?.taskUpdates ?? true,
+        reviewReminders: ws.notificationPreferences?.inApp?.reviewReminders ?? true,
+        deadlineAlerts: ws.notificationPreferences?.inApp?.deadlineAlerts ?? true,
+        teamActivity: ws.notificationPreferences?.inApp?.teamActivity ?? true,
+        aiInsights: ws.notificationPreferences?.inApp?.aiInsights ?? true,
+      },
+      timing: {
+        digestDay: ws.notificationPreferences?.timing?.digestDay ?? 5,
+        digestHour: ws.notificationPreferences?.timing?.digestHour ?? 9,
+        quietHoursStart: ws.notificationPreferences?.timing?.quietHoursStart ?? null,
+        quietHoursEnd: ws.notificationPreferences?.timing?.quietHoursEnd ?? null,
+      },
+    };
+
+    return res.json({ notificationPreferences });
   } catch (err) {
     next(err);
   }

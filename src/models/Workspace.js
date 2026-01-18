@@ -33,13 +33,21 @@ const WorkspaceSchema = new mongoose.Schema(
     },
     // Workspace-level notification preferences
     notificationPreferences: {
-      // Email notifications
+      // Email notifications (enabled/disabled)
       email: {
         weeklyDigest: { type: Boolean, default: true }, // Weekly summary of tasks and progress
         dailyWish: { type: Boolean, default: true }, // Daily AI-generated recommendations
         reviewReminders: { type: Boolean, default: true }, // Reminders before scheduled reviews
         deadlineAlerts: { type: Boolean, default: true }, // Alerts for upcoming/overdue deadlines
         teamActivity: { type: Boolean, default: true }, // Notifications about team member actions
+      },
+      // Email frequency settings (daily, weekly, monthly, never)
+      emailFrequency: {
+        digest: { type: String, enum: ['daily', 'weekly', 'monthly', 'never'], default: 'weekly' },
+        dailyWish: { type: String, enum: ['daily', 'weekly', 'monthly', 'never'], default: 'daily' },
+        reviewReminders: { type: String, enum: ['daily', 'weekly', 'monthly', 'never'], default: 'weekly' },
+        deadlineAlerts: { type: String, enum: ['daily', 'weekly', 'monthly', 'never'], default: 'daily' },
+        teamActivity: { type: String, enum: ['daily', 'weekly', 'monthly', 'never'], default: 'weekly' },
       },
       // In-app notifications
       inApp: {

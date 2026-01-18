@@ -31,6 +31,33 @@ function getTodayDateET() {
 }
 
 /**
+ * Check if a notification should be sent based on frequency setting
+ * @param {string} frequency - 'daily', 'weekly', 'monthly', 'never'
+ * @returns {boolean} - true if should send today
+ */
+function shouldSendByFrequency(frequency) {
+  if (!frequency || frequency === 'daily') return true;
+  if (frequency === 'never') return false;
+
+  const now = new Date();
+  // Convert to Eastern Time
+  const etOptions = { timeZone: 'America/Toronto' };
+  const etDate = new Date(now.toLocaleString('en-US', etOptions));
+
+  if (frequency === 'weekly') {
+    // Send on Monday (day 1)
+    return etDate.getDay() === 1;
+  }
+
+  if (frequency === 'monthly') {
+    // Send on 1st of month
+    return etDate.getDate() === 1;
+  }
+
+  return true; // Default to sending
+}
+
+/**
  * Generate AI recommendation for a user
  */
 async function generateWishForUser(context) {
@@ -100,10 +127,22 @@ async function sendWishToUser(user, resend, fromAddress, dashboardUrl) {
   try {
     const todayDate = getTodayDateET();
 
-    // Get user's default workspace
+    // Get user's default workspace with notification preferences
     const workspace = await Workspace.findOne({ user: user._id, defaultWorkspace: true }).lean();
     if (!workspace) {
       return { sent: false, reason: 'no_workspace' };
+    }
+
+    // Check notification frequency preference
+    const frequency = workspace.notificationPreferences?.emailFrequency?.dailyWish || 'daily';
+    if (!shouldSendByFrequency(frequency)) {
+      return { sent: false, reason: 'frequency_skip' };
+    }
+
+    // Check if daily wish emails are disabled entirely
+    const dailyWishEnabled = workspace.notificationPreferences?.email?.dailyWish;
+    if (dailyWishEnabled === false) {
+      return { sent: false, reason: 'disabled' };
     }
 
     // Check if already sent today for this workspace
@@ -195,7 +234,7 @@ async function processBatch(users, resend, fromAddress, dashboardUrl) {
       if (r.sent) {
         sent++;
         console.log(`[dailyWish] Sent to ${users[index].email}: "${r.title}" (${r.category})`);
-      } else if (r.reason === 'already_sent' || r.reason === 'no_workspace') {
+      } else if (r.reason === 'already_sent' || r.reason === 'no_workspace' || r.reason === 'frequency_skip' || r.reason === 'disabled') {
         skipped++;
       } else {
         errors++;
