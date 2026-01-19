@@ -34,7 +34,8 @@ async function getWorkspaceOnboardingStatus(userId, workspaceIdOrWid) {
 }
 
 function signToken(userId) {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '30m' });
+  // TODO: Revert to '30m' after client testing - temporarily set to 2h per client request
+  return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: '2h' });
 }
 
 // Helper to issue access + refresh tokens and set httpOnly cookies
