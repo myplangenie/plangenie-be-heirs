@@ -2883,3 +2883,67 @@ exports.redistributeAllDueDates = async (req, res) => {
     return res.status(500).json({ message });
   }
 };
+
+/**
+ * Spread only a new project's deliverables across the remaining year.
+ * Used when adding projects from the dashboard (post-onboarding) to avoid
+ * disrupting existing deliverable due dates that users may already be working towards.
+ */
+exports.assignNewProjectDueDates = async (req, res) => {
+  try {
+    const { project } = req.body || {};
+    if (!project || !Array.isArray(project.deliverables) || !project.deliverables.length) {
+      return res.json({ project });
+    }
+
+    const now = new Date();
+    const endOfYear = new Date(now.getFullYear(), 11, 31);
+    const daysRemaining = Math.max(30, Math.floor((endOfYear - now) / (1000 * 60 * 60 * 24)));
+    const count = project.deliverables.length;
+    const baseInterval = daysRemaining / (count + 1);
+
+    const formatYmd = (d) => d.toISOString().split('T')[0];
+
+    // Generate random offsets for each deliverable
+    const offsets = [];
+    for (let i = 0; i < count; i++) {
+      // Skip deliverables that already have due dates
+      if (project.deliverables[i].dueWhen) {
+        offsets.push(null);
+        continue;
+      }
+
+      let offset;
+      if (i === 0) {
+        // First deliverable: 1-2 weeks out
+        offset = Math.floor(Math.random() * 14) + 7;
+      } else if (i === count - 1) {
+        // Last deliverable: near end of year
+        offset = daysRemaining - Math.floor(Math.random() * 14);
+      } else {
+        // Middle deliverables: spread with some variance
+        const basePos = (i + 1) * baseInterval;
+        const variance = baseInterval * 0.3;
+        offset = Math.round(basePos + (Math.random() * variance * 2 - variance));
+      }
+      offsets.push(Math.max(7, Math.min(daysRemaining, offset)));
+    }
+
+    // Sort non-null offsets to ensure chronological order
+    const sortedOffsets = offsets.filter(o => o !== null).sort((a, b) => a - b);
+    let sortedIdx = 0;
+
+    // Assign due dates
+    project.deliverables = project.deliverables.map((d, i) => {
+      if (d.dueWhen || offsets[i] === null) return d;
+      const dueDate = new Date(now);
+      dueDate.setDate(dueDate.getDate() + sortedOffsets[sortedIdx++]);
+      return { ...d, dueWhen: formatYmd(dueDate) };
+    });
+
+    return res.json({ project });
+  } catch (err) {
+    const message = err?.message || 'Failed to assign new project due dates';
+    return res.status(500).json({ message });
+  }
+};
