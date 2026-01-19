@@ -365,6 +365,7 @@ async function callOpenAI({ type, input, contextText }) {
     '- Keep it to 1-2 sentences.',
     '- Be specific and user-centered.',
     '- Output ONLY the final suggestion as plain text.',
+    '- Do NOT prefix with labels like "Goal:", "KPI:", "Deliverable:", "Milestone:", etc. Just provide the content directly.',
     '- Do NOT include code fences, JSON, lists, bullets, quotes, or explanations.',
     '',
     input ? `User input: ${input}` : 'User input: (none provided)',
@@ -459,6 +460,7 @@ async function callOpenAIList({ type, input, contextText, n = 3, nonce, avoid = 
     'Constraints:',
     '- Each option should be 1-2 sentences.',
     '- Be specific and user-centered.',
+    '- Do NOT prefix items with labels like "Goal:", "KPI:", "Deliverable:", "Milestone:", etc. Just provide the content directly.',
     avoidText,
     '- Generate fresh, unique suggestions with different angles and perspectives.',
     '- Return ONLY a valid JSON array of strings (length exactly ${n}).',
@@ -935,6 +937,7 @@ async function callOpenAIRewrite({ type, text, contextText }) {
     'Constraints:',
     '- Keep it to 1-2 sentences.',
     '- Preserve the core meaning; improve clarity and tone.',
+    '- Do NOT prefix with labels like "Goal:", "KPI:", "Deliverable:", "Milestone:", etc. Just provide the content directly.',
     '- Output ONLY the rewritten text as plain text.',
     '',
     text ? `Draft: ${text}` : 'Draft: (none provided)'
@@ -2514,6 +2517,7 @@ async function callOpenAIListWithKeywords({ type, input, contextText, n = 3 }) {
     'For each option, also return 3–4 short behavioral trait keywords that capture the core principles (e.g., "Accountability", "Transparency", "Customer-first").',
     'Constraints:',
     '- Each option text: 1–2 sentences.',
+    '- Do NOT prefix text with labels like "Goal:", "Value:", etc. Just provide the content directly.',
     '- Keywords should be single words or short hyphenated phrases (max 3 words).',
     '- Output ONLY strict JSON: an array of objects [{ "text": string, "keywords": string[] }] of length exactly ${n}.',
     '- Do NOT include any extra commentary or code fences.',
@@ -2621,6 +2625,7 @@ async function callOpenAIListPhrases({ type, input, contextText, n = 3 }) {
     `Task: Generate exactly ${n} NEW and UNIQUE concise options for the ${type}.`,
     'Constraints:',
     '- Each option must be a short phrase (1–4 words), no sentences.',
+    '- Do NOT prefix with labels like "Goal:", "KPI:", "Strength:", "Weakness:", etc. Just provide the content directly.',
     '- Be creative and varied - do NOT repeat common/generic phrases.',
     '- Think of specific, actionable items relevant to THIS business.',
     '- Avoid punctuation except hyphens when necessary.',
@@ -2652,7 +2657,7 @@ async function callOpenAIRewritePhrase({ type, text, contextText }) {
   const userPrompt = [
     contextText || '',
     `Task: Rewrite the ${type} into a short phrase (1–4 words).`,
-    'Rules: No sentences. Avoid punctuation except hyphens if needed. Return only the phrase as plain text.',
+    'Rules: No sentences. Do NOT prefix with labels. Avoid punctuation except hyphens if needed. Return only the phrase as plain text.',
     '',
     `Draft: ${text}`
   ].filter(Boolean).join('\n');
