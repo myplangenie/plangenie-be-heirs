@@ -2668,3 +2668,218 @@ async function callOpenAIRewritePhrase({ type, text, contextText }) {
   if ((out.startsWith('"') && out.endsWith('"')) || (out.startsWith("'") && out.endsWith("'"))) out = out.slice(1,-1).trim();
   return out;
 }
+
+// Redistribute all deliverable due dates across ALL projects from ALL departments
+// Takes assignments object and distributes deliverables evenly across 12 months starting from current date
+// Body: { assignments: Record<string, Array<{ deliverables?: Array<{ text, kpi?, dueWhen? }>, ...}>> }
+// Returns: { assignments: Record<string, Array<...>> } with updated dueWhen values
+exports.redistributeDeliverableDueDates = async (req, res) => {
+  try {
+    const { assignments } = req.body || {};
+    if (!assignments || typeof assignments !== 'object') {
+      return res.status(400).json({ message: 'assignments object is required' });
+    }
+
+    // Helper to format date as YYYY-MM-DD
+    const formatYmd = (dt) => {
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    // Collect all deliverables with references to their section, project, and deliverable indices
+    const allDeliverables = [];
+    Object.entries(assignments).forEach(([sectionKey, projects]) => {
+      if (!Array.isArray(projects)) return;
+      projects.forEach((project, pIdx) => {
+        const deliverables = project?.deliverables;
+        if (!Array.isArray(deliverables)) return;
+        deliverables.forEach((_, dIdx) => {
+          allDeliverables.push({ sectionKey, projectIdx: pIdx, deliverableIdx: dIdx });
+        });
+      });
+    });
+
+    const totalCount = allDeliverables.length;
+    if (totalCount === 0) {
+      return res.json({ assignments });
+    }
+
+    // Calculate interval in days to spread across 12 months (365 days)
+    const nowDate = new Date();
+    const daysInterval = totalCount > 1 ? 365 / (totalCount - 1) : 0;
+
+    // Assign due dates
+    allDeliverables.forEach((ref, idx) => {
+      const daysOffset = Math.round(idx * daysInterval);
+      const dueDate = new Date(nowDate);
+      dueDate.setDate(dueDate.getDate() + daysOffset);
+      const project = assignments[ref.sectionKey]?.[ref.projectIdx];
+      if (project?.deliverables?.[ref.deliverableIdx]) {
+        project.deliverables[ref.deliverableIdx].dueWhen = formatYmd(dueDate);
+      }
+    });
+
+    return res.json({ assignments });
+  } catch (err) {
+    const message = err?.message || 'Failed to redistribute deliverable due dates';
+    return res.status(500).json({ message });
+  }
+};
+
+// Redistribute all deliverable due dates across ALL core strategic projects
+// Takes coreProjectDetails array and distributes deliverables evenly across 12 months starting from current date
+// Body: { coreProjectDetails: Array<{ title, goal?, cost?, dueWhen?, deliverables: Array<{ text, kpi?, dueWhen? }> }> }
+// Returns: { coreProjectDetails: Array<...> } with updated dueWhen values
+exports.redistributeCoreProjectDueDates = async (req, res) => {
+  try {
+    const { coreProjectDetails } = req.body || {};
+    if (!coreProjectDetails || !Array.isArray(coreProjectDetails)) {
+      return res.status(400).json({ message: 'coreProjectDetails array is required' });
+    }
+
+    // Helper to format date as YYYY-MM-DD
+    const formatYmd = (dt) => {
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    // Collect all deliverables with references to their project and deliverable indices
+    const allDeliverables = [];
+    coreProjectDetails.forEach((project, pIdx) => {
+      const deliverables = project?.deliverables;
+      if (!Array.isArray(deliverables)) return;
+      deliverables.forEach((_, dIdx) => {
+        allDeliverables.push({ projectIdx: pIdx, deliverableIdx: dIdx });
+      });
+    });
+
+    const totalCount = allDeliverables.length;
+    if (totalCount === 0) {
+      return res.json({ coreProjectDetails });
+    }
+
+    // Calculate interval in days to spread across 12 months (365 days)
+    const nowDate = new Date();
+    const daysInterval = totalCount > 1 ? 365 / (totalCount - 1) : 0;
+
+    // Assign due dates
+    allDeliverables.forEach((ref, idx) => {
+      const daysOffset = Math.round(idx * daysInterval);
+      const dueDate = new Date(nowDate);
+      dueDate.setDate(dueDate.getDate() + daysOffset);
+      const project = coreProjectDetails[ref.projectIdx];
+      if (project?.deliverables?.[ref.deliverableIdx]) {
+        project.deliverables[ref.deliverableIdx].dueWhen = formatYmd(dueDate);
+      }
+    });
+
+    return res.json({ coreProjectDetails });
+  } catch (err) {
+    const message = err?.message || 'Failed to redistribute core project due dates';
+    return res.status(500).json({ message });
+  }
+};
+
+// Redistribute ALL deliverable due dates across BOTH core projects AND departmental projects
+// Combines all deliverables from all sources and distributes evenly across 12 months
+// Body: { coreProjectDetails?: Array<...>, assignments?: Record<string, Array<...>> }
+// Returns: { coreProjectDetails: Array<...>, assignments: Record<string, Array<...>> } with updated dueWhen values
+exports.redistributeAllDueDates = async (req, res) => {
+  try {
+    const { coreProjectDetails = [], assignments = {} } = req.body || {};
+
+    // Helper to format date as YYYY-MM-DD
+    const formatYmd = (dt) => {
+      const y = dt.getFullYear();
+      const m = String(dt.getMonth() + 1).padStart(2, '0');
+      const d = String(dt.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    };
+
+    // Collect ALL deliverables from both core projects and departmental projects
+    const allDeliverables = [];
+
+    // Collect from core projects
+    if (Array.isArray(coreProjectDetails)) {
+      coreProjectDetails.forEach((project, pIdx) => {
+        const deliverables = project?.deliverables;
+        if (!Array.isArray(deliverables)) return;
+        deliverables.forEach((_, dIdx) => {
+          allDeliverables.push({ source: 'core', projectIdx: pIdx, deliverableIdx: dIdx });
+        });
+      });
+    }
+
+    // Collect from departmental projects
+    if (assignments && typeof assignments === 'object') {
+      Object.entries(assignments).forEach(([sectionKey, projects]) => {
+        if (!Array.isArray(projects)) return;
+        projects.forEach((project, pIdx) => {
+          const deliverables = project?.deliverables;
+          if (!Array.isArray(deliverables)) return;
+          deliverables.forEach((_, dIdx) => {
+            allDeliverables.push({ source: 'dept', sectionKey, projectIdx: pIdx, deliverableIdx: dIdx });
+          });
+        });
+      });
+    }
+
+    const totalCount = allDeliverables.length;
+    if (totalCount === 0) {
+      return res.json({ coreProjectDetails, assignments });
+    }
+
+    // Distribute across 12 months (365 days) with randomness for natural feel
+    const nowDate = new Date();
+    const baseInterval = totalCount > 1 ? 365 / (totalCount - 1) : 0;
+
+    // Generate random offsets for each deliverable, then sort to maintain chronological order
+    const randomOffsets = [];
+    for (let i = 0; i < totalCount; i++) {
+      if (i === 0) {
+        // First deliverable: within first 2 weeks (1-14 days)
+        randomOffsets.push(Math.floor(Math.random() * 14) + 1);
+      } else if (i === totalCount - 1) {
+        // Last deliverable: in the last month (335-365 days)
+        randomOffsets.push(Math.floor(Math.random() * 30) + 335);
+      } else {
+        // Middle deliverables: base position with ±40% variance
+        const basePosition = i * baseInterval;
+        const variance = baseInterval * 0.4;
+        const randomOffset = basePosition + (Math.random() * variance * 2 - variance);
+        randomOffsets.push(Math.max(15, Math.min(334, Math.round(randomOffset))));
+      }
+    }
+    // Sort to ensure chronological order
+    randomOffsets.sort((a, b) => a - b);
+
+    // Assign due dates
+    allDeliverables.forEach((ref, idx) => {
+      const daysOffset = randomOffsets[idx];
+      const dueDate = new Date(nowDate);
+      dueDate.setDate(dueDate.getDate() + daysOffset);
+      const formattedDate = formatYmd(dueDate);
+
+      if (ref.source === 'core') {
+        const project = coreProjectDetails[ref.projectIdx];
+        if (project?.deliverables?.[ref.deliverableIdx]) {
+          project.deliverables[ref.deliverableIdx].dueWhen = formattedDate;
+        }
+      } else {
+        const project = assignments[ref.sectionKey]?.[ref.projectIdx];
+        if (project?.deliverables?.[ref.deliverableIdx]) {
+          project.deliverables[ref.deliverableIdx].dueWhen = formattedDate;
+        }
+      }
+    });
+
+    return res.json({ coreProjectDetails, assignments });
+  } catch (err) {
+    const message = err?.message || 'Failed to redistribute all due dates';
+    return res.status(500).json({ message });
+  }
+};

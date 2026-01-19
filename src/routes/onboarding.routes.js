@@ -132,6 +132,12 @@ router.post('/actions/core/project/suggest', requireContributor, requireAI('core
 // Bulk goals per department/section
 // Allow Lite users to generate section goals used by core projects workflows
 router.post('/actions/sections/goals', requireContributor, requireAI('actions'), ai.suggestDeptGoalsBulk);
+// Redistribute deliverable due dates across all projects globally
+router.post('/actions/redistribute-due-dates', requireContributor, ai.redistributeDeliverableDueDates);
+// Redistribute deliverable due dates across all core strategic projects
+router.post('/actions/core/redistribute-due-dates', requireContributor, ai.redistributeCoreProjectDueDates);
+// Redistribute ALL deliverable due dates across BOTH core projects AND departmental projects
+router.post('/actions/redistribute-all-due-dates', requireContributor, ai.redistributeAllDueDates);
 router.post('/financial/forecast/rewrite', requireContributor, requireAI('financial'), requireFeature('financials'), ai.rewriteFinancialForecast);
 
 // 1-Year Goals CRUD
