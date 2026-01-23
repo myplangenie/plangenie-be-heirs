@@ -9,6 +9,7 @@
  * - Competitor
  * - OrgPosition
  * - SwotEntry
+ * - VisionGoal
  *
  * Run with: node scripts/migrate-onboarding-to-collections.js
  */
@@ -24,6 +25,7 @@ const Product = require('../src/models/Product');
 const Competitor = require('../src/models/Competitor');
 const OrgPosition = require('../src/models/OrgPosition');
 const SwotEntry = require('../src/models/SwotEntry');
+const VisionGoal = require('../src/models/VisionGoal');
 const Workspace = require('../src/models/Workspace');
 
 const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/plangenie';
@@ -78,6 +80,7 @@ async function migrateOnboarding(ob) {
     competitors: 0,
     orgPositions: 0,
     swotEntries: 0,
+    visionGoals: 0,
   };
 
   const wsFilter = { workspace: workspaceId, user: userId };
@@ -300,6 +303,46 @@ async function migrateOnboarding(ob) {
     }
   }
 
+  // 7. Migrate Vision Goals from vision1y and vision3y
+  const vision1yGoals = parseLines(answers.vision1y);
+  const vision3yGoals = parseLines(answers.vision3y);
+  const totalVisionGoals = vision1yGoals.length + vision3yGoals.length;
+
+  if (totalVisionGoals > 0) {
+    const existingVisionGoals = await VisionGoal.countDocuments({ ...wsFilter, isDeleted: false });
+    if (existingVisionGoals === 0) {
+      let order = 0;
+
+      for (const text of vision1yGoals) {
+        await VisionGoal.create({
+          workspace: workspaceId,
+          user: userId,
+          goalType: '1y',
+          text,
+          order: order++,
+        });
+        stats.visionGoals++;
+      }
+
+      // Reset order for 3-year goals
+      order = 0;
+      for (const text of vision3yGoals) {
+        await VisionGoal.create({
+          workspace: workspaceId,
+          user: userId,
+          goalType: '3y',
+          text,
+          order: order++,
+        });
+        stats.visionGoals++;
+      }
+
+      console.log(`  - Migrated ${stats.visionGoals} vision goals`);
+    } else {
+      console.log(`  - Skipping vision goals (${existingVisionGoals} already exist)`);
+    }
+  }
+
   return stats;
 }
 
@@ -320,6 +363,7 @@ async function main() {
       competitors: 0,
       orgPositions: 0,
       swotEntries: 0,
+      visionGoals: 0,
       skipped: 0,
     };
 
@@ -337,6 +381,7 @@ async function main() {
         totalStats.competitors += stats.competitors || 0;
         totalStats.orgPositions += stats.orgPositions || 0;
         totalStats.swotEntries += stats.swotEntries || 0;
+        totalStats.visionGoals += stats.visionGoals || 0;
       }
     }
 
@@ -347,6 +392,7 @@ async function main() {
     console.log(`  Total Competitors: ${totalStats.competitors}`);
     console.log(`  Total Org Positions: ${totalStats.orgPositions}`);
     console.log(`  Total SWOT Entries: ${totalStats.swotEntries}`);
+    console.log(`  Total Vision Goals: ${totalStats.visionGoals}`);
     console.log(`  Skipped (no workspace): ${totalStats.skipped}`);
     console.log('');
 

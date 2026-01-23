@@ -1,0 +1,76 @@
+[
+  {
+    "_id": "6954d5438963895087437fa7",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": "695130344db73e493a55c301",
+    "rid": "r_tecsyuil",
+    "cadence": "weekly",
+    "status": "open",
+    "notes": "This is a nice review",
+    "attendees": [],
+    "actionItems": [],
+    "decisions": [],
+    "startedAt": "2025-12-31T07:48:19.563Z",
+    "createdAt": "2025-12-31T07:48:19.564Z",
+    "updatedAt": "2025-12-31T07:48:19.564Z",
+    "__v": 0
+  },
+  {
+    "_id": "695ed55fc140d79fea126638",
+    "user": "695ec942c140d79fea125b5d",
+    "workspace": "695ec942c140d79fea125b5f",
+    "rid": "r_08u3rl4p",
+    "cadence": "weekly",
+    "status": "open",
+    "notes": "",
+    "attendees": [],
+    "actionItems": [],
+    "decisions": [],
+    "startedAt": "2026-01-07T21:51:27.351Z",
+    "createdAt": "2026-01-07T21:51:27.352Z",
+    "updatedAt": "2026-01-07T21:51:27.352Z",
+    "__v": 0
+  },
+  {
+    "_id": "696a579f3dd75e6710b5edbe",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": "695130344db73e493a55c301",
+    "rid": "r_mxtzexov",
+    "cadence": "weekly",
+    "status": "open",
+    "notes": "Review finance budget",
+    "attendees": [
+      {
+        "id": "82e650a9-b4ae-41fd-ac12-6a752943a3ee",
+        "name": "A",
+        "email": ""
+      },
+      {
+        "id": "7612763d-b682-413c-87c4-a4ad3bf5695d",
+        "name": "C",
+        "email": ""
+      },
+      {
+        "id": "8dc8f4f9-9535-4dc8-8915-32125b815627",
+        "name": "D",
+        "email": ""
+      }
+    ],
+    "actionItems": [],
+    "decisions": [],
+    "startedAt": "2026-01-16T15:22:07.917Z",
+    "createdAt": "2026-01-16T15:22:07.919Z",
+    "updatedAt": "2026-01-16T15:42:34.606Z",
+    "__v": 3,
+    "projects": [
+      {
+        "index": 0,
+        "title": "User Feedback"
+      },
+      {
+        "index": 1,
+        "title": "Partnership Outreach"
+      }
+    ]
+  }
+]

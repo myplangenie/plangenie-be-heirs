@@ -1,0 +1,2375 @@
+[
+  {
+    "_id": "6959553a68705101a861956e",
+    "agentType": "plan-guidance",
+    "workspace": "695130344db73e493a55c301",
+    "user": "6916186423f83e5b9bae0f22",
+    "__v": 0,
+    "createdAt": "2026-01-03T17:43:21.836Z",
+    "expiresAt": "2026-01-23T15:09:02.042Z",
+    "generatedAt": "2026-01-23T14:39:02.042Z",
+    "generationTimeMs": 6504,
+    "inputHash": "cdaffba486cbc29d",
+    "response": {
+      "guidance": {
+        "focusRecommendation": "Focus on launching the overdue targeted social media campaign to highlight user success stories and the benefits of CentraLearn.",
+        "topPriority": {
+          "title": "Launch a targeted social media campaign",
+          "reason": "This item has the highest urgency score (80) and is already overdue, directly impacting user engagement and growth.",
+          "actionSteps": [
+            "Identify key user success stories to feature.",
+            "Create compelling visuals and messaging for social media platforms.",
+            "Schedule and launch the campaign across selected channels."
+          ]
+        },
+        "weeklyGoals": [
+          {
+            "title": "Complete social media campaign content",
+            "reason": "This is essential to meet the overdue deadline and drive user engagement."
+          },
+          {
+            "title": "Draft referral program details",
+            "reason": "Preparing this will help leverage word-of-mouth marketing, which is important for user acquisition."
+          }
+        ],
+        "deprioritized": [
+          {
+            "title": "Develop a series of engaging workshops at the University of Lagos",
+            "reason": "While important, it has the same score as the top priority but lacks urgency as it is not overdue."
+          },
+          {
+            "title": "Create engaging content for blogs and videos",
+            "reason": "This is also overdue but has a lower urgency and relevance compared to the social media campaign."
+          }
+        ],
+        "warnings": [
+          "The social media campaign is overdue and needs immediate attention to avoid further delays."
+        ],
+        "encouragement": "You've made progress with 55 active items; focusing on the campaign this week can significantly boost user awareness."
+      },
+      "stats": {
+        "totalItems": 55,
+        "overdueCount": 2,
+        "dueSoonCount": 0,
+        "completedToday": 0
+      },
+      "priorities": {
+        "weekly": [
+          {
+            "title": "Launch a targeted social media campaign that highlights user success stories and the benefits of personalized career planning with CentraLearn.",
+            "dueWhen": "2026-01-10",
+            "score": 57,
+            "scoreBreakdown": {
+              "importance": 21,
+              "urgency": 0,
+              "overdue": 16,
+              "blocker": 15
+            },
+            "source": {
+              "type": "dept_deliverable",
+              "department": "marketing",
+              "goalIndex": 7,
+              "deliverableIndex": 0,
+              "projectId": "69730094bff753dda0d449eb"
+            }
+          },
+          {
+            "title": "Create engaging content, including blogs and videos, that educates potential users on navigating tech career paths and the unique features of the CentraLearn app.",
+            "dueWhen": "2026-01-17",
+            "score": 52,
+            "scoreBreakdown": {
+              "importance": 21,
+              "urgency": 0,
+              "overdue": 12,
+              "blocker": 14
+            },
+            "source": {
+              "type": "dept_deliverable",
+              "department": "marketing",
+              "goalIndex": 7,
+              "deliverableIndex": 1,
+              "projectId": "69730094bff753dda0d449eb"
+            }
+          }
+        ],
+        "monthlyThrust": {
+          "title": "Launch a targeted social media campaign that highlights user success stories and the benefits of personalized career planning with CentraLearn.",
+          "dueWhen": "2026-01-10",
+          "score": 57
+        }
+      },
+      "generatedAt": "2026-01-23T14:39:02.042Z"
+    },
+    "updatedAt": "2026-01-23T14:39:02.043Z"
+  },
+  {
+    "_id": "695c40f368705101a8637186",
+    "agentType": "financial-validation",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": "695130344db73e493a55c301",
+    "__v": 0,
+    "createdAt": "2026-01-05T22:53:39.717Z",
+    "expiresAt": "2026-01-17T09:15:06.306Z",
+    "generatedAt": "2026-01-17T08:15:06.306Z",
+    "generationTimeMs": 0,
+    "inputHash": "ab96e0d388b2c9bf",
+    "response": {
+      "status": "healthy",
+      "errors": [],
+      "warnings": [],
+      "suggestions": [],
+      "metrics": {
+        "monthlyRevenue": 3300025833.33,
+        "monthlyCosts": 5066666.67,
+        "deliveryCost": 5051666.67,
+        "workCosts": 4000,
+        "fixedCosts": 11000,
+        "grossMargin": "99.8",
+        "netMargin": "99.8",
+        "monthlyBurn": 0,
+        "runway": 999,
+        "currentCash": 500,
+        "expectedFunding": 500000,
+        "streamCount": 4
+      },
+      "aiAnalysis": {
+        "overallAssessment": "healthy",
+        "realism": {
+          "score": 7,
+          "explanation": "Numbers appear reasonable"
+        },
+        "consistencyIssues": [],
+        "topRecommendations": [],
+        "positives": []
+      },
+      "generatedAt": "2026-01-17T08:15:06.306Z"
+    },
+    "updatedAt": "2026-01-17T08:15:06.307Z"
+  },
+  {
+    "_id": "695c40ff68705101a863718d",
+    "user": "6916186423f83e5b9bae0f22",
+    "agentType": "strategy-suggestion",
+    "workspace": "695130344db73e493a55c301",
+    "__v": 0,
+    "createdAt": "2026-01-05T22:53:51.097Z",
+    "expiresAt": "2026-01-08T18:36:15.339Z",
+    "generatedAt": "2026-01-08T16:36:15.339Z",
+    "generationTimeMs": 15116,
+    "inputHash": "7cd61bdaeab4b4ac",
+    "response": {
+      "strategyScore": 85,
+      "strategyBreakdown": {
+        "vision": 25,
+        "positioning": 20,
+        "market": 20,
+        "competitive": 5,
+        "product": 15
+      },
+      "gaps": [
+        "competitive"
+      ],
+      "suggestions": {
+        "strategicDirection": {
+          "currentAssessment": "CentraLearn has a strong AI-driven proposition but faces challenges with brand recognition and user acquisition in a competitive market.",
+          "recommendedFocus": "Accelerate user acquisition through targeted partnerships and local engagement initiatives."
+        },
+        "businessModelSuggestions": [
+          {
+            "suggestion": "Implement a subscription model with tiered access to premium features and content.",
+            "rationale": "This would create a consistent revenue stream while incentivizing users to engage more with the platform.",
+            "effort": "medium",
+            "impact": "high"
+          }
+        ],
+        "positioningTweaks": [
+          {
+            "current": "Currently focusing solely on AI-driven insights.",
+            "suggested": "Position CentraLearn as not just a career planning tool, but as a community hub where users can interact, share experiences, and gain mentorship.",
+            "benefit": "This will enhance user retention and engagement, making CentraLearn more attractive compared to competitors like Ayo and Andela’s learning platform."
+          }
+        ],
+        "competitiveStrategies": [
+          {
+            "strategy": "Develop exclusive partnerships with local tech firms to offer job placements for users.",
+            "targetCompetitor": "Ayo, Andela",
+            "implementation": "Reach out to at least five tech companies this month to discuss potential partnerships that can facilitate job placements."
+          }
+        ],
+        "growthOpportunities": [
+          {
+            "opportunity": "Host monthly local tech events or workshops to engage the community and promote the app.",
+            "requirements": "Need to secure a venue, collaborate with local tech influencers, and promote the event through social media.",
+            "timeline": "short-term"
+          }
+        ],
+        "quickWins": [
+          "Create and publish a user testimonial video this week to showcase early success stories and build credibility.",
+          "Attend local tech meetups to network and promote CentraLearn, aiming for at least two meetups this week."
+        ],
+        "riskAlerts": [
+          "High reliance on a single founder poses a risk in decision-making and execution speed; consider bringing in an advisor or part-time team member to mitigate this vulnerability."
+        ]
+      },
+      "focusArea": null,
+      "generatedAt": "2026-01-08T16:36:15.339Z"
+    },
+    "updatedAt": "2026-01-08T16:36:15.341Z"
+  },
+  {
+    "_id": "695c410868705101a8637194",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": "695130344db73e493a55c301",
+    "agentType": "progress-status",
+    "__v": 0,
+    "createdAt": "2026-01-05T22:54:00.165Z",
+    "expiresAt": "2026-01-17T08:30:22.040Z",
+    "generatedAt": "2026-01-17T08:15:22.040Z",
+    "generationTimeMs": 5972,
+    "inputHash": "694c3cf92bde99ab",
+    "response": {
+      "overallProgress": 90,
+      "overallStatus": "ready",
+      "statusLabels": {
+        "getting-started": "Getting Started",
+        "making-progress": "Making Progress",
+        "almost-there": "Almost There",
+        "ready": "Ready to Execute"
+      },
+      "sections": [
+        {
+          "key": "userProfile",
+          "name": "User Profile",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 5
+        },
+        {
+          "key": "businessProfile",
+          "name": "Business Profile",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 15
+        },
+        {
+          "key": "vision",
+          "name": "Vision & Purpose",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 15
+        },
+        {
+          "key": "values",
+          "name": "Values & Culture",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "market",
+          "name": "Market Analysis",
+          "percentage": 33,
+          "status": "started",
+          "weight": 15
+        },
+        {
+          "key": "swot",
+          "name": "SWOT Analysis",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "products",
+          "name": "Products & Services",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "financial",
+          "name": "Financial Projections",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "projects",
+          "name": "Strategic Projects",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        }
+      ],
+      "sectionDetails": [
+        {
+          "key": "userProfile",
+          "name": "User Profile",
+          "description": "Your personal information and role",
+          "weight": 5,
+          "filled": 2,
+          "total": 2,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 5
+        },
+        {
+          "key": "businessProfile",
+          "name": "Business Profile",
+          "description": "Core business information",
+          "weight": 15,
+          "filled": 5,
+          "total": 5,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 15
+        },
+        {
+          "key": "vision",
+          "name": "Vision & Purpose",
+          "description": "Your business purpose and goals",
+          "weight": 15,
+          "filled": 4,
+          "total": 4,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 15
+        },
+        {
+          "key": "values",
+          "name": "Values & Culture",
+          "description": "Company values and culture",
+          "weight": 10,
+          "filled": 2,
+          "total": 2,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "market",
+          "name": "Market Analysis",
+          "description": "Target market and competitive landscape",
+          "weight": 15,
+          "filled": 1,
+          "total": 3,
+          "percentage": 33,
+          "status": "started",
+          "missingFields": [
+            "marketPartners",
+            "marketCompetitors"
+          ],
+          "weightedScore": 4.95
+        },
+        {
+          "key": "swot",
+          "name": "SWOT Analysis",
+          "description": "Strengths, weaknesses, opportunities, threats",
+          "weight": 10,
+          "filled": 4,
+          "total": 4,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "products",
+          "name": "Products & Services",
+          "description": "Your product/service offerings with pricing",
+          "weight": 10,
+          "filled": 1,
+          "total": 1,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "financial",
+          "name": "Financial Projections",
+          "description": "Revenue, costs, and cash position",
+          "weight": 10,
+          "filled": 3,
+          "total": 3,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "projects",
+          "name": "Strategic Projects",
+          "description": "Core strategic initiatives",
+          "weight": 10,
+          "filled": 1,
+          "total": 1,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        }
+      ],
+      "nextSteps": [
+        {
+          "section": "Market Analysis",
+          "action": "Complete \"Market Analysis\" - missing: marketPartners, marketCompetitors",
+          "reason": "33% done, needs 67% more",
+          "priority": "high",
+          "estimatedTime": "2-5 minutes"
+        }
+      ],
+      "aiFeedback": {
+        "overallFeedback": "CentraLearn has made significant progress at 90%, with completed sections including User Profile, Business Profile, and SWOT Analysis. However, the Market Analysis section is only 33% complete, which is critical for understanding the competitive landscape.",
+        "strengths": [
+          "SWOT Analysis provides a solid foundation for strategic decisions."
+        ],
+        "priorities": [
+          "Complete the Market Analysis section as it will provide insights into target demographics and competition, essential for refining your marketing strategy."
+        ],
+        "encouragement": "You've completed 8 sections, focusing on Market Analysis will finalize your business plan."
+      },
+      "generatedAt": "2026-01-17T08:15:22.040Z"
+    },
+    "updatedAt": "2026-01-17T08:15:22.042Z"
+  },
+  {
+    "_id": "695db47268705101a8649dc5",
+    "user": "695db41fdb01be6299711553",
+    "agentType": "plan-guidance",
+    "workspace": "695db41fdb01be6299711555",
+    "__v": 0,
+    "createdAt": "2026-01-07T01:18:42.535Z",
+    "expiresAt": "2026-01-07T01:48:45.071Z",
+    "generatedAt": "2026-01-07T01:18:45.071Z",
+    "generationTimeMs": 5179,
+    "inputHash": "0d68b6c6d4d9bb43",
+    "response": {
+      "guidance": {
+        "focusRecommendation": "Focus on defining your business model and target market for Kariiya today.",
+        "topPriority": {
+          "title": "Develop a Business Model Canvas",
+          "reason": "This is the top priority as you currently have 0 active items, indicating a need to establish a foundational business structure before moving forward.",
+          "actionSteps": [
+            "Identify your key customer segments.",
+            "Outline your value propositions.",
+            "Determine your revenue streams and cost structure."
+          ]
+        },
+        "weeklyGoals": [
+          {
+            "title": "Complete Market Research",
+            "reason": "Understanding your target audience is crucial to tailor your offerings."
+          },
+          {
+            "title": "Draft a Preliminary Marketing Strategy",
+            "reason": "A clear strategy will guide your outreach efforts once you have products to sell."
+          }
+        ],
+        "deprioritized": [
+          {
+            "title": "Product Development",
+            "reason": "Without a defined business model and target market, product development lacks direction."
+          }
+        ],
+        "warnings": [],
+        "encouragement": "You have a clean slate with no overdue items, which provides a perfect opportunity to build from the ground up."
+      },
+      "stats": {
+        "totalItems": 0,
+        "overdueCount": 0,
+        "dueSoonCount": 0,
+        "completedToday": 0
+      },
+      "priorities": {
+        "weekly": [],
+        "monthlyThrust": null
+      },
+      "generatedAt": "2026-01-07T01:18:45.071Z"
+    },
+    "updatedAt": "2026-01-07T01:18:45.072Z"
+  },
+  {
+    "_id": "695e94ac68705101a8652bfe",
+    "agentType": "plan-guidance",
+    "workspace": "695e7ebaf0d126a92c7efa18",
+    "user": "695e7ebaf0d126a92c7efa16",
+    "__v": 0,
+    "createdAt": "2026-01-07T17:15:23.427Z",
+    "expiresAt": "2026-01-07T18:28:45.848Z",
+    "generatedAt": "2026-01-07T17:58:45.848Z",
+    "generationTimeMs": 7348,
+    "inputHash": "f9532146d7b97a25",
+    "response": {
+      "guidance": {
+        "focusRecommendation": "Focus on enhancing your 'Client Outreach' project to secure your first nonprofit clients.",
+        "topPriority": {
+          "title": "Client Outreach",
+          "reason": "This project has the highest importance score of 100 and a blocker score of 70, indicating significant barriers to progress that need immediate attention.",
+          "actionSteps": [
+            "Identify and list potential local nonprofit clients to target for outreach.",
+            "Develop personalized outreach messages that highlight how RRRR's services can address their specific financial challenges.",
+            "Schedule calls or meetings with identified nonprofits to present your services and gather feedback."
+          ]
+        },
+        "weeklyGoals": [
+          {
+            "title": "Engage 5 potential nonprofit clients",
+            "reason": "Direct engagement is crucial to achieving your goal of 15 clients within a year."
+          },
+          {
+            "title": "Finalize outreach materials",
+            "reason": "Effective outreach materials will enhance your chances of converting leads into clients."
+          }
+        ],
+        "deprioritized": [
+          {
+            "title": "Launch a targeted digital marketing campaign",
+            "reason": "Lower urgency and higher blocker score (80) suggest focusing on direct outreach first."
+          },
+          {
+            "title": "Host a series of free introductory workshops",
+            "reason": "While important, this is less urgent than securing initial clients and has a lower score (38)."
+          }
+        ],
+        "warnings": [],
+        "encouragement": "You have 25 active items on your plate with no overdue tasks, indicating effective time management as you tackle these priorities."
+      },
+      "stats": {
+        "totalItems": 25,
+        "overdueCount": 0,
+        "dueSoonCount": 0,
+        "completedToday": 0
+      },
+      "priorities": {
+        "weekly": [],
+        "monthlyThrust": {
+          "title": "Client Outreach",
+          "dueWhen": "2027-01-07",
+          "score": 43
+        }
+      },
+      "generatedAt": "2026-01-07T17:58:45.848Z"
+    },
+    "updatedAt": "2026-01-07T17:58:45.850Z"
+  },
+  {
+    "_id": "695e974868705101a8652dff",
+    "user": "695e7ebaf0d126a92c7efa16",
+    "agentType": "strategy-suggestion",
+    "workspace": "695e7ebaf0d126a92c7efa18",
+    "__v": 0,
+    "createdAt": "2026-01-07T17:26:31.374Z",
+    "expiresAt": "2026-01-07T19:26:31.373Z",
+    "generatedAt": "2026-01-07T17:26:31.373Z",
+    "generationTimeMs": 11913,
+    "inputHash": "73c32c5c87a2f311",
+    "response": {
+      "strategyScore": 85,
+      "strategyBreakdown": {
+        "vision": 25,
+        "positioning": 20,
+        "market": 20,
+        "competitive": 5,
+        "product": 15
+      },
+      "gaps": [
+        "competitive"
+      ],
+      "suggestions": {
+        "strategicDirection": {
+          "currentAssessment": "RRRR has a solid foundation with personalized services but faces challenges in brand recognition and competition. The current strategy is strong but needs enhancement to stand out in the competitive landscape.",
+          "recommendedFocus": "Enhance brand visibility and competitive differentiation through targeted marketing and strategic partnerships."
+        },
+        "businessModelSuggestions": [
+          {
+            "suggestion": "Introduce tiered service packages for different nonprofit budget levels.",
+            "rationale": "This approach allows nonprofits with varying budgets to access services, increasing the potential client base while addressing diverse needs.",
+            "effort": "medium",
+            "impact": "high"
+          }
+        ],
+        "positioningTweaks": [
+          {
+            "current": "Focusing mainly on local nonprofits without a strong online presence.",
+            "suggested": "Develop a strong online presence with a focused content marketing strategy that showcases success stories and client testimonials.",
+            "benefit": "This will enhance brand recognition and trust, attracting more clients."
+          }
+        ],
+        "competitiveStrategies": [
+          {
+            "strategy": "Implement a referral program for existing clients to incentivize them to recommend RRRR to other nonprofits.",
+            "targetCompetitor": "Local accounting firms and other nonprofit-focused services.",
+            "implementation": "Create a structured referral program offering discounts or free services to clients who refer new business."
+          }
+        ],
+        "growthOpportunities": [
+          {
+            "opportunity": "Develop a partnership with local universities to provide internship opportunities for accounting students, who can assist RRRR while gaining practical experience.",
+            "requirements": "Outreach to accounting departments at local universities to establish internship agreements.",
+            "timeline": "short-term"
+          }
+        ],
+        "quickWins": [
+          "Create a simple, engaging flyer outlining the services RRRR offers and distribute it at local nonprofit events this week.",
+          "Set up a dedicated email newsletter to share financial tips and updates with current and potential clients, launching it within the week."
+        ],
+        "riskAlerts": [
+          "Economic downturns could impact the budgets of target nonprofits, potentially reducing demand for accounting services. RRRR should consider diversifying its client base to include slightly larger organizations or different charity sectors."
+        ]
+      },
+      "focusArea": null,
+      "generatedAt": "2026-01-07T17:26:31.373Z"
+    },
+    "updatedAt": "2026-01-07T17:26:31.374Z"
+  },
+  {
+    "_id": "695ecfa868705101a86556cb",
+    "user": "695ec942c140d79fea125b5d",
+    "agentType": "plan-guidance",
+    "workspace": "695ec942c140d79fea125b5f",
+    "__v": 0,
+    "createdAt": "2026-01-07T21:27:04.086Z",
+    "expiresAt": "2026-01-12T18:24:06.575Z",
+    "generatedAt": "2026-01-12T17:54:06.575Z",
+    "generationTimeMs": 9370,
+    "inputHash": "a4af0c52e91ad28b",
+    "response": {
+      "guidance": {
+        "focusRecommendation": "Concentrate on completing the 'Product Design' project as it is your top priority.",
+        "topPriority": {
+          "title": "Product Design",
+          "reason": "This project has the highest score of 43/100, with a critical importance score of 100 and a blocker score of 70, indicating significant challenges that need to be addressed by the deadline of January 7, 2027.",
+          "actionSteps": [
+            "Review the current design specifications and gather feedback from your team.",
+            "Identify any technical challenges or blockers that need resolution.",
+            "Set a timeline for completing design iterations and establish checkpoints for progress."
+          ]
+        },
+        "weeklyGoals": [
+          {
+            "title": "Finalize initial design mockups",
+            "reason": "Getting closer to completion will help mitigate the blocker score of 70."
+          },
+          {
+            "title": "Schedule a team meeting to discuss feedback",
+            "reason": "Collaboration is essential to overcome the current blockers and ensure alignment on design objectives."
+          }
+        ],
+        "deprioritized": [
+          {
+            "title": "Create a detailed budget plan outlining all projected expenses",
+            "reason": "This item has lower urgency and is not immediately necessary for the ongoing product design process."
+          },
+          {
+            "title": "Create an interactive onboarding tutorial",
+            "reason": "While important, it can be tackled after the product design is completed and is not urgent."
+          },
+          {
+            "title": "Develop a referral program",
+            "reason": "This has a lower score (38) and can be addressed once the current top priorities are managed."
+          }
+        ],
+        "warnings": [],
+        "encouragement": "You have zero overdue items and are on track with 25 active projects, indicating strong project management so far."
+      },
+      "stats": {
+        "totalItems": 25,
+        "overdueCount": 0,
+        "dueSoonCount": 0,
+        "completedToday": 0
+      },
+      "priorities": {
+        "weekly": [],
+        "monthlyThrust": {
+          "title": "Product Design",
+          "dueWhen": "2027-01-07",
+          "score": 43
+        }
+      },
+      "generatedAt": "2026-01-12T17:54:06.575Z"
+    },
+    "updatedAt": "2026-01-12T17:54:06.575Z"
+  },
+  {
+    "_id": "695ed31968705101a865596a",
+    "user": "695ec942c140d79fea125b5d",
+    "agentType": "financial-validation",
+    "workspace": "695ec942c140d79fea125b5f",
+    "__v": 0,
+    "createdAt": "2026-01-07T21:41:45.533Z",
+    "expiresAt": "2026-01-07T22:41:45.532Z",
+    "generatedAt": "2026-01-07T21:41:45.532Z",
+    "generationTimeMs": 0,
+    "inputHash": "07668cfa507f4fd4",
+    "response": {
+      "status": "healthy",
+      "errors": [],
+      "warnings": [],
+      "suggestions": [
+        {
+          "type": "missing_revenue",
+          "field": "salesVolume",
+          "message": "No revenue projections entered",
+          "severity": "info",
+          "suggestion": "Add your expected sales volume to get better financial insights"
+        },
+        {
+          "type": "missing_costs",
+          "field": "costs",
+          "message": "No operating costs entered",
+          "severity": "info",
+          "suggestion": "Add your expected costs for more accurate projections"
+        }
+      ],
+      "metrics": {
+        "monthlyRevenue": 0,
+        "monthlyCosts": 0,
+        "grossMargin": "0.0",
+        "netMargin": "0.0",
+        "monthlyBurn": 0,
+        "runway": null,
+        "growthRate": 0
+      },
+      "aiAnalysis": {
+        "overallAssessment": "healthy",
+        "realism": {
+          "score": 0,
+          "explanation": "No financial data entered yet"
+        },
+        "consistencyIssues": [],
+        "topRecommendations": [
+          "Start by entering your revenue projections"
+        ],
+        "positives": []
+      },
+      "generatedAt": "2026-01-07T21:41:45.532Z"
+    },
+    "updatedAt": "2026-01-07T21:41:45.533Z"
+  },
+  {
+    "_id": "695ed32568705101a8655972",
+    "user": "695ec942c140d79fea125b5d",
+    "agentType": "strategy-suggestion",
+    "workspace": "695ec942c140d79fea125b5f",
+    "__v": 0,
+    "createdAt": "2026-01-07T21:41:57.451Z",
+    "expiresAt": "2026-01-07T23:50:58.083Z",
+    "generatedAt": "2026-01-07T21:50:58.083Z",
+    "generationTimeMs": 7820,
+    "inputHash": "25bbc8ef64d87952",
+    "response": {
+      "strategyScore": 85,
+      "strategyBreakdown": {
+        "vision": 25,
+        "positioning": 20,
+        "market": 20,
+        "competitive": 5,
+        "product": 15
+      },
+      "gaps": [
+        "competitive"
+      ],
+      "suggestions": {
+        "strategicDirection": {
+          "currentAssessment": "Plan Genie Inc. has a solid foundation with clear goals, but faces challenges in brand awareness and competitive differentiation in a crowded market.",
+          "recommendedFocus": "Enhancing brand visibility and competitive differentiation through targeted marketing and community engagement."
+        },
+        "businessModelSuggestions": [
+          {
+            "suggestion": "Introduce a tiered subscription model",
+            "rationale": "This would allow small businesses to choose a plan based on their specific needs, potentially increasing revenue while attracting a broader user base.",
+            "effort": "medium",
+            "impact": "high"
+          }
+        ],
+        "positioningTweaks": [
+          {
+            "current": "Plan Genie Inc. positions itself solely as a provider of planning tools.",
+            "suggested": "Position as a community-centric hub for small business growth, integrating tools with extensive resources and networking opportunities.",
+            "benefit": "This would enhance brand loyalty and attract users looking for more than just tools."
+          }
+        ],
+        "competitiveStrategies": [
+          {
+            "strategy": "Launch a local ambassador program to promote Plan Genie Inc. through existing users and influencers.",
+            "targetCompetitor": "Local project management tools like Trello and Asana that are widely recognized.",
+            "implementation": "Identify and engage local business leaders to act as ambassadors, providing them with incentives for referrals and visibility."
+          }
+        ],
+        "growthOpportunities": [
+          {
+            "opportunity": "Develop partnerships with local business schools for workshops.",
+            "requirements": "Establish connections with educational institutions and create tailored workshop content.",
+            "timeline": "medium-term"
+          }
+        ],
+        "quickWins": [
+          "Launch a social media campaign featuring user testimonials and success stories to increase brand awareness this week.",
+          "Set up an initial version of the referral program and communicate it to current users via email to encourage sign-ups."
+        ],
+        "riskAlerts": [
+          "Dependence on local market could be a vulnerability if economic conditions deteriorate; consider diversifying into online offerings that are accessible beyond Vancouver."
+        ]
+      },
+      "focusArea": null,
+      "generatedAt": "2026-01-07T21:50:58.083Z"
+    },
+    "updatedAt": "2026-01-07T21:50:58.083Z"
+  },
+  {
+    "_id": "695ed33268705101a8655982",
+    "user": "695ec942c140d79fea125b5d",
+    "agentType": "progress-status",
+    "workspace": "695ec942c140d79fea125b5f",
+    "__v": 0,
+    "createdAt": "2026-01-07T21:42:10.248Z",
+    "expiresAt": "2026-01-07T21:57:10.248Z",
+    "generatedAt": "2026-01-07T21:42:10.248Z",
+    "generationTimeMs": 2681,
+    "inputHash": "01cfa69ab0c6a7ee",
+    "response": {
+      "overallProgress": 80,
+      "overallStatus": "almost-there",
+      "statusLabels": {
+        "getting-started": "Getting Started",
+        "making-progress": "Making Progress",
+        "almost-there": "Almost There",
+        "ready": "Ready to Execute"
+      },
+      "sections": [
+        {
+          "key": "userProfile",
+          "name": "User Profile",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 5
+        },
+        {
+          "key": "businessProfile",
+          "name": "Business Profile",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 15
+        },
+        {
+          "key": "vision",
+          "name": "Vision & Purpose",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 15
+        },
+        {
+          "key": "values",
+          "name": "Values & Culture",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "market",
+          "name": "Market Analysis",
+          "percentage": 33,
+          "status": "started",
+          "weight": 15
+        },
+        {
+          "key": "swot",
+          "name": "SWOT Analysis",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "products",
+          "name": "Products & Services",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "financial",
+          "name": "Financial Projections",
+          "percentage": 0,
+          "status": "empty",
+          "weight": 10
+        },
+        {
+          "key": "projects",
+          "name": "Strategic Projects",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        }
+      ],
+      "sectionDetails": [
+        {
+          "key": "userProfile",
+          "name": "User Profile",
+          "description": "Your personal information and role",
+          "weight": 5,
+          "filled": 2,
+          "total": 2,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 5
+        },
+        {
+          "key": "businessProfile",
+          "name": "Business Profile",
+          "description": "Core business information",
+          "weight": 15,
+          "filled": 5,
+          "total": 5,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 15
+        },
+        {
+          "key": "vision",
+          "name": "Vision & Purpose",
+          "description": "Your business purpose and goals",
+          "weight": 15,
+          "filled": 4,
+          "total": 4,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 15
+        },
+        {
+          "key": "values",
+          "name": "Values & Culture",
+          "description": "Company values and culture",
+          "weight": 10,
+          "filled": 2,
+          "total": 2,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "market",
+          "name": "Market Analysis",
+          "description": "Target market and competitive landscape",
+          "weight": 15,
+          "filled": 1,
+          "total": 3,
+          "percentage": 33,
+          "status": "started",
+          "missingFields": [
+            "marketPartners",
+            "marketCompetitors"
+          ],
+          "weightedScore": 4.95
+        },
+        {
+          "key": "swot",
+          "name": "SWOT Analysis",
+          "description": "Strengths, weaknesses, opportunities, threats",
+          "weight": 10,
+          "filled": 4,
+          "total": 4,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "products",
+          "name": "Products & Services",
+          "description": "Your product/service offerings",
+          "weight": 10,
+          "filled": 1,
+          "total": 1,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "financial",
+          "name": "Financial Projections",
+          "description": "Revenue and cost projections",
+          "weight": 10,
+          "filled": 0,
+          "total": 3,
+          "percentage": 0,
+          "status": "empty",
+          "missingFields": [
+            "salesVolume",
+            "avgUnitCost",
+            "fixedOperatingCosts"
+          ],
+          "weightedScore": 0
+        },
+        {
+          "key": "projects",
+          "name": "Strategic Projects",
+          "description": "Core strategic initiatives",
+          "weight": 10,
+          "filled": 1,
+          "total": 1,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        }
+      ],
+      "nextSteps": [
+        {
+          "section": "Financial Projections",
+          "action": "Start filling out \"Financial Projections\"",
+          "reason": "Revenue and cost projections",
+          "priority": "high",
+          "estimatedTime": "5-10 minutes"
+        },
+        {
+          "section": "Market Analysis",
+          "action": "Complete \"Market Analysis\" - missing: marketPartners, marketCompetitors",
+          "reason": "33% done, needs 67% more",
+          "priority": "high",
+          "estimatedTime": "2-5 minutes"
+        }
+      ],
+      "aiFeedback": {
+        "overallFeedback": "Plan Genie Inc. has made solid progress with 80% completion, particularly excelling in the User Profile, Business Profile, and SWOT Analysis sections.",
+        "strengths": [
+          "Completed SWOT Analysis, which is crucial for understanding competitive landscape."
+        ],
+        "priorities": [
+          "Financial Projections (0%) - This section is critical for assessing the viability and sustainability of your business model."
+        ],
+        "encouragement": "With 3 sections complete in Market Analysis and Financial Projections pending, focusing on these will enhance your business plan significantly."
+      },
+      "generatedAt": "2026-01-07T21:42:10.248Z"
+    },
+    "updatedAt": "2026-01-07T21:42:10.248Z"
+  },
+  {
+    "_id": "695ed9a768705101a8655f7b",
+    "agentType": "plan-guidance",
+    "workspace": "695ed85fc140d79fea126b18",
+    "user": "695ec942c140d79fea125b5d",
+    "__v": 0,
+    "createdAt": "2026-01-07T22:09:43.792Z",
+    "expiresAt": "2026-01-07T22:39:43.847Z",
+    "generatedAt": "2026-01-07T22:09:43.847Z",
+    "generationTimeMs": 4501,
+    "inputHash": "0d68b6c6d4d9bb43",
+    "response": {
+      "guidance": {
+        "focusRecommendation": "Today, focus on defining your business model and target market for Plan Genie Inc.",
+        "topPriority": {
+          "title": "Develop a Business Model Canvas",
+          "reason": "Establishing your business model is critical since you currently have no active items, and this foundational step will guide all future planning and decision-making.",
+          "actionSteps": [
+            "Identify your value propositions and customer segments.",
+            "Outline key activities, resources, and partnerships.",
+            "Draft a revenue streams and cost structure analysis."
+          ]
+        },
+        "weeklyGoals": [
+          {
+            "title": "Conduct Market Research",
+            "reason": "Understanding your target market is essential to tailor your offerings effectively."
+          },
+          {
+            "title": "Create a Marketing Strategy Outline",
+            "reason": "This will help you plan how to reach your audience once your business model is defined."
+          }
+        ],
+        "deprioritized": [
+          {
+            "title": "Establish Online Presence",
+            "reason": "This can wait until you have a clearer business model and target audience."
+          }
+        ],
+        "warnings": [],
+        "encouragement": "You've taken the first step by assessing your current status; now it's time to build a strong foundation."
+      },
+      "stats": {
+        "totalItems": 0,
+        "overdueCount": 0,
+        "dueSoonCount": 0,
+        "completedToday": 0
+      },
+      "priorities": {
+        "weekly": [],
+        "monthlyThrust": null
+      },
+      "generatedAt": "2026-01-07T22:09:43.847Z"
+    },
+    "updatedAt": "2026-01-07T22:09:43.847Z"
+  },
+  {
+    "_id": "695fec8d68705101a8665c27",
+    "agentType": "plan-guidance",
+    "workspace": "695fe8cf24ad03a594e2afb5",
+    "user": "695fe8ce24ad03a594e2afb3",
+    "__v": 0,
+    "createdAt": "2026-01-08T17:42:37.411Z",
+    "expiresAt": "2026-01-08T18:32:21.438Z",
+    "generatedAt": "2026-01-08T18:02:21.438Z",
+    "generationTimeMs": 8557,
+    "inputHash": "1a9c2e1e242b9d15",
+    "response": {
+      "guidance": {
+        "focusRecommendation": "Today, focus on launching the targeted social media campaign to engage health-conscious consumers.",
+        "topPriority": {
+          "title": "Launch a targeted social media campaign showcasing local farms and organic ingredients.",
+          "reason": "This is the top priority with a score of 59, urgent due date of January 15, 2026, and significant importance for building brand awareness among your target audience.",
+          "actionSteps": [
+            "Define the campaign objectives and key performance indicators (KPIs).",
+            "Create engaging content that highlights the local farms and organic ingredients.",
+            "Schedule the campaign launch and monitor engagement metrics."
+          ]
+        },
+        "weeklyGoals": [
+          {
+            "title": "Finalize campaign content",
+            "reason": "To ensure timely launch and effective messaging."
+          },
+          {
+            "title": "Identify influencers or partners to amplify the campaign",
+            "reason": "To expand reach and credibility among target customers."
+          }
+        ],
+        "deprioritized": [
+          {
+            "title": "Identify and onboard five local farms committed to organic practices.",
+            "reason": "While important, this has a slightly lower urgency and can proceed after the social media campaign is underway."
+          },
+          {
+            "title": "Develop a user-friendly feedback portal on the IfeCorp website.",
+            "reason": "This item has a lower score and is not as urgent as current marketing initiatives."
+          }
+        ],
+        "warnings": [
+          "Ensure that all top priority items are on track to meet the January 15 deadline."
+        ],
+        "encouragement": "You've completed 2 out of 7 due items this week, demonstrating solid progress towards your goals."
+      },
+      "stats": {
+        "totalItems": 35,
+        "overdueCount": 0,
+        "dueSoonCount": 7,
+        "completedToday": 0
+      },
+      "priorities": {
+        "weekly": [],
+        "monthlyThrust": {
+          "title": "Farm Partnerships",
+          "dueWhen": "2027-01-08",
+          "score": 43
+        }
+      },
+      "generatedAt": "2026-01-08T18:02:21.438Z"
+    },
+    "updatedAt": "2026-01-08T18:02:21.439Z"
+  },
+  {
+    "_id": "695fed0e68705101a8665c81",
+    "user": "695fe8ce24ad03a594e2afb3",
+    "workspace": "695fe8cf24ad03a594e2afb5",
+    "agentType": "financial-validation",
+    "__v": 0,
+    "createdAt": "2026-01-08T17:44:46.906Z",
+    "expiresAt": "2026-01-08T18:44:46.906Z",
+    "generatedAt": "2026-01-08T17:44:46.906Z",
+    "generationTimeMs": 0,
+    "inputHash": "e8003e4eebf91175",
+    "response": {
+      "status": "healthy",
+      "errors": [],
+      "warnings": [],
+      "suggestions": [
+        {
+          "type": "missing_revenue",
+          "field": "salesVolume",
+          "message": "No revenue projections entered",
+          "severity": "info",
+          "suggestion": "Add your expected sales volume to get better financial insights"
+        },
+        {
+          "type": "missing_costs",
+          "field": "costs",
+          "message": "No operating costs entered",
+          "severity": "info",
+          "suggestion": "Add your expected costs for more accurate projections"
+        }
+      ],
+      "metrics": {
+        "monthlyRevenue": 0,
+        "monthlyCosts": 0,
+        "grossMargin": "0.0",
+        "netMargin": "0.0",
+        "monthlyBurn": 0,
+        "runway": null,
+        "growthRate": 0
+      },
+      "aiAnalysis": {
+        "overallAssessment": "healthy",
+        "realism": {
+          "score": 0,
+          "explanation": "No financial data entered yet"
+        },
+        "consistencyIssues": [],
+        "topRecommendations": [
+          "Start by entering your revenue projections"
+        ],
+        "positives": []
+      },
+      "generatedAt": "2026-01-08T17:44:46.906Z"
+    },
+    "updatedAt": "2026-01-08T17:44:46.906Z"
+  },
+  {
+    "_id": "695fed6968705101a8665cc8",
+    "user": "695fe8ce24ad03a594e2afb3",
+    "workspace": "695fe8cf24ad03a594e2afb5",
+    "agentType": "strategy-suggestion",
+    "__v": 0,
+    "createdAt": "2026-01-08T17:46:16.675Z",
+    "expiresAt": "2026-01-08T19:46:16.675Z",
+    "generatedAt": "2026-01-08T17:46:16.675Z",
+    "generationTimeMs": 10267,
+    "inputHash": "c77d305719d652c1",
+    "response": {
+      "strategyScore": 85,
+      "strategyBreakdown": {
+        "vision": 25,
+        "positioning": 20,
+        "market": 20,
+        "competitive": 5,
+        "product": 15
+      },
+      "gaps": [
+        "competitive"
+      ],
+      "suggestions": {
+        "strategicDirection": {
+          "currentAssessment": "IfeCorp's strategy shows promise with strong local sourcing and a commitment to health-conscious consumers; however, brand awareness and competitive differentiation remain significant gaps.",
+          "recommendedFocus": "Enhance brand visibility and competitive positioning in the local market."
+        },
+        "businessModelSuggestions": [
+          {
+            "suggestion": "Introduce a subscription model for meal kits",
+            "rationale": "This model can provide predictable revenue and enhance customer loyalty by ensuring regular engagement with the brand.",
+            "effort": "medium",
+            "impact": "high"
+          }
+        ],
+        "positioningTweaks": [
+          {
+            "current": "Currently focusing on health-conscious consumers without clear differentiation from competitors like Blue Apron or HelloFresh.",
+            "suggested": "Emphasize the exclusive local sourcing of ingredients and the community impact of purchasing from IfeCorp over competitors.",
+            "benefit": "Strengthened brand identity and appeal to consumers' desire to support local economies."
+          }
+        ],
+        "competitiveStrategies": [
+          {
+            "strategy": "Develop exclusive partnerships with local chefs to create unique recipes for IfeCorp meal kits.",
+            "targetCompetitor": "Blue Apron, HelloFresh",
+            "implementation": "Reach out to local culinary schools and chefs to collaborate on recipe development that highlights local ingredients, thereby differentiating IfeCorp's offerings."
+          }
+        ],
+        "growthOpportunities": [
+          {
+            "opportunity": "Expand product offerings to include ready-to-eat meals or snacks using local ingredients.",
+            "requirements": "Research local demand, develop recipes, and establish partnerships with local artisans for production.",
+            "timeline": "medium-term"
+          }
+        ],
+        "quickWins": [
+          "Create and distribute a press release to local media highlighting IfeCorp's unique value proposition and partnerships with local farms.",
+          "Launch a social media contest encouraging users to post photos of their meals made with IfeCorp ingredients, offering a prize to increase engagement and brand visibility."
+        ],
+        "riskAlerts": [
+          "Supply chain disruptions can affect product availability, especially given reliance on local farms; diversify sourcing to mitigate risks."
+        ]
+      },
+      "focusArea": null,
+      "generatedAt": "2026-01-08T17:46:16.675Z"
+    },
+    "updatedAt": "2026-01-08T17:46:16.675Z"
+  },
+  {
+    "_id": "695fed8f68705101a8665cdd",
+    "user": "695fe8ce24ad03a594e2afb3",
+    "workspace": "695fe8cf24ad03a594e2afb5",
+    "agentType": "progress-status",
+    "__v": 0,
+    "createdAt": "2026-01-08T17:46:55.085Z",
+    "expiresAt": "2026-01-08T18:01:55.085Z",
+    "generatedAt": "2026-01-08T17:46:55.085Z",
+    "generationTimeMs": 4400,
+    "inputHash": "9c4fc160d9b0196c",
+    "response": {
+      "overallProgress": 80,
+      "overallStatus": "almost-there",
+      "statusLabels": {
+        "getting-started": "Getting Started",
+        "making-progress": "Making Progress",
+        "almost-there": "Almost There",
+        "ready": "Ready to Execute"
+      },
+      "sections": [
+        {
+          "key": "userProfile",
+          "name": "User Profile",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 5
+        },
+        {
+          "key": "businessProfile",
+          "name": "Business Profile",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 15
+        },
+        {
+          "key": "vision",
+          "name": "Vision & Purpose",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 15
+        },
+        {
+          "key": "values",
+          "name": "Values & Culture",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "market",
+          "name": "Market Analysis",
+          "percentage": 33,
+          "status": "started",
+          "weight": 15
+        },
+        {
+          "key": "swot",
+          "name": "SWOT Analysis",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "products",
+          "name": "Products & Services",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "financial",
+          "name": "Financial Projections",
+          "percentage": 0,
+          "status": "empty",
+          "weight": 10
+        },
+        {
+          "key": "projects",
+          "name": "Strategic Projects",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        }
+      ],
+      "sectionDetails": [
+        {
+          "key": "userProfile",
+          "name": "User Profile",
+          "description": "Your personal information and role",
+          "weight": 5,
+          "filled": 2,
+          "total": 2,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 5
+        },
+        {
+          "key": "businessProfile",
+          "name": "Business Profile",
+          "description": "Core business information",
+          "weight": 15,
+          "filled": 5,
+          "total": 5,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 15
+        },
+        {
+          "key": "vision",
+          "name": "Vision & Purpose",
+          "description": "Your business purpose and goals",
+          "weight": 15,
+          "filled": 4,
+          "total": 4,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 15
+        },
+        {
+          "key": "values",
+          "name": "Values & Culture",
+          "description": "Company values and culture",
+          "weight": 10,
+          "filled": 2,
+          "total": 2,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "market",
+          "name": "Market Analysis",
+          "description": "Target market and competitive landscape",
+          "weight": 15,
+          "filled": 1,
+          "total": 3,
+          "percentage": 33,
+          "status": "started",
+          "missingFields": [
+            "marketPartners",
+            "marketCompetitors"
+          ],
+          "weightedScore": 4.95
+        },
+        {
+          "key": "swot",
+          "name": "SWOT Analysis",
+          "description": "Strengths, weaknesses, opportunities, threats",
+          "weight": 10,
+          "filled": 4,
+          "total": 4,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "products",
+          "name": "Products & Services",
+          "description": "Your product/service offerings",
+          "weight": 10,
+          "filled": 1,
+          "total": 1,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "financial",
+          "name": "Financial Projections",
+          "description": "Revenue and cost projections",
+          "weight": 10,
+          "filled": 0,
+          "total": 3,
+          "percentage": 0,
+          "status": "empty",
+          "missingFields": [
+            "salesVolume",
+            "avgUnitCost",
+            "fixedOperatingCosts"
+          ],
+          "weightedScore": 0
+        },
+        {
+          "key": "projects",
+          "name": "Strategic Projects",
+          "description": "Core strategic initiatives",
+          "weight": 10,
+          "filled": 1,
+          "total": 1,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        }
+      ],
+      "nextSteps": [
+        {
+          "section": "Financial Projections",
+          "action": "Start filling out \"Financial Projections\"",
+          "reason": "Revenue and cost projections",
+          "priority": "high",
+          "estimatedTime": "5-10 minutes"
+        },
+        {
+          "section": "Market Analysis",
+          "action": "Complete \"Market Analysis\" - missing: marketPartners, marketCompetitors",
+          "reason": "33% done, needs 67% more",
+          "priority": "high",
+          "estimatedTime": "2-5 minutes"
+        }
+      ],
+      "aiFeedback": {
+        "overallFeedback": "IfeCorp has made significant progress at 80%, with completed sections including User Profile, Business Profile, and SWOT Analysis. However, the Market Analysis and Financial Projections sections are still incomplete and need attention.",
+        "strengths": [
+          "SWOT Analysis provides a clear understanding of the business's strengths and weaknesses."
+        ],
+        "priorities": [
+          "Financial Projections (0%) must be completed next, as they are critical for understanding the business's financial viability and attracting potential investors."
+        ],
+        "encouragement": "With 3 sections complete, focusing on the Financial Projections will enhance your business plan's robustness."
+      },
+      "generatedAt": "2026-01-08T17:46:55.084Z"
+    },
+    "updatedAt": "2026-01-08T17:46:55.085Z"
+  },
+  {
+    "_id": "69618f8668705101a867b8e1",
+    "agentType": "plan-guidance",
+    "user": "696186ea7d3eed3d5355a176",
+    "workspace": "696186ea7d3eed3d5355a178",
+    "__v": 0,
+    "createdAt": "2026-01-09T23:30:14.694Z",
+    "expiresAt": "2026-01-16T19:34:34.935Z",
+    "generatedAt": "2026-01-16T19:04:34.935Z",
+    "generationTimeMs": 9553,
+    "inputHash": "3c51e833de9aa8aa",
+    "response": {
+      "guidance": {
+        "focusRecommendation": "Focus on creating the mentorship program today to address the overdue deliverable and its high importance score.",
+        "topPriority": {
+          "title": "Create a mentorship program",
+          "reason": "This is the top priority with a score of 52, marked as overdue (due on 2026-01-05), and has a high blocker score of 98, indicating it’s critical to resolve to move forward.",
+          "actionSteps": [
+            "Define the structure and objectives of the mentorship program.",
+            "Identify potential mentors and mentees to recruit.",
+            "Develop a marketing plan to promote the program."
+          ]
+        },
+        "weeklyGoals": [
+          {
+            "title": "Complete the mentorship program framework",
+            "reason": "Establishing a clear framework is crucial to attract participants."
+          },
+          {
+            "title": "Start outreach to potential mentors",
+            "reason": "Engaging mentors early will help ensure the program's success."
+          }
+        ],
+        "deprioritized": [
+          {
+            "title": "Conduct a detailed market analysis",
+            "reason": "While important, it's less urgent than the mentorship program and has a later due date."
+          },
+          {
+            "title": "Recruit a tech programmer",
+            "reason": "This is a necessary step, but it can wait until the mentorship program is underway."
+          },
+          {
+            "title": "Market Entry",
+            "reason": "This project has lower urgency and can be addressed after immediate priorities are resolved."
+          }
+        ],
+        "warnings": [
+          "Three items are overdue, with the mentorship program being the most critical to address immediately."
+        ],
+        "encouragement": "You've made progress with 0 overdue items last week; now focus on getting the mentorship program back on track."
+      },
+      "stats": {
+        "totalItems": 55,
+        "overdueCount": 3,
+        "dueSoonCount": 8,
+        "completedToday": 0
+      },
+      "priorities": {
+        "weekly": [
+          {
+            "title": "Create a mentorship program that connects experienced entrepreneurs with startups and social purpose organizations to provide guidance and support tailored to specific challenges.",
+            "dueWhen": "2026-01-05",
+            "score": 52,
+            "scoreBreakdown": {
+              "importance": 21,
+              "urgency": 0,
+              "overdue": 16,
+              "blocker": 15
+            },
+            "source": {
+              "type": "deliverable",
+              "projectIndex": 4,
+              "deliverableIndex": 0
+            }
+          },
+          {
+            "title": "Conduct a detailed market analysis for British Columbia and Alberta to identify key startup ecosystems, customer needs, and competitive landscape, ensuring tailored entry strategies.",
+            "dueWhen": "2026-01-09",
+            "score": 51,
+            "scoreBreakdown": {
+              "importance": 21,
+              "urgency": 0,
+              "overdue": 16,
+              "blocker": 14
+            },
+            "source": {
+              "type": "deliverable",
+              "projectIndex": 0,
+              "deliverableIndex": 0
+            }
+          },
+          {
+            "title": "Recruit a tech programmer with experience in developing online platforms to enhance user experience and functionality.",
+            "dueWhen": "2026-01-08",
+            "score": 51,
+            "scoreBreakdown": {
+              "importance": 21,
+              "urgency": 0,
+              "overdue": 16,
+              "blocker": 14
+            },
+            "source": {
+              "type": "deliverable",
+              "projectIndex": 3,
+              "deliverableIndex": 0
+            }
+          },
+          {
+            "title": "Create localized digital marketing campaigns focused on the unique needs of startups and social purpose organizations in British Columbia and Alberta.",
+            "dueWhen": "2026-01-16",
+            "score": 38,
+            "scoreBreakdown": {
+              "importance": 21,
+              "urgency": 0,
+              "overdue": 0,
+              "blocker": 12
+            },
+            "source": {
+              "type": "dept_deliverable",
+              "department": "marketing",
+              "goalIndex": 0,
+              "deliverableIndex": 0
+            }
+          },
+          {
+            "title": "Create a targeted outreach plan to engage potential partners through personalized communication and tailored proposals.",
+            "dueWhen": "2026-01-16",
+            "score": 38,
+            "scoreBreakdown": {
+              "importance": 21,
+              "urgency": 0,
+              "overdue": 0,
+              "blocker": 12
+            },
+            "source": {
+              "type": "dept_deliverable",
+              "department": "sales",
+              "goalIndex": 0,
+              "deliverableIndex": 0
+            }
+          }
+        ],
+        "monthlyThrust": {
+          "title": "Market Entry",
+          "dueWhen": "2027-01-09",
+          "score": 43
+        }
+      },
+      "generatedAt": "2026-01-16T19:04:34.935Z"
+    },
+    "updatedAt": "2026-01-16T19:04:34.935Z"
+  },
+  {
+    "_id": "696820c7a60ffa359ee5d0c3",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": "695130344db73e493a55c301",
+    "agentType": "financial-insights",
+    "__v": 0,
+    "createdAt": "2026-01-14T23:03:35.510Z",
+    "expiresAt": "2026-01-15T15:41:37.323Z",
+    "generatedAt": "2026-01-15T15:11:37.323Z",
+    "generationTimeMs": 8777,
+    "inputHash": "f388d70eff425b53",
+    "response": {
+      "metrics": {
+        "revenue": 0,
+        "deliveryCost": 0,
+        "workCosts": 0,
+        "fixedCosts": 0,
+        "totalCosts": 0,
+        "netSurplus": 0,
+        "runway": 999,
+        "breakEven": 0,
+        "currentCash": 0,
+        "grossMargin": 0,
+        "operatingMargin": 0,
+        "fixedCostRatio": 0,
+        "variableCostRatio": 0,
+        "revenueToBreakEven": 0,
+        "burnRate": 0,
+        "isProfitable": true,
+        "isAboveBreakEven": false
+      },
+      "scenarioImpact": null,
+      "insights": [
+        {
+          "type": "positive",
+          "category": "profitability",
+          "title": "Operating profitably",
+          "message": "You're generating $0 monthly surplus."
+        }
+      ],
+      "signals": [],
+      "causeEffects": [
+        {
+          "cause": "High variable costs",
+          "effect": "Growth requires proportional cost increases",
+          "implication": "Scaling revenue will also scale your costs significantly."
+        },
+        {
+          "cause": "Low gross margin",
+          "effect": "Limited room for operating expenses",
+          "implication": "Consider pricing increases or delivery cost reductions."
+        }
+      ],
+      "ai": {
+        "healthSummary": "CentraLearn is currently in a pre-launch phase with no revenue, costs, or net surplus, indicating a financial state of $0 across all metrics.",
+        "primaryLever": {
+          "lever": "volume",
+          "explanation": "Increasing user acquisition is crucial; achieving 1,000 active users in the first year is essential for establishing market presence and generating potential revenue streams."
+        },
+        "actionableDecision": {
+          "question": "Should CentraLearn invest in a targeted marketing campaign to acquire users?",
+          "recommendation": "Yes, investing in a marketing campaign to reach the target of 1,000 active users is critical.",
+          "impact": "This could lead to an estimated revenue of $10,000 in the first year if each user is monetized at $10."
+        },
+        "scenarioAnalysis": {
+          "tradeOffs": "Gaining initial users may require upfront marketing costs, but it establishes a user base that can provide feedback and validation for the app.",
+          "recommendation": "Proceed with the marketing investment as it is essential for building traction and validating the business model."
+        },
+        "hiddenRisk": "One risk they might not have considered is the potential for low user retention after initial acquisition, which could undermine long-term growth and profitability."
+      },
+      "generatedAt": "2026-01-15T15:11:37.323Z"
+    },
+    "updatedAt": "2026-01-15T15:11:37.325Z"
+  },
+  {
+    "_id": "6973138bb4c573c2802b51b1",
+    "user": "69730810ae583cb12e6e8ed9",
+    "workspace": "69730810ae583cb12e6e8edb",
+    "agentType": "plan-guidance",
+    "__v": 0,
+    "createdAt": "2026-01-23T06:22:03.400Z",
+    "expiresAt": "2026-01-23T16:16:29.810Z",
+    "generatedAt": "2026-01-23T15:46:29.810Z",
+    "generationTimeMs": 8990,
+    "inputHash": "4d9c28efe753a4a9",
+    "response": {
+      "guidance": {
+        "focusRecommendation": "Today, focus on launching the initial marketing campaign targeting local tech communities.",
+        "topPriority": {
+          "title": "Launch initial marketing campaign targeting local tech communities.",
+          "reason": "This is your highest priority with a score of 62, indicating both high urgency (85) and importance (70), and it's due soon on 2026-01-30.",
+          "actionSteps": [
+            "Define your target audience within local tech communities.",
+            "Create engaging marketing materials that showcase CentraLearn's unique personalized training approach.",
+            "Set up channels for distribution, such as social media, local tech meetups, and online forums."
+          ]
+        },
+        "weeklyGoals": [
+          {
+            "title": "Create a feedback collection form for students",
+            "reason": "Essential for gathering insights to refine your offerings and improve user satisfaction."
+          },
+          {
+            "title": "Identify key tech topics for course development",
+            "reason": "Crucial for ensuring your course library aligns with market demand and learner needs."
+          }
+        ],
+        "deprioritized": [
+          {
+            "title": "Identify potential tech companies for partnerships",
+            "reason": "This has a lower urgency score (70) and is due later (2026-02-06), allowing you to focus on more immediate tasks."
+          },
+          {
+            "title": "Launch the feedback collection campaign",
+            "reason": "With a score of 52 and lower urgency (50), it can wait until after the marketing campaign is launched."
+          },
+          {
+            "title": "Develop first course outline based on identified topics",
+            "reason": "This is contingent on identifying key topics first, making it less urgent at this moment."
+          }
+        ],
+        "warnings": [
+          "Ensure the marketing campaign is launched by the due date to maintain momentum and meet your user base goal."
+        ],
+        "encouragement": "You have 71 active items and no overdue tasks, indicating effective management of your project timeline."
+      },
+      "stats": {
+        "totalItems": 71,
+        "overdueCount": 0,
+        "dueSoonCount": 3,
+        "completedToday": 0
+      },
+      "priorities": {
+        "weekly": [],
+        "monthlyThrust": {
+          "title": "User Base Strategy",
+          "dueWhen": "2026-07-22",
+          "score": 48
+        }
+      },
+      "generatedAt": "2026-01-23T15:46:29.810Z"
+    },
+    "updatedAt": "2026-01-23T15:46:29.811Z"
+  },
+  {
+    "_id": "697315fab4c573c2802b5302",
+    "agentType": "financial-validation",
+    "workspace": "69730810ae583cb12e6e8edb",
+    "user": "69730810ae583cb12e6e8ed9",
+    "__v": 0,
+    "createdAt": "2026-01-23T06:32:26.513Z",
+    "expiresAt": "2026-01-23T07:32:26.513Z",
+    "generatedAt": "2026-01-23T06:32:26.513Z",
+    "generationTimeMs": 0,
+    "inputHash": "5faa09bc9d10db03",
+    "response": {
+      "status": "healthy",
+      "errors": [],
+      "warnings": [],
+      "suggestions": [],
+      "metrics": {
+        "monthlyRevenue": 50666666.67,
+        "monthlyCosts": 56000,
+        "deliveryCost": 50000,
+        "workCosts": 1000,
+        "fixedCosts": 5000,
+        "grossMargin": "99.9",
+        "netMargin": "99.9",
+        "monthlyBurn": 0,
+        "runway": 999,
+        "currentCash": 1000000,
+        "expectedFunding": 0,
+        "streamCount": 2
+      },
+      "aiAnalysis": {
+        "overallAssessment": "healthy",
+        "realism": {
+          "score": 7,
+          "explanation": "Numbers appear reasonable"
+        },
+        "consistencyIssues": [],
+        "topRecommendations": [],
+        "positives": []
+      },
+      "generatedAt": "2026-01-23T06:32:26.513Z"
+    },
+    "updatedAt": "2026-01-23T06:32:26.513Z"
+  },
+  {
+    "_id": "69731609b4c573c2802b5308",
+    "user": "69730810ae583cb12e6e8ed9",
+    "workspace": "69730810ae583cb12e6e8edb",
+    "agentType": "strategy-suggestion",
+    "__v": 0,
+    "createdAt": "2026-01-23T06:32:41.011Z",
+    "expiresAt": "2026-01-23T08:32:41.010Z",
+    "generatedAt": "2026-01-23T06:32:41.010Z",
+    "generationTimeMs": 9983,
+    "inputHash": "2984430108a71c14",
+    "response": {
+      "strategyScore": 56,
+      "strategyBreakdown": {
+        "vision": 20,
+        "positioning": 10,
+        "market": 12,
+        "competitive": 0,
+        "product": 8,
+        "financial": 6
+      },
+      "gaps": [
+        "competitive",
+        "financial"
+      ],
+      "suggestions": {
+        "strategicDirection": {
+          "currentAssessment": "CentraLearn has a solid foundation with a unique value proposition, but lacks a defined business model and market positioning to attract users and generate revenue.",
+          "recommendedFocus": "Develop a sustainable revenue model to transition from a purely training-focused approach to a diversified service offering."
+        },
+        "businessModelSuggestions": [
+          {
+            "suggestion": "Introduce tiered subscription plans for advanced training and premium content.",
+            "rationale": "This can provide a steady revenue stream and incentivize users to engage in additional learning resources, enhancing personalization.",
+            "effort": "medium",
+            "impact": "high"
+          },
+          {
+            "suggestion": "Explore partnerships with educational institutions to offer accredited courses.",
+            "rationale": "This could increase credibility and attract a broader audience seeking recognized qualifications.",
+            "effort": "high",
+            "impact": "high"
+          }
+        ],
+        "positioningTweaks": [
+          {
+            "current": "Currently focused solely on personalized training without emphasizing unique selling points.",
+            "suggested": "Highlight success stories and testimonials from students who have advanced in their careers post-training.",
+            "benefit": "This can build trust and attract more users by showcasing real-world impacts."
+          }
+        ],
+        "competitiveStrategies": [
+          {
+            "strategy": "Implement a unique adaptive learning algorithm that personalizes content delivery based on user performance.",
+            "targetCompetitor": "Companies like Coursera and Udacity, which provide more generalized courses.",
+            "implementation": "Invest in machine learning technology to analyze user interactions and adapt course materials accordingly."
+          }
+        ],
+        "growthOpportunities": [
+          {
+            "opportunity": "Develop partnerships with local tech companies for internship placements.",
+            "requirements": "Create a value proposition for companies to participate, demonstrating how it enhances their talent pipeline.",
+            "timeline": "short-term"
+          },
+          {
+            "opportunity": "Launch a referral program to incentivize current users to bring in new learners.",
+            "requirements": "Design a simple referral reward system that encourages users to share CentraLearn with their networks.",
+            "timeline": "short-term"
+          }
+        ],
+        "quickWins": [
+          "Create and distribute a survey to potential users to identify their learning preferences and desired course topics.",
+          "Start building a social media presence by sharing insights on tech trends and personalized learning strategies."
+        ],
+        "riskAlerts": [
+          "The lack of defined strengths and weaknesses poses a risk in competitive positioning; conduct a SWOT analysis immediately to identify key areas for improvement."
+        ]
+      },
+      "focusArea": null,
+      "generatedAt": "2026-01-23T06:32:41.010Z"
+    },
+    "updatedAt": "2026-01-23T06:32:41.011Z"
+  },
+  {
+    "_id": "69731618b4c573c2802b530e",
+    "user": "69730810ae583cb12e6e8ed9",
+    "workspace": "69730810ae583cb12e6e8edb",
+    "agentType": "progress-status",
+    "__v": 0,
+    "createdAt": "2026-01-23T06:32:56.286Z",
+    "expiresAt": "2026-01-23T09:58:29.412Z",
+    "generatedAt": "2026-01-23T09:43:29.412Z",
+    "generationTimeMs": 4131,
+    "inputHash": "fcf77eb42608920b",
+    "response": {
+      "overallProgress": 85,
+      "overallStatus": "almost-there",
+      "statusLabels": {
+        "getting-started": "Getting Started",
+        "making-progress": "Making Progress",
+        "almost-there": "Almost There",
+        "ready": "Ready to Execute"
+      },
+      "sections": [
+        {
+          "key": "userProfile",
+          "name": "User Profile",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 5
+        },
+        {
+          "key": "businessProfile",
+          "name": "Business Profile",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 15
+        },
+        {
+          "key": "vision",
+          "name": "Vision & Purpose",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 15
+        },
+        {
+          "key": "values",
+          "name": "Values & Culture",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "market",
+          "name": "Market Analysis",
+          "percentage": 67,
+          "status": "partial",
+          "weight": 15
+        },
+        {
+          "key": "swot",
+          "name": "SWOT Analysis",
+          "percentage": 0,
+          "status": "empty",
+          "weight": 10
+        },
+        {
+          "key": "products",
+          "name": "Products & Services",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "financial",
+          "name": "Financial Projections",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        },
+        {
+          "key": "projects",
+          "name": "Strategic Projects",
+          "percentage": 100,
+          "status": "complete",
+          "weight": 10
+        }
+      ],
+      "sectionDetails": [
+        {
+          "key": "userProfile",
+          "name": "User Profile",
+          "description": "Your personal information and role",
+          "weight": 5,
+          "filled": 2,
+          "total": 2,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 5
+        },
+        {
+          "key": "businessProfile",
+          "name": "Business Profile",
+          "description": "Core business information",
+          "weight": 15,
+          "filled": 5,
+          "total": 5,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 15
+        },
+        {
+          "key": "vision",
+          "name": "Vision & Purpose",
+          "description": "Your business purpose and goals",
+          "weight": 15,
+          "filled": 4,
+          "total": 4,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 15
+        },
+        {
+          "key": "values",
+          "name": "Values & Culture",
+          "description": "Company values and culture",
+          "weight": 10,
+          "filled": 2,
+          "total": 2,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "market",
+          "name": "Market Analysis",
+          "description": "Target market and competitive landscape",
+          "weight": 15,
+          "filled": 2,
+          "total": 3,
+          "percentage": 67,
+          "status": "partial",
+          "missingFields": [
+            "marketCompetitors"
+          ],
+          "weightedScore": 10.05
+        },
+        {
+          "key": "swot",
+          "name": "SWOT Analysis",
+          "description": "Strengths, weaknesses, opportunities, threats",
+          "weight": 10,
+          "filled": 0,
+          "total": 4,
+          "percentage": 0,
+          "status": "empty",
+          "missingFields": [
+            "swotStrengths",
+            "swotWeaknesses",
+            "swotOpportunities",
+            "swotThreats"
+          ],
+          "weightedScore": 0
+        },
+        {
+          "key": "products",
+          "name": "Products & Services",
+          "description": "Your product/service offerings with pricing",
+          "weight": 10,
+          "filled": 1,
+          "total": 1,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "financial",
+          "name": "Financial Projections",
+          "description": "Revenue, costs, and cash position",
+          "weight": 10,
+          "filled": 3,
+          "total": 3,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        },
+        {
+          "key": "projects",
+          "name": "Strategic Projects",
+          "description": "Core strategic initiatives",
+          "weight": 10,
+          "filled": 1,
+          "total": 1,
+          "percentage": 100,
+          "status": "complete",
+          "missingFields": [],
+          "weightedScore": 10
+        }
+      ],
+      "nextSteps": [
+        {
+          "section": "SWOT Analysis",
+          "action": "Start filling out \"SWOT Analysis\"",
+          "reason": "Strengths, weaknesses, opportunities, threats",
+          "priority": "high",
+          "estimatedTime": "5-10 minutes"
+        },
+        {
+          "section": "Market Analysis",
+          "action": "Complete \"Market Analysis\" - missing: marketCompetitors",
+          "reason": "67% done, needs 33% more",
+          "priority": "medium",
+          "estimatedTime": "2-5 minutes"
+        }
+      ],
+      "aiFeedback": {
+        "overallFeedback": "CentraLearn has made solid progress at 85%, with complete sections such as User Profile, Business Profile, and Financial Projections.",
+        "strengths": [
+          "The completed Financial Projections section provides a clear overview of revenue streams and costs."
+        ],
+        "priorities": [
+          "Complete the SWOT Analysis (0%) to identify strengths, weaknesses, opportunities, and threats, which is crucial for strategic planning."
+        ],
+        "encouragement": "With 3 sections complete in Market Analysis and a strong cash position, focus on finalizing the SWOT Analysis next."
+      },
+      "generatedAt": "2026-01-23T09:43:29.411Z"
+    },
+    "updatedAt": "2026-01-23T09:43:29.412Z"
+  },
+  {
+    "_id": "69732717b4c573c2802b5c3d",
+    "agentType": "plan-guidance",
+    "user": "69731f973732d26375456804",
+    "workspace": "69731f973732d26375456806",
+    "__v": 0,
+    "createdAt": "2026-01-23T07:45:27.088Z",
+    "expiresAt": "2026-01-23T08:41:52.328Z",
+    "generatedAt": "2026-01-23T08:11:52.328Z",
+    "generationTimeMs": 6886,
+    "inputHash": "1036747246896ea1",
+    "response": {
+      "guidance": {
+        "focusRecommendation": "Focus on launching the onboarding checklist for new clients today.",
+        "topPriority": {
+          "title": "Launch onboarding checklist for new clients",
+          "reason": "This task has the highest urgency score of 85 and is crucial for ensuring new clients have a smooth transition, impacting your goal of onboarding at least 50 new clients within the first year.",
+          "actionSteps": [
+            "Review the draft checklist and ensure all necessary steps for onboarding are included.",
+            "Gather input from your team to finalize the checklist.",
+            "Set a timeline for implementation and communicate it to the team."
+          ]
+        },
+        "weeklyGoals": [
+          {
+            "title": "Finalize training curriculum outline",
+            "reason": "This is critical for your training program, which aims to boost user confidence."
+          },
+          {
+            "title": "Develop user feedback survey",
+            "reason": "Collecting feedback is essential for achieving a user satisfaction rate of over 90%."
+          }
+        ],
+        "deprioritized": [
+          {
+            "title": "Identify potential partner organizations",
+            "reason": "While important, it has the same score as the top priority tasks but is less urgent and can be addressed after onboarding tasks."
+          },
+          {
+            "title": "Create introductory video tutorials",
+            "reason": "This has a lower urgency score of 50 and can wait until more critical onboarding and training items are addressed."
+          }
+        ],
+        "warnings": [],
+        "encouragement": "You've maintained all items on track with no overdue tasks, and you're making progress on the active projects."
+      },
+      "stats": {
+        "totalItems": 92,
+        "overdueCount": 0,
+        "dueSoonCount": 4,
+        "completedToday": 0
+      },
+      "priorities": {
+        "weekly": [],
+        "monthlyThrust": {
+          "title": "Client Onboarding",
+          "dueWhen": "2026-11-30",
+          "score": 48
+        }
+      },
+      "generatedAt": "2026-01-23T08:11:52.328Z"
+    },
+    "updatedAt": "2026-01-23T08:11:52.329Z"
+  },
+  {
+    "_id": "69732b90b4c573c2802b5eab",
+    "user": "69731f973732d26375456804",
+    "agentType": "financial-validation",
+    "workspace": "69731f973732d26375456806",
+    "__v": 0,
+    "createdAt": "2026-01-23T08:04:32.006Z",
+    "expiresAt": "2026-01-23T09:04:32.006Z",
+    "generatedAt": "2026-01-23T08:04:32.006Z",
+    "generationTimeMs": 0,
+    "inputHash": "b4de4f80f2191600",
+    "response": {
+      "status": "healthy",
+      "errors": [],
+      "warnings": [],
+      "suggestions": [],
+      "metrics": {
+        "monthlyRevenue": 50000,
+        "monthlyCosts": 12000,
+        "deliveryCost": 10000,
+        "workCosts": 1000,
+        "fixedCosts": 1000,
+        "grossMargin": "80.0",
+        "netMargin": "76.0",
+        "monthlyBurn": 0,
+        "runway": 999,
+        "currentCash": 5000,
+        "expectedFunding": 12000,
+        "streamCount": 1
+      },
+      "aiAnalysis": {
+        "overallAssessment": "healthy",
+        "realism": {
+          "score": 7,
+          "explanation": "Numbers appear reasonable"
+        },
+        "consistencyIssues": [],
+        "topRecommendations": [],
+        "positives": []
+      },
+      "generatedAt": "2026-01-23T08:04:32.006Z"
+    },
+    "updatedAt": "2026-01-23T08:04:32.006Z"
+  },
+  {
+    "_id": "69732ba2b4c573c2802b5eb1",
+    "agentType": "financial-insights",
+    "workspace": "69731f973732d26375456806",
+    "user": "69731f973732d26375456804",
+    "__v": 0,
+    "createdAt": "2026-01-23T08:04:50.181Z",
+    "expiresAt": "2026-01-23T08:34:50.180Z",
+    "generatedAt": "2026-01-23T08:04:50.180Z",
+    "generationTimeMs": 6469,
+    "inputHash": "bcd3b169610c7c6f",
+    "response": {
+      "metrics": {
+        "revenue": 50000,
+        "deliveryCost": 10000,
+        "workCosts": 1000,
+        "fixedCosts": 1000,
+        "totalCosts": 12000,
+        "netSurplus": 38000,
+        "runway": 999,
+        "breakEven": 12000,
+        "currentCash": 5000,
+        "grossMargin": 80,
+        "operatingMargin": 76,
+        "fixedCostRatio": 8.3,
+        "variableCostRatio": 91.7,
+        "revenueToBreakEven": 416.7,
+        "burnRate": 0,
+        "isProfitable": true,
+        "isAboveBreakEven": true
+      },
+      "scenarioImpact": null,
+      "insights": [
+        {
+          "type": "positive",
+          "category": "profitability",
+          "title": "Operating profitably",
+          "message": "You're generating $38,000 monthly surplus."
+        },
+        {
+          "type": "positive",
+          "category": "breakeven",
+          "title": "Above break-even",
+          "message": "$158,350 revenue buffer above break-even point."
+        }
+      ],
+      "signals": [],
+      "causeEffects": [
+        {
+          "cause": "High variable costs",
+          "effect": "Growth requires proportional cost increases",
+          "implication": "Scaling revenue will also scale your costs significantly."
+        }
+      ],
+      "ai": {
+        "healthSummary": "Plan Genie Inc. is in a strong financial position with a monthly revenue of $50,000, monthly costs of $12,000, and a net surplus of $38,000.",
+        "primaryLever": {
+          "lever": "volume",
+          "explanation": "Increasing the client base is crucial as onboarding just 50 new clients can significantly enhance revenue, potentially adding $2,500/month if each pays $50, which would boost monthly revenue to $52,500."
+        },
+        "actionableDecision": {
+          "question": "Should we invest in marketing to attract more clients?",
+          "recommendation": "Yes, allocate a portion of the surplus to targeted marketing efforts.",
+          "impact": "This could increase client acquisition and revenue, potentially raising monthly revenue by 5-10% within the next quarter."
+        },
+        "scenarioAnalysis": {
+          "tradeOffs": "Gaining more clients can lead to increased revenue but may require upfront investment in marketing and resources.",
+          "recommendation": "Proceed with the investment, as the potential revenue growth outweighs the initial costs."
+        },
+        "hiddenRisk": "The risk of overextending resources during rapid growth, which could lead to a decline in user satisfaction if service quality diminishes."
+      },
+      "generatedAt": "2026-01-23T08:04:50.180Z"
+    },
+    "updatedAt": "2026-01-23T08:04:50.181Z"
+  }
+]

@@ -9,6 +9,13 @@ const RevenueStream = require('../models/RevenueStream');
 const FinancialBaseline = require('../models/FinancialBaseline');
 const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
+const Product = require('../models/Product');
+const VisionGoal = require('../models/VisionGoal');
+const Competitor = require('../models/Competitor');
+const SwotEntry = require('../models/SwotEntry');
+const OrgPosition = require('../models/OrgPosition');
+const CoreProject = require('../models/CoreProject');
+const DepartmentProject = require('../models/DepartmentProject');
 
 function toName(u) {
   const name = (u.fullName && String(u.fullName).trim()) || [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
@@ -138,6 +145,13 @@ exports.getUserFullData = async (req, res) => {
     departments,
     collaborationsAsOwner,
     collaborationsAsViewer,
+    products,
+    visionGoals,
+    competitors,
+    swotEntries,
+    orgPositions,
+    coreProjects,
+    departmentProjects,
   ] = await Promise.all([
     Subscription.findOne({ user: id }).lean().exec(),
     Workspace.find({ user: id }).lean().exec(),
@@ -148,19 +162,55 @@ exports.getUserFullData = async (req, res) => {
     Department.find({ user: id }).lean().exec(),
     Collaboration.find({ owner: id }).populate('viewer', 'email fullName').lean().exec(),
     Collaboration.find({ viewer: id }).populate('owner', 'email fullName').lean().exec(),
+    Product.find({ user: id, isDeleted: { $ne: true } }).sort({ order: 1 }).lean().exec(),
+    VisionGoal.find({ user: id, isDeleted: { $ne: true } }).sort({ goalType: 1, order: 1 }).lean().exec(),
+    Competitor.find({ user: id, isDeleted: { $ne: true } }).sort({ order: 1 }).lean().exec(),
+    SwotEntry.find({ user: id, isDeleted: { $ne: true } }).sort({ entryType: 1, order: 1 }).lean().exec(),
+    OrgPosition.find({ user: id, isDeleted: { $ne: true } }).sort({ order: 1 }).lean().exec(),
+    CoreProject.find({ user: id, isDeleted: { $ne: true } }).sort({ order: 1 }).lean().exec(),
+    DepartmentProject.find({ user: id, isDeleted: { $ne: true } }).sort({ departmentKey: 1, order: 1 }).lean().exec(),
   ]);
 
   // Build workspace map for onboarding data
   const workspaceMap = new Map(workspaces.map(w => [String(w._id), w]));
 
-  // Enrich onboarding data with workspace names
+  // Enrich onboarding data with workspace names and workspace fields
   const enrichedOnboardings = onboardings.map(ob => {
     const ws = ob.workspace ? workspaceMap.get(String(ob.workspace)) : null;
+    const answers = ob.answers || {};
     return {
-      ...ob,
       _id: String(ob._id),
       workspaceName: ws?.name || 'Unknown Workspace',
       workspaceWid: ws?.wid || null,
+      userProfile: ob.userProfile,
+      businessProfile: ob.businessProfile,
+      onboardingCompleted: ob.onboardingCompleted,
+      onboardingDetailCompleted: ob.onboardingDetailCompleted,
+      // Workspace fields (scalar values)
+      workspaceFields: {
+        // Vision & Purpose
+        ubp: answers.ubp || null,
+        purpose: answers.purpose || null,
+        bhag: answers.visionBhag || answers.bhag || null,
+        missionStatement: answers.missionStatement || null,
+        identitySummary: answers.identitySummary || null,
+        // Values & Culture
+        valuesCore: answers.valuesCore || null,
+        cultureFeeling: answers.cultureFeeling || null,
+        // Market
+        targetCustomer: answers.marketCustomer || answers.targetCustomer || null,
+        partners: answers.marketPartners || answers.partners || null,
+        competitorsNotes: answers.competitorsNotes || answers.compNotes || null,
+        // Financial inputs
+        finSalesVolume: answers.finSalesVolume || null,
+        finAvgUnitCost: answers.finAvgUnitCost || null,
+        finTargetProfitMarginPct: answers.finTargetProfitMarginPct || null,
+        finStartingCash: answers.finStartingCash || null,
+        finFixedOperatingCosts: answers.finFixedOperatingCosts || null,
+        finPayrollCost: answers.finPayrollCost || null,
+        finMarketingSalesSpend: answers.finMarketingSalesSpend || null,
+        finSalesGrowthPct: answers.finSalesGrowthPct || null,
+      },
     };
   });
 
@@ -260,6 +310,96 @@ exports.getUserFullData = async (req, res) => {
         createdAt: c.createdAt,
       })),
     },
+    products: products.map(p => ({
+      _id: String(p._id),
+      name: p.name,
+      description: p.description,
+      pricing: p.pricing,
+      price: p.price,
+      unitCost: p.unitCost,
+      monthlyVolume: p.monthlyVolume,
+      order: p.order,
+      workspaceId: p.workspace ? String(p.workspace) : null,
+      createdAt: p.createdAt,
+    })),
+    visionGoals: visionGoals.map(vg => ({
+      _id: String(vg._id),
+      goalType: vg.goalType,
+      text: vg.text,
+      notes: vg.notes,
+      status: vg.status,
+      order: vg.order,
+      workspaceId: vg.workspace ? String(vg.workspace) : null,
+      createdAt: vg.createdAt,
+    })),
+    competitors: competitors.map(c => ({
+      _id: String(c._id),
+      name: c.name,
+      advantage: c.advantage,
+      website: c.website,
+      notes: c.notes,
+      threatLevel: c.threatLevel,
+      order: c.order,
+      workspaceId: c.workspace ? String(c.workspace) : null,
+      createdAt: c.createdAt,
+    })),
+    swotEntries: swotEntries.map(s => ({
+      _id: String(s._id),
+      entryType: s.entryType,
+      text: s.text,
+      priority: s.priority,
+      notes: s.notes,
+      order: s.order,
+      workspaceId: s.workspace ? String(s.workspace) : null,
+      createdAt: s.createdAt,
+    })),
+    orgPositions: orgPositions.map(op => ({
+      _id: String(op._id),
+      position: op.position,
+      role: op.role,
+      name: op.name,
+      department: op.department,
+      parentId: op.parentId ? String(op.parentId) : null,
+      order: op.order,
+      workspaceId: op.workspace ? String(op.workspace) : null,
+      createdAt: op.createdAt,
+    })),
+    coreProjects: coreProjects.map(cp => ({
+      _id: String(cp._id),
+      title: cp.title,
+      description: cp.description,
+      goal: cp.goal,
+      cost: cp.cost,
+      dueWhen: cp.dueWhen,
+      priority: cp.priority,
+      ownerId: cp.ownerId,
+      ownerName: cp.ownerName,
+      linkedGoals: cp.linkedGoals,
+      departments: cp.departments,
+      deliverables: cp.deliverables,
+      order: cp.order,
+      workspaceId: cp.workspace ? String(cp.workspace) : null,
+      createdAt: cp.createdAt,
+    })),
+    departmentProjects: departmentProjects.map(dp => ({
+      _id: String(dp._id),
+      departmentKey: dp.departmentKey,
+      title: dp.title,
+      goal: dp.goal,
+      milestone: dp.milestone,
+      resources: dp.resources,
+      dueWhen: dp.dueWhen,
+      cost: dp.cost,
+      firstName: dp.firstName,
+      lastName: dp.lastName,
+      ownerId: dp.ownerId,
+      linkedCoreProject: dp.linkedCoreProject ? String(dp.linkedCoreProject) : null,
+      linkedGoal: dp.linkedGoal,
+      deliverables: dp.deliverables,
+      order: dp.order,
+      workspaceId: dp.workspace ? String(dp.workspace) : null,
+      createdAt: dp.createdAt,
+    })),
     summary: {
       workspaceCount: workspaces.length,
       revenueStreamCount: revenueStreams.length,
@@ -267,6 +407,13 @@ exports.getUserFullData = async (req, res) => {
       departmentCount: departments.length,
       collaboratorCount: collaborationsAsOwner.length,
       viewingCount: collaborationsAsViewer.length,
+      productCount: products.length,
+      visionGoalCount: visionGoals.length,
+      competitorCount: competitors.length,
+      swotEntryCount: swotEntries.length,
+      orgPositionCount: orgPositions.length,
+      coreProjectCount: coreProjects.length,
+      departmentProjectCount: departmentProjects.length,
     },
   });
 };

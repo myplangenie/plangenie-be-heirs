@@ -1,0 +1,1839 @@
+[
+  {
+    "_id": "69030af733d35d7ce7cd56f9",
+    "user": "6902f6e58d0d3a49714de018",
+    "__v": 8,
+    "createdAt": "2025-10-30T06:51:34.796Z",
+    "summary": {
+      "kpis": {
+        "overdueTasks": 4,
+        "activeTeamMembers": 4
+      },
+      "milestones": [
+        {
+          "label": "Q1 Product Launch",
+          "due": "Mar 12, 2025",
+          "_id": "69030af6e82840a74474898c"
+        },
+        {
+          "label": "Budget review",
+          "due": "Apr 21, 2025",
+          "_id": "69030af6e82840a74474898d"
+        },
+        {
+          "label": "Team retro",
+          "due": "Apr 30, 2025",
+          "_id": "69030af6e82840a74474898e"
+        }
+      ],
+      "departmentProgress": [
+        {
+          "name": "Engineering",
+          "percent": 87,
+          "_id": "69030af6e82840a744748989"
+        },
+        {
+          "name": "Marketing",
+          "percent": 69,
+          "_id": "69030af6e82840a74474898a"
+        },
+        {
+          "name": "Sales",
+          "percent": 62,
+          "_id": "69030af6e82840a74474898b"
+        }
+      ],
+      "financeChart": [
+        {
+          "name": "Jan",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69030af6e82840a744748983"
+        },
+        {
+          "name": "Feb",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69030af6e82840a744748984"
+        },
+        {
+          "name": "Mar",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69030af6e82840a744748985"
+        },
+        {
+          "name": "Apr",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "69030af6e82840a744748986"
+        },
+        {
+          "name": "May",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69030af6e82840a744748987"
+        },
+        {
+          "name": "Jun",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "69030af6e82840a744748988"
+        }
+      ],
+      "activePlans": [
+        {
+          "title": "Increase qualified inbound leads by 25%",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "69030af6e82840a74474897f"
+        },
+        {
+          "title": "Launch revised website by October 1",
+          "status": "Completed",
+          "owner": "Sarah Fredrick",
+          "_id": "69030af6e82840a744748980"
+        },
+        {
+          "title": "Reduce churn to < 3%",
+          "status": "On track",
+          "owner": "Sarah Fredrick",
+          "_id": "69030af6e82840a744748981"
+        },
+        {
+          "title": "Improve NPS to 45",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "69030af6e82840a744748982"
+        }
+      ],
+      "insights": [
+        "Launch a digital marketing campaign targeting at least 5,000 potential users in city-1 by January 28, 2026, with a budget of $5,000 to track engagement and conversion rates.",
+        "Secure partnerships with at least five local universities and job placement agencies by January 28, 2026, to co-host events and workshops, aiming for a 30% increase in user engagement.",
+        "Develop and launch a user-friendly mock interview platform by January 28, 2026, aiming for 1,000 active job seekers and a 75% engagement rate."
+      ],
+      "snapshot": {
+        "vision": "To become a leading business in…",
+        "ubp": "Simplifying business strategy through intelligent automation"
+      },
+      "team": [
+        {
+          "name": "Gabriel Thompson",
+          "role": "CEO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69030af6e82840a74474897b"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "COO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69030af6e82840a74474897c"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CTO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69030af6e82840a74474897d"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CFO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69030af6e82840a74474897e"
+        }
+      ],
+      "insightSections": [
+        {
+          "title": "Pre-launch",
+          "items": [
+            "Launch a digital marketing campaign targeting at least 5,000 potential users in city-1 by January 28, 2026, with a budget of $5,000 to track engagement and conversion rates.",
+            "Secure partnerships with at least five local universities and job placement agencies by January 28, 2026, to co-host events and workshops, aiming for a 30% increase in user engagement.",
+            "Develop and launch a user-friendly mock interview platform by January 28, 2026, aiming for 1,000 active job seekers and a 75% engagement rate."
+          ],
+          "_id": "690b7a185c0b43de8e3be33b"
+        },
+        {
+          "title": "Execution",
+          "items": [
+            "Launch the digital marketing campaign within the first quarter, targeting key demographics to reach the 5,000 potential users goal.",
+            "Conduct the first community workshop and track participation to convert 20 attendees into active platform users within three months.",
+            "Begin quarterly team surveys to assess workplace satisfaction and implement the first two actionable improvements by the end of Q2."
+          ],
+          "_id": "690b549dba96eed0c104bc3d"
+        }
+      ]
+    },
+    "updatedAt": "2026-01-03T15:17:07.891Z",
+    "workspace": "695932f25c7dd36581e83cd0"
+  },
+  {
+    "_id": "690eaa00adf17ea18366a858",
+    "user": "690e971b4137786ffb04ab19",
+    "__v": 1,
+    "createdAt": "2025-11-08T02:25:04.757Z",
+    "summary": {
+      "kpis": {
+        "overdueTasks": 4,
+        "activeTeamMembers": 4
+      },
+      "milestones": [
+        {
+          "label": "Q1 Product Launch",
+          "due": "Mar 12, 2025",
+          "_id": "690eaa004137786ffb04ac9b"
+        },
+        {
+          "label": "Budget review",
+          "due": "Apr 21, 2025",
+          "_id": "690eaa004137786ffb04ac9c"
+        },
+        {
+          "label": "Team retro",
+          "due": "Apr 30, 2025",
+          "_id": "690eaa004137786ffb04ac9d"
+        }
+      ],
+      "departmentProgress": [
+        {
+          "name": "Engineering",
+          "percent": 87,
+          "_id": "690eaa004137786ffb04ac98"
+        },
+        {
+          "name": "Marketing",
+          "percent": 69,
+          "_id": "690eaa004137786ffb04ac99"
+        },
+        {
+          "name": "Sales",
+          "percent": 62,
+          "_id": "690eaa004137786ffb04ac9a"
+        }
+      ],
+      "financeChart": [
+        {
+          "name": "Jan",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "690eaa004137786ffb04ac92"
+        },
+        {
+          "name": "Feb",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "690eaa004137786ffb04ac93"
+        },
+        {
+          "name": "Mar",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "690eaa004137786ffb04ac94"
+        },
+        {
+          "name": "Apr",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "690eaa004137786ffb04ac95"
+        },
+        {
+          "name": "May",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "690eaa004137786ffb04ac96"
+        },
+        {
+          "name": "Jun",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "690eaa004137786ffb04ac97"
+        }
+      ],
+      "activePlans": [
+        {
+          "title": "Increase qualified inbound leads by 25%",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "690eaa004137786ffb04ac8e"
+        },
+        {
+          "title": "Launch revised website by October 1",
+          "status": "Completed",
+          "owner": "Sarah Fredrick",
+          "_id": "690eaa004137786ffb04ac8f"
+        },
+        {
+          "title": "Reduce churn to < 3%",
+          "status": "On track",
+          "owner": "Sarah Fredrick",
+          "_id": "690eaa004137786ffb04ac90"
+        },
+        {
+          "title": "Improve NPS to 45",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "690eaa004137786ffb04ac91"
+        }
+      ],
+      "insights": [
+        "Finalize the business plan and ensure all team members understand their roles by the end of the month.",
+        "Conduct market research to identify target customer segments and competitive landscape by next week.",
+        "Set up a website and social media profiles by the end of next week to establish an online presence."
+      ],
+      "snapshot": {
+        "vision": "To become a leading business in…",
+        "ubp": "Vision Inc. offers an AI-enabled platform that assists users in planning their lives, from daily tasks to long-term goals, while integrating with their calendars and inboxes for seamless task management."
+      },
+      "team": [
+        {
+          "name": "Gabriel Thompson",
+          "role": "CEO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "690eaa004137786ffb04ac8a"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "COO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "690eaa004137786ffb04ac8b"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CTO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "690eaa004137786ffb04ac8c"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CFO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "690eaa004137786ffb04ac8d"
+        }
+      ],
+      "insightSections": [
+        {
+          "title": "Pre-launch",
+          "items": [
+            "Finalize the business plan and ensure all team members understand their roles by the end of the month.",
+            "Conduct market research to identify target customer segments and competitive landscape by next week.",
+            "Set up a website and social media profiles by the end of next week to establish an online presence."
+          ],
+          "_id": "690eaa054137786ffb04acb4"
+        },
+        {
+          "title": "Execution",
+          "items": [
+            "Begin outreach to potential clients and partners starting next month to generate initial leads.",
+            "Develop a minimal viable product (MVP) and aim for completion within two months to start user testing.",
+            "Implement a customer feedback mechanism within the first month of launching the MVP to iterate based on user needs."
+          ],
+          "_id": "690eaa054137786ffb04acb5"
+        }
+      ]
+    },
+    "updatedAt": "2026-01-03T15:17:17.985Z",
+    "workspace": "695932fc5c7dd36581e83cf7"
+  },
+  {
+    "_id": "69122333adf17ea18368bb87",
+    "user": "69121f44fcc9679d5cccd34d",
+    "__v": 1,
+    "createdAt": "2025-11-10T17:38:59.130Z",
+    "summary": {
+      "kpis": {
+        "overdueTasks": 4,
+        "activeTeamMembers": 4
+      },
+      "milestones": [
+        {
+          "label": "Q1 Product Launch",
+          "due": "Mar 12, 2025",
+          "_id": "69122333fcc9679d5cccd43d"
+        },
+        {
+          "label": "Budget review",
+          "due": "Apr 21, 2025",
+          "_id": "69122333fcc9679d5cccd43e"
+        },
+        {
+          "label": "Team retro",
+          "due": "Apr 30, 2025",
+          "_id": "69122333fcc9679d5cccd43f"
+        }
+      ],
+      "departmentProgress": [
+        {
+          "name": "Engineering",
+          "percent": 87,
+          "_id": "69122333fcc9679d5cccd43a"
+        },
+        {
+          "name": "Marketing",
+          "percent": 69,
+          "_id": "69122333fcc9679d5cccd43b"
+        },
+        {
+          "name": "Sales",
+          "percent": 62,
+          "_id": "69122333fcc9679d5cccd43c"
+        }
+      ],
+      "financeChart": [
+        {
+          "name": "Jan",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69122333fcc9679d5cccd434"
+        },
+        {
+          "name": "Feb",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69122333fcc9679d5cccd435"
+        },
+        {
+          "name": "Mar",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69122333fcc9679d5cccd436"
+        },
+        {
+          "name": "Apr",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "69122333fcc9679d5cccd437"
+        },
+        {
+          "name": "May",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69122333fcc9679d5cccd438"
+        },
+        {
+          "name": "Jun",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "69122333fcc9679d5cccd439"
+        }
+      ],
+      "activePlans": [
+        {
+          "title": "Increase qualified inbound leads by 25%",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "69122333fcc9679d5cccd430"
+        },
+        {
+          "title": "Launch revised website by October 1",
+          "status": "Completed",
+          "owner": "Sarah Fredrick",
+          "_id": "69122333fcc9679d5cccd431"
+        },
+        {
+          "title": "Reduce churn to < 3%",
+          "status": "On track",
+          "owner": "Sarah Fredrick",
+          "_id": "69122333fcc9679d5cccd432"
+        },
+        {
+          "title": "Improve NPS to 45",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "69122333fcc9679d5cccd433"
+        }
+      ],
+      "insights": [
+        "Create and implement a targeted outreach campaign by leveraging social media ads and local events, allocating NGN 500,000 by 2026-02-08.",
+        "Recruit at least 3 skilled professionals in AI and education technology, with a budget of $15,000 for onboarding and training, due by 2026-02-08.",
+        "Develop a detailed financial plan outlining revenue streams and break-even analysis to ensure sustainability and allow for reinvestment, due by 2026-02-08."
+      ],
+      "snapshot": {
+        "vision": "To become a leading business in…",
+        "ubp": "CentraLearn offers personalized AI-driven career guidance, helping users identify in-demand tech skills and tailored learning paths to boost their employability in Nigeria's competitive job market."
+      },
+      "team": [
+        {
+          "name": "Gabriel Thompson",
+          "role": "CEO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69122333fcc9679d5cccd42c"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "COO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69122333fcc9679d5cccd42d"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CTO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69122333fcc9679d5cccd42e"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CFO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69122333fcc9679d5cccd42f"
+        }
+      ],
+      "insightSections": [
+        {
+          "title": "Pre-launch",
+          "items": [
+            "Create and implement a targeted outreach campaign by leveraging social media ads and local events, allocating NGN 500,000 by 2026-02-08.",
+            "Recruit at least 3 skilled professionals in AI and education technology, with a budget of $15,000 for onboarding and training, due by 2026-02-08.",
+            "Develop a detailed financial plan outlining revenue streams and break-even analysis to ensure sustainability and allow for reinvestment, due by 2026-02-08."
+          ],
+          "_id": "6912233bfcc9679d5cccd456"
+        },
+        {
+          "title": "Execution",
+          "items": [
+            "Secure partnerships with at least 5 local tech companies for enhanced job placements by engaging in outreach activities by 2026-02-08.",
+            "Launch a user-friendly platform that facilitates seamless interaction with the AI career assistant, aiming for 80% user satisfaction by 2026-02-08.",
+            "Implement a user feedback system to continuously improve the AI career assistant, targeting a 90% satisfaction rate by the end of year three."
+          ],
+          "_id": "6912233bfcc9679d5cccd457"
+        }
+      ]
+    },
+    "updatedAt": "2026-01-03T15:17:28.994Z",
+    "workspace": "695933075c7dd36581e83d1e"
+  },
+  {
+    "_id": "6914c884adf17ea1836b4744",
+    "user": "6914c08d4a5b21ac61c18296",
+    "__v": 1,
+    "createdAt": "2025-11-12T17:48:52.720Z",
+    "summary": {
+      "kpis": {
+        "overdueTasks": 4,
+        "activeTeamMembers": 4
+      },
+      "milestones": [
+        {
+          "label": "Q1 Product Launch",
+          "due": "Mar 12, 2025",
+          "_id": "6914c8844a5b21ac61c1839a"
+        },
+        {
+          "label": "Budget review",
+          "due": "Apr 21, 2025",
+          "_id": "6914c8844a5b21ac61c1839b"
+        },
+        {
+          "label": "Team retro",
+          "due": "Apr 30, 2025",
+          "_id": "6914c8844a5b21ac61c1839c"
+        }
+      ],
+      "departmentProgress": [
+        {
+          "name": "Engineering",
+          "percent": 87,
+          "_id": "6914c8844a5b21ac61c18397"
+        },
+        {
+          "name": "Marketing",
+          "percent": 69,
+          "_id": "6914c8844a5b21ac61c18398"
+        },
+        {
+          "name": "Sales",
+          "percent": 62,
+          "_id": "6914c8844a5b21ac61c18399"
+        }
+      ],
+      "financeChart": [
+        {
+          "name": "Jan",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6914c8844a5b21ac61c18391"
+        },
+        {
+          "name": "Feb",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6914c8844a5b21ac61c18392"
+        },
+        {
+          "name": "Mar",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6914c8844a5b21ac61c18393"
+        },
+        {
+          "name": "Apr",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "6914c8844a5b21ac61c18394"
+        },
+        {
+          "name": "May",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6914c8844a5b21ac61c18395"
+        },
+        {
+          "name": "Jun",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "6914c8844a5b21ac61c18396"
+        }
+      ],
+      "activePlans": [
+        {
+          "title": "Increase qualified inbound leads by 25%",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "6914c8844a5b21ac61c1838d"
+        },
+        {
+          "title": "Launch revised website by October 1",
+          "status": "Completed",
+          "owner": "Sarah Fredrick",
+          "_id": "6914c8844a5b21ac61c1838e"
+        },
+        {
+          "title": "Reduce churn to < 3%",
+          "status": "On track",
+          "owner": "Sarah Fredrick",
+          "_id": "6914c8844a5b21ac61c1838f"
+        },
+        {
+          "title": "Improve NPS to 45",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "6914c8844a5b21ac61c18390"
+        }
+      ],
+      "insights": [
+        "Finalize the training program for team members to ensure 100% completion within six months post-launch for effective user support.",
+        "Develop and implement a feedback system to capture insights from at least 80% of active users quarterly, ensuring continuous platform improvements.",
+        "Prepare targeted marketing campaigns focusing on SMEs and non-profits to achieve 333 user sign-ups per month."
+      ],
+      "snapshot": {
+        "vision": "To become a leading business in…",
+        "ubp": "Plan Genie streamlines the planning process for SMEs and non-profits by providing customized insights that enable users to make informed decisions efficiently."
+      },
+      "team": [
+        {
+          "name": "Gabriel Thompson",
+          "role": "CEO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6914c8844a5b21ac61c18389"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "COO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6914c8844a5b21ac61c1838a"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CTO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6914c8844a5b21ac61c1838b"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CFO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6914c8844a5b21ac61c1838c"
+        }
+      ],
+      "insightSections": [
+        {
+          "title": "Pre-launch",
+          "items": [
+            "Finalize the training program for team members to ensure 100% completion within six months post-launch for effective user support.",
+            "Develop and implement a feedback system to capture insights from at least 80% of active users quarterly, ensuring continuous platform improvements.",
+            "Prepare targeted marketing campaigns focusing on SMEs and non-profits to achieve 333 user sign-ups per month."
+          ],
+          "_id": "6914c8894a5b21ac61c183b3"
+        },
+        {
+          "title": "Execution",
+          "items": [
+            "Launch the targeted marketing campaigns and outreach strategies to acquire 1,000 active users within the first three months.",
+            "Establish strategic partnerships with at least five organizations in the SME and non-profit sectors to enhance platform credibility.",
+            "Implement a referral program by the end of year one to generate 30% of new user sign-ups through user recommendations."
+          ],
+          "_id": "6914c8894a5b21ac61c183b4"
+        }
+      ]
+    },
+    "updatedAt": "2026-01-03T15:17:35.913Z",
+    "workspace": "6959330e5c7dd36581e83d38"
+  },
+  {
+    "_id": "69188a4bf1e619c4de49aa36",
+    "user": "6918875e7c34250cfede9f6d",
+    "__v": 1,
+    "createdAt": "2025-11-15T14:12:27.579Z",
+    "summary": {
+      "kpis": {
+        "overdueTasks": 4,
+        "activeTeamMembers": 4
+      },
+      "milestones": [
+        {
+          "label": "Q1 Product Launch",
+          "due": "Mar 12, 2025",
+          "_id": "69188a4b7c34250cfedea080"
+        },
+        {
+          "label": "Budget review",
+          "due": "Apr 21, 2025",
+          "_id": "69188a4b7c34250cfedea081"
+        },
+        {
+          "label": "Team retro",
+          "due": "Apr 30, 2025",
+          "_id": "69188a4b7c34250cfedea082"
+        }
+      ],
+      "departmentProgress": [
+        {
+          "name": "Engineering",
+          "percent": 87,
+          "_id": "69188a4b7c34250cfedea07d"
+        },
+        {
+          "name": "Marketing",
+          "percent": 69,
+          "_id": "69188a4b7c34250cfedea07e"
+        },
+        {
+          "name": "Sales",
+          "percent": 62,
+          "_id": "69188a4b7c34250cfedea07f"
+        }
+      ],
+      "financeChart": [
+        {
+          "name": "Jan",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69188a4b7c34250cfedea077"
+        },
+        {
+          "name": "Feb",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69188a4b7c34250cfedea078"
+        },
+        {
+          "name": "Mar",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69188a4b7c34250cfedea079"
+        },
+        {
+          "name": "Apr",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "69188a4b7c34250cfedea07a"
+        },
+        {
+          "name": "May",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69188a4b7c34250cfedea07b"
+        },
+        {
+          "name": "Jun",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "69188a4b7c34250cfedea07c"
+        }
+      ],
+      "activePlans": [
+        {
+          "title": "Increase qualified inbound leads by 25%",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "69188a4b7c34250cfedea073"
+        },
+        {
+          "title": "Launch revised website by October 1",
+          "status": "Completed",
+          "owner": "Sarah Fredrick",
+          "_id": "69188a4b7c34250cfedea074"
+        },
+        {
+          "title": "Reduce churn to < 3%",
+          "status": "On track",
+          "owner": "Sarah Fredrick",
+          "_id": "69188a4b7c34250cfedea075"
+        },
+        {
+          "title": "Improve NPS to 45",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "69188a4b7c34250cfedea076"
+        }
+      ],
+      "insights": [
+        "Finalize the marketing strategy by outlining content themes for social media aimed at engaging job seekers, with a focus on success stories and AI benefits.",
+        "Prepare initial outreach materials and budgets for partnerships with five leading job boards and recruitment agencies, targeting meetings within the first year.",
+        "Allocate resources for recruiting a diverse team of at least three skilled professionals in AI development and user support to strengthen RoboCop's technology."
+      ],
+      "snapshot": {
+        "vision": "To become a leading business in…",
+        "ubp": "RoboCop simplifies job searching by providing personalized AI-driven career advice and tailored resume building, ensuring users stand out in a competitive job market."
+      },
+      "team": [
+        {
+          "name": "Gabriel Thompson",
+          "role": "CEO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69188a4b7c34250cfedea06f"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "COO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69188a4b7c34250cfedea070"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CTO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69188a4b7c34250cfedea071"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CFO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69188a4b7c34250cfedea072"
+        }
+      ],
+      "insightSections": [
+        {
+          "title": "Pre-launch",
+          "items": [
+            "Finalize the marketing strategy by outlining content themes for social media aimed at engaging job seekers, with a focus on success stories and AI benefits.",
+            "Prepare initial outreach materials and budgets for partnerships with five leading job boards and recruitment agencies, targeting meetings within the first year.",
+            "Allocate resources for recruiting a diverse team of at least three skilled professionals in AI development and user support to strengthen RoboCop's technology."
+          ],
+          "_id": "69188a507c34250cfedea099"
+        },
+        {
+          "title": "Execution",
+          "items": [
+            "Launch a targeted social media campaign to engage job seekers, aiming for 5,000 interactions within the first six months and 10,000 active users by year-end.",
+            "Implement a streamlined onboarding process to ensure 90% of new users receive personalized guidance within 24 hours of sign-up.",
+            "Establish a continuous training program for team members focused on AI advancements and user engagement strategies to enhance service quality."
+          ],
+          "_id": "69188a507c34250cfedea09a"
+        }
+      ]
+    },
+    "updatedAt": "2026-01-03T15:18:11.555Z",
+    "workspace": "695933315c7dd36581e83d9d"
+  },
+  {
+    "_id": "691e239f4034c61e8614d04b",
+    "user": "6916186423f83e5b9bae0f22",
+    "__v": 6,
+    "createdAt": "2025-11-19T20:07:59.489Z",
+    "summary": {
+      "kpis": {
+        "overdueTasks": 4,
+        "activeTeamMembers": 4
+      },
+      "milestones": [
+        {
+          "label": "Q1 Product Launch",
+          "due": "Mar 12, 2025",
+          "_id": "691e239f1db005e9f93f71bd"
+        },
+        {
+          "label": "Budget review",
+          "due": "Apr 21, 2025",
+          "_id": "691e239f1db005e9f93f71be"
+        },
+        {
+          "label": "Team retro",
+          "due": "Apr 30, 2025",
+          "_id": "691e239f1db005e9f93f71bf"
+        }
+      ],
+      "departmentProgress": [
+        {
+          "name": "Engineering",
+          "percent": 87,
+          "_id": "691e239f1db005e9f93f71ba"
+        },
+        {
+          "name": "Marketing",
+          "percent": 69,
+          "_id": "691e239f1db005e9f93f71bb"
+        },
+        {
+          "name": "Sales",
+          "percent": 62,
+          "_id": "691e239f1db005e9f93f71bc"
+        }
+      ],
+      "financeChart": [
+        {
+          "name": "Jan",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "691e239f1db005e9f93f71b4"
+        },
+        {
+          "name": "Feb",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "691e239f1db005e9f93f71b5"
+        },
+        {
+          "name": "Mar",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "691e239f1db005e9f93f71b6"
+        },
+        {
+          "name": "Apr",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "691e239f1db005e9f93f71b7"
+        },
+        {
+          "name": "May",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "691e239f1db005e9f93f71b8"
+        },
+        {
+          "name": "Jun",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "691e239f1db005e9f93f71b9"
+        }
+      ],
+      "activePlans": [
+        {
+          "title": "Increase qualified inbound leads by 25%",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "691e239f1db005e9f93f71b0"
+        },
+        {
+          "title": "Launch revised website by October 1",
+          "status": "Completed",
+          "owner": "Sarah Fredrick",
+          "_id": "691e239f1db005e9f93f71b1"
+        },
+        {
+          "title": "Reduce churn to < 3%",
+          "status": "On track",
+          "owner": "Sarah Fredrick",
+          "_id": "691e239f1db005e9f93f71b2"
+        },
+        {
+          "title": "Improve NPS to 45",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "691e239f1db005e9f93f71b3"
+        }
+      ],
+      "insights": [
+        "Pre-launch: Finalize the financial plan by March 6, 2026, ensuring it outlines startup costs and funding sources to support marketing and technology development.",
+        "Pre-launch: Develop and deploy the technology platform, focusing on user experience and functionality for personalized AI career guidance, with a budget of $5,000, due by March 6, 2026.",
+        "Pre-launch: Create a detailed marketing plan including targeted campaigns and a referral program to attract at least 1,000 active users, with a budget of $3,000, due by March 6, 2026."
+      ],
+      "insightSections": [
+        {
+          "title": "Pre-launch",
+          "items": [
+            "Pre-launch: Finalize the financial plan by March 6, 2026, ensuring it outlines startup costs and funding sources to support marketing and technology development.",
+            "Pre-launch: Develop and deploy the technology platform, focusing on user experience and functionality for personalized AI career guidance, with a budget of $5,000, due by March 6, 2026.",
+            "Pre-launch: Create a detailed marketing plan including targeted campaigns and a referral program to attract at least 1,000 active users, with a budget of $3,000, due by March 6, 2026."
+          ],
+          "_id": "69387a5a3754d612458be81c"
+        },
+        {
+          "title": "Execution",
+          "items": [
+            "Execution: Launch targeted marketing campaigns by December 8, 2025, with a goal of attracting 1,000 active users and engaging with local tech companies.",
+            "Execution: Establish partnerships with at least 5 local tech companies by March 6, 2026, focusing on internship and job placement opportunities for users.",
+            "Execution: Build a user-centric support team with a budget of $2,000, aimed at achieving a user satisfaction score of 4.5 or higher within the first year."
+          ],
+          "_id": "69387a5a3754d612458be81d"
+        }
+      ],
+      "snapshot": {
+        "vision": "To become a leading business in…",
+        "ubp": "We at CentraLearn promise to offer personalized AI-driven career guidance, helping users navigate the tech job market with tailored advice and resources based on their unique skills and aspirations."
+      },
+      "team": [
+        {
+          "name": "Gabriel Thompson",
+          "role": "CEO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "691e239f1db005e9f93f71ac"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "COO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "691e239f1db005e9f93f71ad"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CTO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "691e239f1db005e9f93f71ae"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CFO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "691e239f1db005e9f93f71af"
+        }
+      ]
+    },
+    "updatedAt": "2026-01-03T15:17:39.984Z",
+    "workspace": "695130344db73e493a55c301"
+  },
+  {
+    "_id": "692122da176561fb207feb6f",
+    "user": "691656389b78850187cfb550",
+    "__v": 3,
+    "createdAt": "2025-11-22T02:41:29.996Z",
+    "summary": {
+      "kpis": {
+        "overdueTasks": 4,
+        "activeTeamMembers": 4
+      },
+      "milestones": [
+        {
+          "label": "Q1 Product Launch",
+          "due": "Mar 12, 2025",
+          "_id": "692122daacdc5d679d19bfd6"
+        },
+        {
+          "label": "Budget review",
+          "due": "Apr 21, 2025",
+          "_id": "692122daacdc5d679d19bfd7"
+        },
+        {
+          "label": "Team retro",
+          "due": "Apr 30, 2025",
+          "_id": "692122daacdc5d679d19bfd8"
+        }
+      ],
+      "departmentProgress": [
+        {
+          "name": "Engineering",
+          "percent": 87,
+          "_id": "692122daacdc5d679d19bfd3"
+        },
+        {
+          "name": "Marketing",
+          "percent": 69,
+          "_id": "692122daacdc5d679d19bfd4"
+        },
+        {
+          "name": "Sales",
+          "percent": 62,
+          "_id": "692122daacdc5d679d19bfd5"
+        }
+      ],
+      "financeChart": [
+        {
+          "name": "Jan",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "692122daacdc5d679d19bfcd"
+        },
+        {
+          "name": "Feb",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "692122daacdc5d679d19bfce"
+        },
+        {
+          "name": "Mar",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "692122daacdc5d679d19bfcf"
+        },
+        {
+          "name": "Apr",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "692122daacdc5d679d19bfd0"
+        },
+        {
+          "name": "May",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "692122daacdc5d679d19bfd1"
+        },
+        {
+          "name": "Jun",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "692122daacdc5d679d19bfd2"
+        }
+      ],
+      "activePlans": [
+        {
+          "title": "Increase qualified inbound leads by 25%",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "692122daacdc5d679d19bfc9"
+        },
+        {
+          "title": "Launch revised website by October 1",
+          "status": "Completed",
+          "owner": "Sarah Fredrick",
+          "_id": "692122daacdc5d679d19bfca"
+        },
+        {
+          "title": "Reduce churn to < 3%",
+          "status": "On track",
+          "owner": "Sarah Fredrick",
+          "_id": "692122daacdc5d679d19bfcb"
+        },
+        {
+          "title": "Improve NPS to 45",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "692122daacdc5d679d19bfcc"
+        }
+      ],
+      "insights": [
+        "Allocate $5,000 budget for digital marketing campaigns, focusing on social media ads to reach 500 organizations by February 17, 2026.",
+        "Develop a comprehensive onboarding and training program for new users, ensuring 80% feel confident within their first month by the due date.",
+        "Secure partnerships with at least 5 industry leaders or influencers by year-end to enhance credibility and expand reach."
+      ],
+      "snapshot": {
+        "vision": "To become a leading business in…",
+        "ubp": "Plan Genie simplifies complex planning processes by integrating strategy, structure, and forecasting in one user-friendly platform, enabling organizations to transform ideas into actionable plans effortlessly."
+      },
+      "team": [
+        {
+          "name": "Gabriel Thompson",
+          "role": "CEO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "692122daacdc5d679d19bfc5"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "COO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "692122daacdc5d679d19bfc6"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CTO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "692122daacdc5d679d19bfc7"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CFO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "692122daacdc5d679d19bfc8"
+        }
+      ],
+      "insightSections": [
+        {
+          "title": "Pre-launch",
+          "items": [
+            "Allocate $5,000 budget for digital marketing campaigns, focusing on social media ads to reach 500 organizations by February 17, 2026.",
+            "Develop a comprehensive onboarding and training program for new users, ensuring 80% feel confident within their first month by the due date.",
+            "Secure partnerships with at least 5 industry leaders or influencers by year-end to enhance credibility and expand reach."
+          ],
+          "_id": "6921232eacdc5d679d19c04c"
+        },
+        {
+          "title": "Execution",
+          "items": [
+            "Implement a financial management system with a $5,000 budget to accurately track expenses and revenues and support achieving $10,000 in monthly recurring revenue.",
+            "Create a user-friendly onboarding process allowing new users to access Plan Genie and essential resources within 24 hours of sign-up.",
+            "Complete the technology infrastructure development for Plan Genie, ensuring 99.9% uptime and integration of advanced forecasting tools by year-end."
+          ],
+          "_id": "6921232eacdc5d679d19c04d"
+        }
+      ]
+    },
+    "updatedAt": "2026-01-03T15:17:43.489Z",
+    "workspace": "695933165c7dd36581e83d4f"
+  },
+  {
+    "_id": "69275149176561fb2089ce89",
+    "user": "6924e87d9601b2cbdbd90fd7",
+    "__v": 1,
+    "createdAt": "2025-11-26T19:13:13.067Z",
+    "summary": {
+      "kpis": {
+        "overdueTasks": 4,
+        "activeTeamMembers": 4
+      },
+      "milestones": [
+        {
+          "label": "Q1 Product Launch",
+          "due": "Mar 12, 2025",
+          "_id": "69275149b3af06c668790130"
+        },
+        {
+          "label": "Budget review",
+          "due": "Apr 21, 2025",
+          "_id": "69275149b3af06c668790131"
+        },
+        {
+          "label": "Team retro",
+          "due": "Apr 30, 2025",
+          "_id": "69275149b3af06c668790132"
+        }
+      ],
+      "departmentProgress": [
+        {
+          "name": "Engineering",
+          "percent": 87,
+          "_id": "69275149b3af06c66879012d"
+        },
+        {
+          "name": "Marketing",
+          "percent": 69,
+          "_id": "69275149b3af06c66879012e"
+        },
+        {
+          "name": "Sales",
+          "percent": 62,
+          "_id": "69275149b3af06c66879012f"
+        }
+      ],
+      "financeChart": [
+        {
+          "name": "Jan",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69275149b3af06c668790127"
+        },
+        {
+          "name": "Feb",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69275149b3af06c668790128"
+        },
+        {
+          "name": "Mar",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69275149b3af06c668790129"
+        },
+        {
+          "name": "Apr",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "69275149b3af06c66879012a"
+        },
+        {
+          "name": "May",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69275149b3af06c66879012b"
+        },
+        {
+          "name": "Jun",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "69275149b3af06c66879012c"
+        }
+      ],
+      "activePlans": [
+        {
+          "title": "Increase qualified inbound leads by 25%",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "69275149b3af06c668790123"
+        },
+        {
+          "title": "Launch revised website by October 1",
+          "status": "Completed",
+          "owner": "Sarah Fredrick",
+          "_id": "69275149b3af06c668790124"
+        },
+        {
+          "title": "Reduce churn to < 3%",
+          "status": "On track",
+          "owner": "Sarah Fredrick",
+          "_id": "69275149b3af06c668790125"
+        },
+        {
+          "title": "Improve NPS to 45",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "69275149b3af06c668790126"
+        }
+      ],
+      "insights": [
+        "Launch targeted digital marketing campaigns to reach 50,000 potential users by showcasing AI-driven planning benefits, ensuring 10,000 monthly reach with 25% engagement.",
+        "Implement a financial tracking system for real-time insights into budgeting and forecasting, aiming for a cash flow positive status by year-end to support the $250,000 revenue target.",
+        "Streamline the onboarding process to reduce average time to 15 minutes, ensuring 90% of new users receive personalized support during their first week."
+      ],
+      "snapshot": {
+        "vision": "To become a leading business in…",
+        "ubp": "With Plan Genie, users gain real-time access to AI-driven planning resources that simplify complex decision-making, making strategic growth easier for both individuals and organizations."
+      },
+      "team": [
+        {
+          "name": "Gabriel Thompson",
+          "role": "CEO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69275149b3af06c66879011f"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "COO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69275149b3af06c668790120"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CTO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69275149b3af06c668790121"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CFO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69275149b3af06c668790122"
+        }
+      ],
+      "insightSections": [
+        {
+          "title": "Execution",
+          "items": [
+            "Launch targeted digital marketing campaigns to reach 50,000 potential users by showcasing AI-driven planning benefits, ensuring 10,000 monthly reach with 25% engagement.",
+            "Implement a financial tracking system for real-time insights into budgeting and forecasting, aiming for a cash flow positive status by year-end to support the $250,000 revenue target.",
+            "Streamline the onboarding process to reduce average time to 15 minutes, ensuring 90% of new users receive personalized support during their first week."
+          ],
+          "_id": "69275152b3af06c668790149"
+        },
+        {
+          "title": "Partnership Development",
+          "items": [
+            "Establish three strategic partnerships with industry leaders to boost platform capabilities and user engagement by 50%, focusing on collaboration integration efforts.",
+            "Allocate a budget of $50,000 for partnership development to enhance service offerings and attract a diverse user base, aligning with the goal of increasing paid subscriptions.",
+            "Build a skilled and diverse team of 5-10 members by the end of the first year, ensuring that at least 80% have expertise in AI and strategic planning to support growth."
+          ],
+          "_id": "69275152b3af06c66879014a"
+        }
+      ]
+    },
+    "updatedAt": "2026-01-03T15:18:59.128Z",
+    "workspace": "695933615c7dd36581e83e2c"
+  },
+  {
+    "_id": "6927bf36176561fb208a195f",
+    "user": "6927a20bddeefc8082b0460b",
+    "__v": 1,
+    "createdAt": "2025-11-27T03:02:14.374Z",
+    "summary": {
+      "kpis": {
+        "overdueTasks": 4,
+        "activeTeamMembers": 4
+      },
+      "milestones": [
+        {
+          "label": "Q1 Product Launch",
+          "due": "Mar 12, 2025",
+          "_id": "6927bf36cf38443484cc03db"
+        },
+        {
+          "label": "Budget review",
+          "due": "Apr 21, 2025",
+          "_id": "6927bf36cf38443484cc03dc"
+        },
+        {
+          "label": "Team retro",
+          "due": "Apr 30, 2025",
+          "_id": "6927bf36cf38443484cc03dd"
+        }
+      ],
+      "departmentProgress": [
+        {
+          "name": "Engineering",
+          "percent": 87,
+          "_id": "6927bf36cf38443484cc03d8"
+        },
+        {
+          "name": "Marketing",
+          "percent": 69,
+          "_id": "6927bf36cf38443484cc03d9"
+        },
+        {
+          "name": "Sales",
+          "percent": 62,
+          "_id": "6927bf36cf38443484cc03da"
+        }
+      ],
+      "financeChart": [
+        {
+          "name": "Jan",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6927bf36cf38443484cc03d2"
+        },
+        {
+          "name": "Feb",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6927bf36cf38443484cc03d3"
+        },
+        {
+          "name": "Mar",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6927bf36cf38443484cc03d4"
+        },
+        {
+          "name": "Apr",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "6927bf36cf38443484cc03d5"
+        },
+        {
+          "name": "May",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6927bf36cf38443484cc03d6"
+        },
+        {
+          "name": "Jun",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "6927bf36cf38443484cc03d7"
+        }
+      ],
+      "activePlans": [
+        {
+          "title": "Increase qualified inbound leads by 25%",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "6927bf36cf38443484cc03ce"
+        },
+        {
+          "title": "Launch revised website by October 1",
+          "status": "Completed",
+          "owner": "Sarah Fredrick",
+          "_id": "6927bf36cf38443484cc03cf"
+        },
+        {
+          "title": "Reduce churn to < 3%",
+          "status": "On track",
+          "owner": "Sarah Fredrick",
+          "_id": "6927bf36cf38443484cc03d0"
+        },
+        {
+          "title": "Improve NPS to 45",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "6927bf36cf38443484cc03d1"
+        }
+      ],
+      "insights": [
+        "Launch targeted outreach campaigns with allocated $50,000 budget to increase brand awareness by 30% by February 2026.",
+        "Enhance monthly subscription sales through strategic partnerships, aiming for a 20% increase by February 2026.",
+        "Streamline the onboarding process to enable new users to utilize tools within one hour of sign-up by February 2026."
+      ],
+      "snapshot": {
+        "vision": "To become a leading business in…",
+        "ubp": "Plan Genie Inc. provides small and medium enterprises, startups, and social purpose organizations with customized business intelligence tools that facilitate data-driven decision-making without requiring extensive technical skills."
+      },
+      "team": [
+        {
+          "name": "Gabriel Thompson",
+          "role": "CEO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6927bf36cf38443484cc03ca"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "COO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6927bf36cf38443484cc03cb"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CTO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6927bf36cf38443484cc03cc"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CFO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6927bf36cf38443484cc03cd"
+        }
+      ],
+      "insightSections": [
+        {
+          "title": "Execution",
+          "items": [
+            "Launch targeted outreach campaigns with allocated $50,000 budget to increase brand awareness by 30% by February 2026.",
+            "Enhance monthly subscription sales through strategic partnerships, aiming for a 20% increase by February 2026.",
+            "Streamline the onboarding process to enable new users to utilize tools within one hour of sign-up by February 2026."
+          ],
+          "_id": "6927bf3fcf38443484cc03f4"
+        },
+        {
+          "title": "KPI & Review",
+          "items": [
+            "Monitor website traffic and user engagement metrics to evaluate the effectiveness of marketing and partnership initiatives by mid-2026.",
+            "Conduct quarterly feedback sessions to assess team engagement and implement improvements to achieve an 85% score by February 2026.",
+            "Evaluate the effectiveness of the sustainability framework by measuring the carbon footprint reduction for users by February 2026."
+          ],
+          "_id": "6927bf3fcf38443484cc03f5"
+        }
+      ]
+    },
+    "updatedAt": "2026-01-03T15:19:02.669Z",
+    "workspace": "695933655c7dd36581e83e39"
+  },
+  {
+    "_id": "69288e3e176561fb208aa086",
+    "user": "6928862ead92c429c71ea718",
+    "__v": 1,
+    "createdAt": "2025-11-27T17:45:34.696Z",
+    "summary": {
+      "kpis": {
+        "overdueTasks": 4,
+        "activeTeamMembers": 4
+      },
+      "milestones": [
+        {
+          "label": "Q1 Product Launch",
+          "due": "Mar 12, 2025",
+          "_id": "69288e3ead92c429c71ea861"
+        },
+        {
+          "label": "Budget review",
+          "due": "Apr 21, 2025",
+          "_id": "69288e3ead92c429c71ea862"
+        },
+        {
+          "label": "Team retro",
+          "due": "Apr 30, 2025",
+          "_id": "69288e3ead92c429c71ea863"
+        }
+      ],
+      "departmentProgress": [
+        {
+          "name": "Engineering",
+          "percent": 87,
+          "_id": "69288e3ead92c429c71ea85e"
+        },
+        {
+          "name": "Marketing",
+          "percent": 69,
+          "_id": "69288e3ead92c429c71ea85f"
+        },
+        {
+          "name": "Sales",
+          "percent": 62,
+          "_id": "69288e3ead92c429c71ea860"
+        }
+      ],
+      "financeChart": [
+        {
+          "name": "Jan",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69288e3ead92c429c71ea858"
+        },
+        {
+          "name": "Feb",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69288e3ead92c429c71ea859"
+        },
+        {
+          "name": "Mar",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69288e3ead92c429c71ea85a"
+        },
+        {
+          "name": "Apr",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "69288e3ead92c429c71ea85b"
+        },
+        {
+          "name": "May",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "69288e3ead92c429c71ea85c"
+        },
+        {
+          "name": "Jun",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "69288e3ead92c429c71ea85d"
+        }
+      ],
+      "activePlans": [
+        {
+          "title": "Increase qualified inbound leads by 25%",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "69288e3ead92c429c71ea854"
+        },
+        {
+          "title": "Launch revised website by October 1",
+          "status": "Completed",
+          "owner": "Sarah Fredrick",
+          "_id": "69288e3ead92c429c71ea855"
+        },
+        {
+          "title": "Reduce churn to < 3%",
+          "status": "On track",
+          "owner": "Sarah Fredrick",
+          "_id": "69288e3ead92c429c71ea856"
+        },
+        {
+          "title": "Improve NPS to 45",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "69288e3ead92c429c71ea857"
+        }
+      ],
+      "insights": [
+        "Launch the targeted educational marketing campaign by February 2026, aiming for a 30% increase in brand awareness across 10 countries.",
+        "Build and train the customer support team to ensure personalized onboarding experiences, targeting a 90% satisfaction rate by February 2026.",
+        "Establish partnerships with at least five industry influencers by February 2026 to enhance credibility and drive user engagement."
+      ],
+      "snapshot": {
+        "vision": "To become a leading business in…",
+        "ubp": "Plan Genie helps startups, social purpose organizations, and SMEs make informed decisions by offering customized insights and actionable steps, turning complex data into straightforward growth strategies."
+      },
+      "team": [
+        {
+          "name": "Gabriel Thompson",
+          "role": "CEO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69288e3ead92c429c71ea850"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "COO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69288e3ead92c429c71ea851"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CTO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69288e3ead92c429c71ea852"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CFO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "69288e3ead92c429c71ea853"
+        }
+      ],
+      "insightSections": [
+        {
+          "title": "Execution",
+          "items": [
+            "Launch the targeted educational marketing campaign by February 2026, aiming for a 30% increase in brand awareness across 10 countries.",
+            "Build and train the customer support team to ensure personalized onboarding experiences, targeting a 90% satisfaction rate by February 2026.",
+            "Establish partnerships with at least five industry influencers by February 2026 to enhance credibility and drive user engagement."
+          ],
+          "_id": "69288e46ad92c429c71ea87a"
+        },
+        {
+          "title": "KPI & Review",
+          "items": [
+            "Evaluate the effectiveness of the marketing campaign and user engagement metrics within one month of launch to ensure alignment with the 30% increase goal.",
+            "Review client onboarding feedback within the first month post-launch to assess the satisfaction rate and make necessary adjustments.",
+            "Analyze the success of partnership initiatives after six months to measure their impact on brand awareness and user engagement."
+          ],
+          "_id": "69288e46ad92c429c71ea87b"
+        }
+      ]
+    },
+    "updatedAt": "2026-01-03T15:19:06.269Z",
+    "workspace": "695933685c7dd36581e83e46"
+  },
+  {
+    "_id": "6937fcfa176561fb2096b463",
+    "user": "6937ecb06f2bac8490e46318",
+    "__v": 1,
+    "createdAt": "2025-12-09T10:42:02.080Z",
+    "summary": {
+      "kpis": {
+        "overdueTasks": 4,
+        "activeTeamMembers": 4
+      },
+      "milestones": [
+        {
+          "label": "Q1 Product Launch",
+          "due": "Mar 12, 2025",
+          "_id": "6937fcfa231c61769d279f3a"
+        },
+        {
+          "label": "Budget review",
+          "due": "Apr 21, 2025",
+          "_id": "6937fcfa231c61769d279f3b"
+        },
+        {
+          "label": "Team retro",
+          "due": "Apr 30, 2025",
+          "_id": "6937fcfa231c61769d279f3c"
+        }
+      ],
+      "departmentProgress": [
+        {
+          "name": "Engineering",
+          "percent": 87,
+          "_id": "6937fcfa231c61769d279f37"
+        },
+        {
+          "name": "Marketing",
+          "percent": 69,
+          "_id": "6937fcfa231c61769d279f38"
+        },
+        {
+          "name": "Sales",
+          "percent": 62,
+          "_id": "6937fcfa231c61769d279f39"
+        }
+      ],
+      "financeChart": [
+        {
+          "name": "Jan",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6937fcfa231c61769d279f31"
+        },
+        {
+          "name": "Feb",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6937fcfa231c61769d279f32"
+        },
+        {
+          "name": "Mar",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6937fcfa231c61769d279f33"
+        },
+        {
+          "name": "Apr",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "6937fcfa231c61769d279f34"
+        },
+        {
+          "name": "May",
+          "Revenue": 10,
+          "Cost": 7,
+          "_id": "6937fcfa231c61769d279f35"
+        },
+        {
+          "name": "Jun",
+          "Revenue": 19,
+          "Cost": 15,
+          "_id": "6937fcfa231c61769d279f36"
+        }
+      ],
+      "activePlans": [
+        {
+          "title": "Increase qualified inbound leads by 25%",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "6937fcfa231c61769d279f2d"
+        },
+        {
+          "title": "Launch revised website by October 1",
+          "status": "Completed",
+          "owner": "Sarah Fredrick",
+          "_id": "6937fcfa231c61769d279f2e"
+        },
+        {
+          "title": "Reduce churn to < 3%",
+          "status": "On track",
+          "owner": "Sarah Fredrick",
+          "_id": "6937fcfa231c61769d279f2f"
+        },
+        {
+          "title": "Improve NPS to 45",
+          "status": "In progress",
+          "owner": "Sarah Fredrick",
+          "_id": "6937fcfa231c61769d279f30"
+        }
+      ],
+      "insights": [
+        "Launch targeted marketing campaigns by March 9, 2026, to attract 50 new small business clients in Vancouver, using online ads and local networking events.",
+        "Finalize recruitment and training of team members by March 9, 2026, to ensure exceptional client onboarding and support for at least 50 small business clients.",
+        "Complete the development of the scalable software infrastructure by March 9, 2026, to support the user-friendly platform and meet the needs of small businesses."
+      ],
+      "snapshot": {
+        "vision": "To become a leading business in…",
+        "ubp": "Plan Genie Inc. offers tailored IT solutions for small businesses in Vancouver, focusing on user-friendly software that simplifies project management and streamlines operations."
+      },
+      "team": [
+        {
+          "name": "Gabriel Thompson",
+          "role": "CEO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6937fcfa231c61769d279f29"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "COO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6937fcfa231c61769d279f2a"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CTO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6937fcfa231c61769d279f2b"
+        },
+        {
+          "name": "Gabriel Thompson",
+          "role": "CFO",
+          "note": "In charge of marketing and everything that has to do…",
+          "_id": "6937fcfa231c61769d279f2c"
+        }
+      ],
+      "insightSections": [
+        {
+          "title": "Execution",
+          "items": [
+            "Launch targeted marketing campaigns by March 9, 2026, to attract 50 new small business clients in Vancouver, using online ads and local networking events.",
+            "Finalize recruitment and training of team members by March 9, 2026, to ensure exceptional client onboarding and support for at least 50 small business clients.",
+            "Complete the development of the scalable software infrastructure by March 9, 2026, to support the user-friendly platform and meet the needs of small businesses."
+          ],
+          "_id": "6937fd06231c61769d279f53"
+        },
+        {
+          "title": "KPI & Review",
+          "items": [
+            "Monitor the number of new small business clients engaged through marketing campaigns and partnerships to assess progress towards the goal of 50 clients by the end of the year.",
+            "Evaluate customer satisfaction ratings through feedback surveys post-onboarding to ensure an 85% satisfaction rating is achieved within the first year.",
+            "Review financial performance to ensure a net positive cash flow is achieved within the first year, aligning expenditures with the allocated budget of $57,500."
+          ],
+          "_id": "6937fd06231c61769d279f54"
+        }
+      ]
+    },
+    "updatedAt": "2026-01-03T15:19:26.803Z",
+    "workspace": "6959337d5c7dd36581e83e94"
+  }
+]

@@ -1,0 +1,5081 @@
+[
+  {
+    "_id": "695130344db73e493a55c301",
+    "user": "6916186423f83e5b9bae0f22",
+    "wid": "ws_ea1c091967be",
+    "name": "CentraLearn",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2025-12-28T13:27:16.098Z",
+    "createdAt": "2025-12-28T13:27:16.100Z",
+    "updatedAt": "2026-01-23T14:32:51.912Z",
+    "__v": 0,
+    "aiSettings": {
+      "enabled": true,
+      "features": {
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true,
+        "financialSuggestions": true,
+        "marketAnalysis": true,
+        "swotAnalysis": true,
+        "valueSuggestions": true,
+        "visionSuggestions": true
+      }
+    },
+    "exportSettings": {
+      "content": {
+        "departments": true,
+        "financials": true,
+        "plan": true,
+        "strategyCanvas": true
+      },
+      "enabled": true,
+      "formats": {
+        "csv": true,
+        "docx": true,
+        "pdf": true
+      }
+    },
+    "industry": "",
+    "lastActivityAt": "2026-01-23T14:32:51.892Z",
+    "notificationPreferences": {
+      "email": {
+        "dailyWish": true,
+        "deadlineAlerts": true,
+        "reviewReminders": true,
+        "teamActivity": true,
+        "weeklyDigest": true
+      },
+      "inApp": {
+        "aiInsights": true,
+        "deadlineAlerts": true,
+        "reviewReminders": true,
+        "taskUpdates": true,
+        "teamActivity": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9
+      },
+      "emailFrequency": {
+        "dailyWish": "daily",
+        "deadlineAlerts": "daily",
+        "digest": "weekly",
+        "reviewReminders": "weekly",
+        "teamActivity": "weekly"
+      }
+    }
+  },
+  {
+    "_id": "695932ee5c7dd36581e83cae",
+    "user": "68d41682bf62234695db994b",
+    "wid": "ws_mjyg4sm2_j0qa5l",
+    "name": "My Business",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:02.048Z",
+    "createdAt": "2026-01-03T15:17:02.051Z",
+    "updatedAt": "2026-01-03T15:17:02.051Z",
+    "__v": 0
+  },
+  {
+    "_id": "695932f25c7dd36581e83cd0",
+    "user": "6902f6e58d0d3a49714de018",
+    "wid": "ws_mjyg4w8m_7qhtyb",
+    "name": "Kariiya Incorporated",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:06.742Z",
+    "createdAt": "2026-01-03T15:17:06.743Z",
+    "updatedAt": "2026-01-03T15:17:06.743Z",
+    "__v": 0
+  },
+  {
+    "_id": "695932f65c7dd36581e83cdd",
+    "user": "690386eda6c2e2916c54e226",
+    "wid": "ws_mjyg4ytq_h7ogk7",
+    "name": "My Business",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:10.095Z",
+    "createdAt": "2026-01-03T15:17:10.095Z",
+    "updatedAt": "2026-01-03T15:17:10.095Z",
+    "__v": 0
+  },
+  {
+    "_id": "695932f95c7dd36581e83cea",
+    "user": "6908d6fe5734a7104a4775a5",
+    "wid": "ws_mjyg51g1_a061h4",
+    "name": "Kariiya",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:13.490Z",
+    "createdAt": "2026-01-03T15:17:13.490Z",
+    "updatedAt": "2026-01-03T15:17:13.490Z",
+    "__v": 0
+  },
+  {
+    "_id": "695932fc5c7dd36581e83cf7",
+    "user": "690e971b4137786ffb04ab19",
+    "wid": "ws_mjyg540d_anijor",
+    "name": "Vision Inc.",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:16.813Z",
+    "createdAt": "2026-01-03T15:17:16.814Z",
+    "updatedAt": "2026-01-03T15:17:16.814Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933005c7dd36581e83d04",
+    "user": "6911b9248d77c2bd86c86a6c",
+    "wid": "ws_mjyg56vv_pp64oy",
+    "name": "My Business",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:20.540Z",
+    "createdAt": "2026-01-03T15:17:20.540Z",
+    "updatedAt": "2026-01-03T15:17:20.540Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933045c7dd36581e83d11",
+    "user": "6911bc651a7f673046cc55dd",
+    "wid": "ws_mjyg59n4_pj0r0k",
+    "name": "CentraLearn",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:24.112Z",
+    "createdAt": "2026-01-03T15:17:24.112Z",
+    "updatedAt": "2026-01-03T15:17:24.112Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933075c7dd36581e83d1e",
+    "user": "69121f44fcc9679d5cccd34d",
+    "wid": "ws_mjyg5cjx_6jp3k7",
+    "name": "CentraLearn",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:27.885Z",
+    "createdAt": "2026-01-03T15:17:27.885Z",
+    "updatedAt": "2026-01-03T15:17:27.885Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959330b5c7dd36581e83d2b",
+    "user": "6914be3b4a5b21ac61c18282",
+    "wid": "ws_mjyg5fbv_tii45d",
+    "name": "My Business",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:31.484Z",
+    "createdAt": "2026-01-03T15:17:31.484Z",
+    "updatedAt": "2026-01-03T15:17:31.484Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959330e5c7dd36581e83d38",
+    "user": "6914c08d4a5b21ac61c18296",
+    "wid": "ws_mjyg5hvg_w1nrk5",
+    "name": "Plan Genie",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:34.780Z",
+    "createdAt": "2026-01-03T15:17:34.781Z",
+    "updatedAt": "2026-01-03T15:17:34.781Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933165c7dd36581e83d4f",
+    "user": "691656389b78850187cfb550",
+    "wid": "ws_mjyg5nn5_rnzc1p",
+    "name": "McKinsey & Company",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:42.257Z",
+    "createdAt": "2026-01-03T15:17:42.258Z",
+    "updatedAt": "2026-01-03T15:17:42.258Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933195c7dd36581e83d5c",
+    "user": "691762ae57bf6af046cb2be0",
+    "wid": "ws_mjyg5qa1_uuvje9",
+    "name": "Plan Genie",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:45.673Z",
+    "createdAt": "2026-01-03T15:17:45.673Z",
+    "updatedAt": "2026-01-03T15:17:45.673Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959331d5c7dd36581e83d69",
+    "user": "6917af15ecc82674cfa7b7ab",
+    "wid": "ws_mjyg5t8b_z3qlf8",
+    "name": "Plan Genie",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:49.500Z",
+    "createdAt": "2026-01-03T15:17:49.500Z",
+    "updatedAt": "2026-01-03T15:17:49.500Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933205c7dd36581e83d76",
+    "user": "6917b020ecc82674cfa7b7fc",
+    "wid": "ws_mjyg5vpw_6bw3q7",
+    "name": "My Business",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:52.725Z",
+    "createdAt": "2026-01-03T15:17:52.725Z",
+    "updatedAt": "2026-01-03T15:17:52.725Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933245c7dd36581e83d83",
+    "user": "6917b25eecc82674cfa7b914",
+    "wid": "ws_mjyg5yka_rfe7ir",
+    "name": "My Business",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:56.410Z",
+    "createdAt": "2026-01-03T15:17:56.411Z",
+    "updatedAt": "2026-01-03T15:17:56.411Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933275c7dd36581e83d90",
+    "user": "691882347c34250cfede9ef8",
+    "wid": "ws_mjyg617h_9qs8a9",
+    "name": "CentraLearn",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:17:59.837Z",
+    "createdAt": "2026-01-03T15:17:59.837Z",
+    "updatedAt": "2026-01-03T15:17:59.837Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933315c7dd36581e83d9d",
+    "user": "6918875e7c34250cfede9f6d",
+    "wid": "ws_mjyg68dp_z0gz5z",
+    "name": "RoboCop",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:09.133Z",
+    "createdAt": "2026-01-03T15:18:09.134Z",
+    "updatedAt": "2026-01-03T15:18:09.134Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933385c7dd36581e83daa",
+    "user": "6918d5ba5b2c76b30b0c9cb2",
+    "wid": "ws_mjyg6dvv_o5mrl0",
+    "name": "Plan Genie",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:16.267Z",
+    "createdAt": "2026-01-03T15:18:16.268Z",
+    "updatedAt": "2026-01-03T15:18:16.268Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959333d5c7dd36581e83db7",
+    "user": "691a9f882dc9812ead667608",
+    "wid": "ws_mjyg6i46_eicrdp",
+    "name": "VoloInc",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:21.751Z",
+    "createdAt": "2026-01-03T15:18:21.751Z",
+    "updatedAt": "2026-01-03T15:18:21.751Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933425c7dd36581e83dc4",
+    "user": "691aac329c24195fa5b6f4d8",
+    "wid": "ws_mjyg6lmb_8kju7e",
+    "name": "Plan Genie Inc.",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:26.292Z",
+    "createdAt": "2026-01-03T15:18:26.292Z",
+    "updatedAt": "2026-01-03T15:18:26.292Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933465c7dd36581e83dd1",
+    "user": "691b68e7ec4e53ba70f95019",
+    "wid": "ws_mjyg6opz_d696u5",
+    "name": "ADV.NG",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:30.311Z",
+    "createdAt": "2026-01-03T15:18:30.312Z",
+    "updatedAt": "2026-01-03T15:18:30.312Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959334a5c7dd36581e83dde",
+    "user": "691b732dd57f435823602a99",
+    "wid": "ws_mjyg6s2d_55wl74",
+    "name": "CentraLearn",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:34.645Z",
+    "createdAt": "2026-01-03T15:18:34.646Z",
+    "updatedAt": "2026-01-03T15:18:34.646Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959334e5c7dd36581e83deb",
+    "user": "691b7759d57f435823602b0e",
+    "wid": "ws_mjyg6vbl_dq858r",
+    "name": "CentraLearn",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:38.866Z",
+    "createdAt": "2026-01-03T15:18:38.866Z",
+    "updatedAt": "2026-01-03T15:18:38.866Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933525c7dd36581e83df8",
+    "user": "691b7a2ad57f435823602b47",
+    "wid": "ws_mjyg6ydy_as60lo",
+    "name": "CentraLearn",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:42.839Z",
+    "createdAt": "2026-01-03T15:18:42.839Z",
+    "updatedAt": "2026-01-03T15:18:42.839Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933565c7dd36581e83e05",
+    "user": "691e10ab32e5641ace6e7417",
+    "wid": "ws_mjyg71ew_n630pm",
+    "name": "Kariiya",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:46.761Z",
+    "createdAt": "2026-01-03T15:18:46.761Z",
+    "updatedAt": "2026-01-03T15:18:46.761Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959335a5c7dd36581e83e12",
+    "user": "691e95df62cc2181d30e881a",
+    "wid": "ws_mjyg7474_pd5t2d",
+    "name": "Centralearn",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:50.369Z",
+    "createdAt": "2026-01-03T15:18:50.369Z",
+    "updatedAt": "2026-01-03T15:18:50.369Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959335e5c7dd36581e83e1f",
+    "user": "69232b349536cb98c29df1ec",
+    "wid": "ws_mjyg770f_c24l13",
+    "name": "CentraLearn",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:54.015Z",
+    "createdAt": "2026-01-03T15:18:54.016Z",
+    "updatedAt": "2026-01-03T15:18:54.016Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933615c7dd36581e83e2c",
+    "user": "6924e87d9601b2cbdbd90fd7",
+    "wid": "ws_mjyg79sv_lmprrj",
+    "name": "Plan Genie Inc.",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:18:57.631Z",
+    "createdAt": "2026-01-03T15:18:57.632Z",
+    "updatedAt": "2026-01-03T15:18:57.632Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933655c7dd36581e83e39",
+    "user": "6927a20bddeefc8082b0460b",
+    "wid": "ws_mjyg7cr1_ix61qo",
+    "name": "Plan Genie Inc.",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:01.454Z",
+    "createdAt": "2026-01-03T15:19:01.455Z",
+    "updatedAt": "2026-01-03T15:19:01.455Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933685c7dd36581e83e46",
+    "user": "6928862ead92c429c71ea718",
+    "wid": "ws_mjyg7fh8_8g5im7",
+    "name": "Plan Genie Inc.",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:04.988Z",
+    "createdAt": "2026-01-03T15:19:04.989Z",
+    "updatedAt": "2026-01-03T15:19:04.989Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933705c7dd36581e83e60",
+    "user": "692965ec0eb4a4cb6c06c7a3",
+    "wid": "ws_mjyg7l3b_nwafx8",
+    "name": "Plan Genie Inc.",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:12.263Z",
+    "createdAt": "2026-01-03T15:19:12.263Z",
+    "updatedAt": "2026-01-03T15:19:12.263Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933735c7dd36581e83e6d",
+    "user": "6931c24c1a8ed5778dcc7f10",
+    "wid": "ws_mjyg7nnv_9cctch",
+    "name": "Dacentric",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:15.595Z",
+    "createdAt": "2026-01-03T15:19:15.595Z",
+    "updatedAt": "2026-01-03T15:19:15.595Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933765c7dd36581e83e7a",
+    "user": "693501e815e5d205196dc169",
+    "wid": "ws_mjyg7q72_6t54wj",
+    "name": "Plan Genie Inc.",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:18.878Z",
+    "createdAt": "2026-01-03T15:19:18.878Z",
+    "updatedAt": "2026-01-03T15:19:18.878Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959337a5c7dd36581e83e87",
+    "user": "6937922c99a2a068c7fe6c28",
+    "wid": "ws_mjyg7sre_x3wprl",
+    "name": "My Business",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:22.203Z",
+    "createdAt": "2026-01-03T15:19:22.203Z",
+    "updatedAt": "2026-01-03T15:19:22.203Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959337d5c7dd36581e83e94",
+    "user": "6937ecb06f2bac8490e46318",
+    "wid": "ws_mjyg7vgo_oe3ynf",
+    "name": "Plan Genie Inc.",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:25.704Z",
+    "createdAt": "2026-01-03T15:19:25.705Z",
+    "updatedAt": "2026-01-03T15:19:25.705Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933815c7dd36581e83ea1",
+    "user": "693839929e14dd0b597662e0",
+    "wid": "ws_mjyg7y0t_hw4bkm",
+    "name": "My Business",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:29.021Z",
+    "createdAt": "2026-01-03T15:19:29.022Z",
+    "updatedAt": "2026-01-03T15:19:29.022Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933845c7dd36581e83eae",
+    "user": "693855799689ae7c71aff2b9",
+    "wid": "ws_mjyg80il_qt8pem",
+    "name": "My Business",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:32.254Z",
+    "createdAt": "2026-01-03T15:19:32.255Z",
+    "updatedAt": "2026-01-03T15:19:32.255Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959338b5c7dd36581e83ec8",
+    "user": "693a3a0d217ec1e63c2ac4e8",
+    "wid": "ws_mjyg864q_zwii2a",
+    "name": "RoboCop",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:39.531Z",
+    "createdAt": "2026-01-03T15:19:39.531Z",
+    "updatedAt": "2026-01-16T18:35:21.362Z",
+    "__v": 0,
+    "aiSettings": {
+      "enabled": true,
+      "features": {
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true,
+        "financialSuggestions": true,
+        "marketAnalysis": true,
+        "swotAnalysis": true,
+        "valueSuggestions": true,
+        "visionSuggestions": true
+      }
+    },
+    "exportSettings": {
+      "content": {
+        "departments": true,
+        "financials": true,
+        "plan": true,
+        "strategyCanvas": true
+      },
+      "enabled": true,
+      "formats": {
+        "csv": true,
+        "docx": true,
+        "pdf": true
+      }
+    },
+    "industry": "",
+    "lastActivityAt": "2026-01-16T18:35:21.361Z",
+    "notificationPreferences": {
+      "email": {
+        "dailyWish": true,
+        "deadlineAlerts": true,
+        "reviewReminders": true,
+        "teamActivity": true,
+        "weeklyDigest": true
+      },
+      "inApp": {
+        "aiInsights": true,
+        "deadlineAlerts": true,
+        "reviewReminders": true,
+        "taskUpdates": true,
+        "teamActivity": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9
+      }
+    }
+  },
+  {
+    "_id": "695933955c7dd36581e83eec",
+    "user": "694793f4d884ac6068070395",
+    "wid": "ws_mjyg8dqy_6au122",
+    "name": "Independent Consultant",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:49.402Z",
+    "createdAt": "2026-01-03T15:19:49.402Z",
+    "updatedAt": "2026-01-03T15:19:49.402Z",
+    "__v": 0
+  },
+  {
+    "_id": "695933985c7dd36581e83ef9",
+    "user": "6949d99d8d013b0739c9fb2b",
+    "wid": "ws_mjyg8ghv_f602hg",
+    "name": "Dysruptive Technologies",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:52.963Z",
+    "createdAt": "2026-01-03T15:19:52.964Z",
+    "updatedAt": "2026-01-03T15:19:52.964Z",
+    "__v": 0
+  },
+  {
+    "_id": "6959339c5c7dd36581e83f06",
+    "user": "6951c115fdfc7a5e3a82c77b",
+    "wid": "ws_mjyg8j8j_ahxfn1",
+    "name": "Aletheia Trust",
+    "description": "Default workspace from onboarding",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-03T15:19:56.515Z",
+    "createdAt": "2026-01-03T15:19:56.515Z",
+    "updatedAt": "2026-01-03T15:19:56.515Z",
+    "__v": 0
+  },
+  {
+    "_id": "695c2a97e32bf19ca9041682",
+    "user": "695b73b1f10a85ddc095fac5",
+    "wid": "ws_b84f7270b9fb",
+    "name": "My Business",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-05T21:18:15.781Z",
+    "createdAt": "2026-01-05T21:18:15.784Z",
+    "updatedAt": "2026-01-05T21:18:15.784Z",
+    "__v": 0
+  },
+  {
+    "_id": "695c2c8ee32bf19ca9041888",
+    "user": "695c2c8ee32bf19ca9041886",
+    "wid": "ws_8c62cafa427d",
+    "name": "Plan Genie Inc.",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-05T21:26:38.513Z",
+    "createdAt": "2026-01-05T21:26:38.514Z",
+    "updatedAt": "2026-01-05T21:26:38.514Z",
+    "__v": 0
+  },
+  {
+    "_id": "695da092db01be6299710a0a",
+    "user": "6916186423f83e5b9bae0f22",
+    "wid": "ws_085ceb374a0d",
+    "name": "Second coy",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": false,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-06T23:53:54.799Z",
+    "createdAt": "2026-01-06T23:53:54.799Z",
+    "updatedAt": "2026-01-14T13:15:40.414Z",
+    "__v": 0,
+    "aiSettings": {
+      "enabled": true,
+      "features": {
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true,
+        "financialSuggestions": true,
+        "marketAnalysis": true,
+        "swotAnalysis": true,
+        "valueSuggestions": true,
+        "visionSuggestions": true
+      }
+    },
+    "exportSettings": {
+      "content": {
+        "departments": true,
+        "financials": true,
+        "plan": true,
+        "strategyCanvas": true
+      },
+      "enabled": true,
+      "formats": {
+        "csv": true,
+        "docx": true,
+        "pdf": true
+      }
+    },
+    "industry": "",
+    "lastActivityAt": "2026-01-14T13:15:40.412Z",
+    "notificationPreferences": {
+      "email": {
+        "dailyWish": true,
+        "deadlineAlerts": true,
+        "reviewReminders": true,
+        "teamActivity": true,
+        "weeklyDigest": true
+      },
+      "inApp": {
+        "aiInsights": true,
+        "deadlineAlerts": true,
+        "reviewReminders": true,
+        "taskUpdates": true,
+        "teamActivity": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9
+      }
+    }
+  },
+  {
+    "_id": "695db41fdb01be6299711555",
+    "user": "695db41fdb01be6299711553",
+    "wid": "ws_274e8d4ee045",
+    "name": "Kariiya",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-07T01:17:19.357Z",
+    "createdAt": "2026-01-07T01:17:19.358Z",
+    "updatedAt": "2026-01-07T01:17:19.358Z",
+    "__v": 0
+  },
+  {
+    "_id": "695db6fedb01be6299712267",
+    "user": "695db6fedb01be6299712265",
+    "wid": "ws_2c9b72b026b2",
+    "name": "Kariiya",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-07T01:29:34.267Z",
+    "createdAt": "2026-01-07T01:29:34.267Z",
+    "updatedAt": "2026-01-07T01:29:34.267Z",
+    "__v": 0
+  },
+  {
+    "_id": "695dba2a3577214989df7fd3",
+    "user": "695dba2a3577214989df7fd1",
+    "wid": "ws_512733aa131d",
+    "name": "Roblox",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-07T01:43:06.550Z",
+    "createdAt": "2026-01-07T01:43:06.550Z",
+    "updatedAt": "2026-01-07T01:43:06.550Z",
+    "__v": 0
+  },
+  {
+    "_id": "695e24e53932b44a07110328",
+    "user": "695e24e53932b44a07110322",
+    "wid": "ws_5ef969c53bcd",
+    "name": "Ricky",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-07T09:18:29.446Z",
+    "createdAt": "2026-01-07T09:18:29.447Z",
+    "updatedAt": "2026-01-07T09:18:29.447Z",
+    "__v": 0
+  },
+  {
+    "_id": "695e48d3335e8ed061f7a1e0",
+    "user": "695e48d3335e8ed061f7a1de",
+    "wid": "ws_64d43121a6dd",
+    "name": "Robert Crest",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-07T11:51:47.483Z",
+    "createdAt": "2026-01-07T11:51:47.484Z",
+    "updatedAt": "2026-01-07T11:51:47.484Z",
+    "__v": 0
+  },
+  {
+    "_id": "695e7ebaf0d126a92c7efa18",
+    "user": "695e7ebaf0d126a92c7efa16",
+    "wid": "ws_de59f8c0cac9",
+    "name": "RRRR",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-07T15:41:46.790Z",
+    "createdAt": "2026-01-07T15:41:46.791Z",
+    "updatedAt": "2026-01-07T15:41:46.791Z",
+    "__v": 0
+  },
+  {
+    "_id": "695ec92dc140d79fea125b54",
+    "user": "695e772bf0d126a92c7ef36a",
+    "wid": "ws_6b234c24637a",
+    "name": "My Business",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-07T20:59:25.977Z",
+    "createdAt": "2026-01-07T20:59:25.977Z",
+    "updatedAt": "2026-01-07T20:59:25.977Z",
+    "__v": 0
+  },
+  {
+    "_id": "695ec92dc140d79fea125b56",
+    "user": "695e772bf0d126a92c7ef36a",
+    "wid": "ws_a65a082bb174",
+    "name": "My Business",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-07T20:59:25.991Z",
+    "createdAt": "2026-01-07T20:59:25.991Z",
+    "updatedAt": "2026-01-07T20:59:25.991Z",
+    "__v": 0
+  },
+  {
+    "_id": "695ec942c140d79fea125b5f",
+    "user": "695ec942c140d79fea125b5d",
+    "wid": "ws_940fc0504c61",
+    "name": "Plan Genie Inc.",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-07T20:59:46.459Z",
+    "createdAt": "2026-01-07T20:59:46.460Z",
+    "updatedAt": "2026-01-07T20:59:46.460Z",
+    "__v": 0
+  },
+  {
+    "_id": "695ed85fc140d79fea126b18",
+    "user": "695ec942c140d79fea125b5d",
+    "wid": "ws_d46fe1f76329",
+    "name": "Karanna Group",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": false,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-07T22:04:15.559Z",
+    "createdAt": "2026-01-07T22:04:15.559Z",
+    "updatedAt": "2026-01-07T22:04:15.559Z",
+    "__v": 0
+  },
+  {
+    "_id": "695fe8cf24ad03a594e2afb5",
+    "user": "695fe8ce24ad03a594e2afb3",
+    "wid": "ws_b6c054d45abf",
+    "name": "IfeCorp",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-08T17:26:39.005Z",
+    "createdAt": "2026-01-08T17:26:39.005Z",
+    "updatedAt": "2026-01-08T17:26:39.005Z",
+    "__v": 0
+  },
+  {
+    "_id": "696186387d3eed3d5355a16d",
+    "user": "695da1f0db01be6299710b18",
+    "wid": "ws_32570c53dd8c",
+    "name": "My Business",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-09T22:50:32.093Z",
+    "createdAt": "2026-01-09T22:50:32.093Z",
+    "updatedAt": "2026-01-09T22:50:32.093Z",
+    "__v": 0
+  },
+  {
+    "_id": "696186387d3eed3d5355a16f",
+    "user": "695da1f0db01be6299710b18",
+    "wid": "ws_b340483b4a31",
+    "name": "My Business",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-09T22:50:32.156Z",
+    "createdAt": "2026-01-09T22:50:32.157Z",
+    "updatedAt": "2026-01-09T22:50:32.157Z",
+    "__v": 0
+  },
+  {
+    "_id": "696186ea7d3eed3d5355a178",
+    "user": "696186ea7d3eed3d5355a176",
+    "wid": "ws_5847a83eaa97",
+    "name": "Plan Genie Inc.",
+    "description": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-09T22:53:30.804Z",
+    "createdAt": "2026-01-09T22:53:30.804Z",
+    "updatedAt": "2026-01-09T22:53:30.804Z",
+    "__v": 0
+  },
+  {
+    "_id": "6967b396af319cf832eb4082",
+    "user": "6916186423f83e5b9bae0f22",
+    "wid": "ws_fcbe161d965c",
+    "name": "My third company",
+    "description": "Independent contractors",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": false,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-14T15:17:42.190Z",
+    "lastActivityAt": "2026-01-14T15:17:42.190Z",
+    "createdAt": "2026-01-14T15:17:42.191Z",
+    "updatedAt": "2026-01-14T15:17:42.191Z",
+    "__v": 0
+  },
+  {
+    "_id": "696a8d23aa4e6a9951a0ed64",
+    "user": "696a8d23aa4e6a9951a0ed62",
+    "wid": "ws_660e387df188",
+    "name": "WMS Financial",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-16T19:10:27.126Z",
+    "lastActivityAt": "2026-01-16T19:59:42.383Z",
+    "createdAt": "2026-01-16T19:10:27.127Z",
+    "updatedAt": "2026-01-16T19:59:42.384Z",
+    "__v": 0
+  },
+  {
+    "_id": "696ebda6cd7477a69d50476f",
+    "user": "696ebda6cd7477a69d50476d",
+    "wid": "ws_0267907d7e64",
+    "name": "XbpjELmskRhXEtbUETykazH",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-19T23:26:30.974Z",
+    "lastActivityAt": "2026-01-19T23:26:30.974Z",
+    "createdAt": "2026-01-19T23:26:30.975Z",
+    "updatedAt": "2026-01-19T23:26:30.975Z",
+    "__v": 0
+  },
+  {
+    "_id": "696ed2b5cd7477a69d504a90",
+    "user": "696ed2b5cd7477a69d504a8e",
+    "wid": "ws_571fc63f5654",
+    "name": "ZChFrFJKMRbFgxfTxnrUcV",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T00:56:21.819Z",
+    "lastActivityAt": "2026-01-20T00:56:21.819Z",
+    "createdAt": "2026-01-20T00:56:21.820Z",
+    "updatedAt": "2026-01-20T00:56:21.820Z",
+    "__v": 0
+  },
+  {
+    "_id": "696ed8a3cd7477a69d504db4",
+    "user": "696ed8a3cd7477a69d504db2",
+    "wid": "ws_ffcc0cee8f61",
+    "name": "nVyAUuOoXwYypLLM",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T01:21:39.667Z",
+    "lastActivityAt": "2026-01-20T01:21:39.667Z",
+    "createdAt": "2026-01-20T01:21:39.667Z",
+    "updatedAt": "2026-01-20T01:21:39.667Z",
+    "__v": 0
+  },
+  {
+    "_id": "696ee2fdcd7477a69d5050db",
+    "user": "696ee2fdcd7477a69d5050d9",
+    "wid": "ws_9c9805db85fd",
+    "name": "JnvyvRMtmZsbnTGifjq",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T02:05:49.739Z",
+    "lastActivityAt": "2026-01-20T02:05:49.739Z",
+    "createdAt": "2026-01-20T02:05:49.740Z",
+    "updatedAt": "2026-01-20T02:05:49.740Z",
+    "__v": 0
+  },
+  {
+    "_id": "696ee7e4cd7477a69d5050e0",
+    "user": "696ee7e4cd7477a69d5050de",
+    "wid": "ws_40de40ca18ea",
+    "name": "xyoCVPbnmcPUzOxcSG",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T02:26:44.950Z",
+    "lastActivityAt": "2026-01-20T02:26:44.950Z",
+    "createdAt": "2026-01-20T02:26:44.951Z",
+    "updatedAt": "2026-01-20T02:26:44.951Z",
+    "__v": 0
+  },
+  {
+    "_id": "696f6057cd7477a69d506d4d",
+    "user": "696f6057cd7477a69d506d4b",
+    "wid": "ws_c94d0a2e90c6",
+    "name": "RfclitWakehJNFtORwWkZb",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T11:00:39.810Z",
+    "lastActivityAt": "2026-01-20T11:00:39.810Z",
+    "createdAt": "2026-01-20T11:00:39.811Z",
+    "updatedAt": "2026-01-20T11:00:39.811Z",
+    "__v": 0
+  },
+  {
+    "_id": "696fa457cd7477a69d507b33",
+    "user": "696fa457cd7477a69d507b31",
+    "wid": "ws_da43142a54b6",
+    "name": "ZFcfrZPlAGrWVoRKlNDhNqSB",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T15:50:47.622Z",
+    "lastActivityAt": "2026-01-20T15:50:47.622Z",
+    "createdAt": "2026-01-20T15:50:47.622Z",
+    "updatedAt": "2026-01-20T15:50:47.622Z",
+    "__v": 0
+  },
+  {
+    "_id": "696fc0aacd7477a69d508217",
+    "user": "696fc0aacd7477a69d508215",
+    "wid": "ws_a5ba2878bd19",
+    "name": "zHHAOqamXwUKjVicRcRsEO",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T17:51:38.961Z",
+    "lastActivityAt": "2026-01-20T17:51:38.961Z",
+    "createdAt": "2026-01-20T17:51:38.961Z",
+    "updatedAt": "2026-01-20T17:51:38.961Z",
+    "__v": 0
+  },
+  {
+    "_id": "696fcee7cd7477a69d5086fe",
+    "user": "696fcee7cd7477a69d5086fc",
+    "wid": "ws_9d72ba3bb430",
+    "name": "xlTyLXjemRlXQrnjkl",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T18:52:23.233Z",
+    "lastActivityAt": "2026-01-20T18:52:23.233Z",
+    "createdAt": "2026-01-20T18:52:23.234Z",
+    "updatedAt": "2026-01-20T18:52:23.234Z",
+    "__v": 0
+  },
+  {
+    "_id": "696fdce9cd7477a69d508a84",
+    "user": "696fdce8cd7477a69d508a82",
+    "wid": "ws_feb60caae009",
+    "name": "PgsbicNrhiorhcbUCPc",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T19:52:09.089Z",
+    "lastActivityAt": "2026-01-20T19:52:09.089Z",
+    "createdAt": "2026-01-20T19:52:09.090Z",
+    "updatedAt": "2026-01-20T19:52:09.090Z",
+    "__v": 0
+  },
+  {
+    "_id": "696feff0cd7477a69d5091a4",
+    "user": "696feff0cd7477a69d5091a2",
+    "wid": "ws_500b4bf860cf",
+    "name": "LboTaRtFDcufDzzmgXqRmy",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T21:13:20.157Z",
+    "lastActivityAt": "2026-01-20T21:13:20.157Z",
+    "createdAt": "2026-01-20T21:13:20.158Z",
+    "updatedAt": "2026-01-20T21:13:20.158Z",
+    "__v": 0
+  },
+  {
+    "_id": "696ffe35cd7477a69d5094e3",
+    "user": "696ffe35cd7477a69d5094e1",
+    "wid": "ws_4566df6fa4e5",
+    "name": "KslQgVUemJuAcTxXBpqL",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T22:14:13.539Z",
+    "lastActivityAt": "2026-01-20T22:14:13.539Z",
+    "createdAt": "2026-01-20T22:14:13.539Z",
+    "updatedAt": "2026-01-20T22:14:13.539Z",
+    "__v": 0
+  },
+  {
+    "_id": "69701637cd7477a69d509825",
+    "user": "69701637cd7477a69d509823",
+    "wid": "ws_7ca948164820",
+    "name": "ZBUCEVmdZejeviBsSmcNv",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-20T23:56:39.890Z",
+    "lastActivityAt": "2026-01-20T23:56:39.890Z",
+    "createdAt": "2026-01-20T23:56:39.890Z",
+    "updatedAt": "2026-01-20T23:56:39.890Z",
+    "__v": 0
+  },
+  {
+    "_id": "6970269ccd7477a69d509eaa",
+    "user": "6970269ccd7477a69d509ea8",
+    "wid": "ws_0b4f4cd5d8ad",
+    "name": "qRSLYPCyfshiStkN",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T01:06:36.617Z",
+    "lastActivityAt": "2026-01-21T01:06:36.617Z",
+    "createdAt": "2026-01-21T01:06:36.618Z",
+    "updatedAt": "2026-01-21T01:06:36.618Z",
+    "__v": 0
+  },
+  {
+    "_id": "69702f9fcd7477a69d509eaf",
+    "user": "69702f9fcd7477a69d509ead",
+    "wid": "ws_aa2e06d1ed4e",
+    "name": "HfCdkWywvDPxFZVugQr",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T01:45:03.383Z",
+    "lastActivityAt": "2026-01-21T01:45:03.383Z",
+    "createdAt": "2026-01-21T01:45:03.387Z",
+    "updatedAt": "2026-01-21T01:45:03.387Z",
+    "__v": 0
+  },
+  {
+    "_id": "69704910cd7477a69d50a540",
+    "user": "69704910cd7477a69d50a53e",
+    "wid": "ws_f4e917068375",
+    "name": "FiTGMbNMNIQsUoIIEJcMqt",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T03:33:36.141Z",
+    "lastActivityAt": "2026-01-21T03:33:36.141Z",
+    "createdAt": "2026-01-21T03:33:36.141Z",
+    "updatedAt": "2026-01-21T03:33:36.141Z",
+    "__v": 0
+  },
+  {
+    "_id": "69704e9dcd7477a69d50a545",
+    "user": "69704e9dcd7477a69d50a543",
+    "wid": "ws_c64948e3f2fe",
+    "name": "vMOmNsaPPwXDiCBvl",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T03:57:17.540Z",
+    "lastActivityAt": "2026-01-21T03:57:17.540Z",
+    "createdAt": "2026-01-21T03:57:17.541Z",
+    "updatedAt": "2026-01-21T03:57:17.541Z",
+    "__v": 0
+  },
+  {
+    "_id": "69706fa6cd7477a69d50af2e",
+    "user": "69706fa5cd7477a69d50af2c",
+    "wid": "ws_aaa038ab47b4",
+    "name": "TqNQaoDHMEzRBUnpUjVIaPK",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T06:18:14.291Z",
+    "lastActivityAt": "2026-01-21T06:18:14.291Z",
+    "createdAt": "2026-01-21T06:18:14.292Z",
+    "updatedAt": "2026-01-21T06:18:14.292Z",
+    "__v": 0
+  },
+  {
+    "_id": "69707ba1cd7477a69d50b282",
+    "user": "69707ba1cd7477a69d50b280",
+    "wid": "ws_11bb80540973",
+    "name": "vjzTqTYfoShBFqTUo",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T07:09:21.267Z",
+    "lastActivityAt": "2026-01-21T07:09:21.267Z",
+    "createdAt": "2026-01-21T07:09:21.267Z",
+    "updatedAt": "2026-01-21T07:09:21.267Z",
+    "__v": 0
+  },
+  {
+    "_id": "6970bf38cd7477a69d50bfcf",
+    "user": "6970bf38cd7477a69d50bfcd",
+    "wid": "ws_bde6a493f736",
+    "name": "tgJXCRSYEirFyZNEnyMf",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T11:57:44.785Z",
+    "lastActivityAt": "2026-01-21T11:57:44.785Z",
+    "createdAt": "2026-01-21T11:57:44.785Z",
+    "updatedAt": "2026-01-21T11:57:44.785Z",
+    "__v": 0
+  },
+  {
+    "_id": "6970e3dfcd7477a69d50ca08",
+    "user": "6970e3dfcd7477a69d50ca06",
+    "wid": "ws_3745705bc0fd",
+    "name": "HZDFZnmmmvrtMjzuKzJPBeXr",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T14:34:07.545Z",
+    "lastActivityAt": "2026-01-21T14:34:07.545Z",
+    "createdAt": "2026-01-21T14:34:07.546Z",
+    "updatedAt": "2026-01-21T14:34:07.546Z",
+    "__v": 0
+  },
+  {
+    "_id": "6970fa7ecd7477a69d50d0bd",
+    "user": "6970fa7ecd7477a69d50d0bb",
+    "wid": "ws_0c0e6959a564",
+    "name": "TNgDCHXsuVPqUaPS",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T16:10:38.783Z",
+    "lastActivityAt": "2026-01-21T16:10:38.783Z",
+    "createdAt": "2026-01-21T16:10:38.784Z",
+    "updatedAt": "2026-01-21T16:10:38.784Z",
+    "__v": 0
+  },
+  {
+    "_id": "69710be7cd7477a69d50d4c4",
+    "user": "69710be7cd7477a69d50d4c2",
+    "wid": "ws_85e295431b93",
+    "name": "ddeAwYuqdiqfhTlJj",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T17:24:55.519Z",
+    "lastActivityAt": "2026-01-21T17:24:55.519Z",
+    "createdAt": "2026-01-21T17:24:55.519Z",
+    "updatedAt": "2026-01-21T17:24:55.519Z",
+    "__v": 0
+  },
+  {
+    "_id": "697120f0cd7477a69d50d809",
+    "user": "697120f0cd7477a69d50d807",
+    "wid": "ws_24b0cf67de1c",
+    "name": "ctIDknCICJpjZgUo",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T18:54:40.654Z",
+    "lastActivityAt": "2026-01-21T18:54:40.654Z",
+    "createdAt": "2026-01-21T18:54:40.654Z",
+    "updatedAt": "2026-01-21T18:54:40.654Z",
+    "__v": 0
+  },
+  {
+    "_id": "69714fddcd7477a69d50e4e4",
+    "user": "69714fddcd7477a69d50e4e2",
+    "wid": "ws_52378c575b36",
+    "name": "BHUVNDpLRkgIeXgtisejufJ",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T22:14:53.341Z",
+    "lastActivityAt": "2026-01-21T22:14:53.341Z",
+    "createdAt": "2026-01-21T22:14:53.341Z",
+    "updatedAt": "2026-01-21T22:14:53.341Z",
+    "__v": 0
+  },
+  {
+    "_id": "69715959cd7477a69d50e4e9",
+    "user": "69715959cd7477a69d50e4e7",
+    "wid": "ws_528d8c220316",
+    "name": "bvSBxjtVfqxIHYQCv",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-21T22:55:21.175Z",
+    "lastActivityAt": "2026-01-21T22:55:21.175Z",
+    "createdAt": "2026-01-21T22:55:21.176Z",
+    "updatedAt": "2026-01-21T22:55:21.176Z",
+    "__v": 0
+  },
+  {
+    "_id": "697169efcd7477a69d50eb58",
+    "user": "697169eecd7477a69d50eb56",
+    "wid": "ws_df18a729621b",
+    "name": "DMAorIdiMsugRTYKijkqsglM",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-22T00:06:07.355Z",
+    "lastActivityAt": "2026-01-22T00:06:07.355Z",
+    "createdAt": "2026-01-22T00:06:07.355Z",
+    "updatedAt": "2026-01-22T00:06:07.355Z",
+    "__v": 0
+  },
+  {
+    "_id": "69717e47cd7477a69d50ee95",
+    "user": "69717e47cd7477a69d50ee93",
+    "wid": "ws_616a88b6d46c",
+    "name": "SFyehwwnRoSCmvnnMRdYrRjk",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-22T01:32:55.646Z",
+    "lastActivityAt": "2026-01-22T01:32:55.646Z",
+    "createdAt": "2026-01-22T01:32:55.647Z",
+    "updatedAt": "2026-01-22T01:32:55.647Z",
+    "__v": 0
+  },
+  {
+    "_id": "6971989dcd7477a69d50f510",
+    "user": "6971989dcd7477a69d50f50e",
+    "wid": "ws_b5c863c3ae9e",
+    "name": "qvTeWYimIIwvADQNOgnKEQxj",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-22T03:25:17.968Z",
+    "lastActivityAt": "2026-01-22T03:25:17.968Z",
+    "createdAt": "2026-01-22T03:25:17.969Z",
+    "updatedAt": "2026-01-22T03:25:17.969Z",
+    "__v": 0
+  },
+  {
+    "_id": "69719f18cd7477a69d50f515",
+    "user": "69719f18cd7477a69d50f513",
+    "wid": "ws_c0e5ec9adbff",
+    "name": "IqiLIiEvUjujHKLrmNa",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-22T03:52:56.266Z",
+    "lastActivityAt": "2026-01-22T03:52:56.266Z",
+    "createdAt": "2026-01-22T03:52:56.267Z",
+    "updatedAt": "2026-01-22T03:52:56.267Z",
+    "__v": 0
+  },
+  {
+    "_id": "6971c153cd7477a69d510035",
+    "user": "6971c152cd7477a69d510033",
+    "wid": "ws_abb13d902136",
+    "name": "nbkuZLrdFNMSIWYUGhMAVitU",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-22T06:18:59.016Z",
+    "lastActivityAt": "2026-01-22T06:18:59.016Z",
+    "createdAt": "2026-01-22T06:18:59.016Z",
+    "updatedAt": "2026-01-22T06:18:59.016Z",
+    "__v": 0
+  },
+  {
+    "_id": "69723841cd7477a69d511c78",
+    "user": "69723841cd7477a69d511c76",
+    "wid": "ws_49a7403bf15c",
+    "name": "AEhzlhgrOxGsTcMGDoMq",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-22T14:46:25.415Z",
+    "lastActivityAt": "2026-01-22T14:46:25.415Z",
+    "createdAt": "2026-01-22T14:46:25.415Z",
+    "updatedAt": "2026-01-22T14:46:25.415Z",
+    "__v": 0
+  },
+  {
+    "_id": "6972612ecd7477a69d51333c",
+    "user": "6972612ecd7477a69d51333a",
+    "wid": "ws_3e7b9f4f97ca",
+    "name": "Plan Genie Systems Inc.",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-22T17:41:02.439Z",
+    "lastActivityAt": "2026-01-22T17:56:20.075Z",
+    "createdAt": "2026-01-22T17:41:02.439Z",
+    "updatedAt": "2026-01-22T17:56:20.076Z",
+    "__v": 0
+  },
+  {
+    "_id": "697269cfcd7477a69d51371f",
+    "user": "697269cfcd7477a69d51371d",
+    "wid": "ws_f35a8070eb95",
+    "name": "iQPmyoTXUdFrKKjR",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-22T18:17:51.950Z",
+    "lastActivityAt": "2026-01-22T18:17:51.950Z",
+    "createdAt": "2026-01-22T18:17:51.950Z",
+    "updatedAt": "2026-01-22T18:17:51.950Z",
+    "__v": 0
+  },
+  {
+    "_id": "6972a184cd7477a69d514458",
+    "user": "6972a184cd7477a69d514456",
+    "wid": "ws_836e284011da",
+    "name": "UhvuhGUmCletRTef",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-22T22:15:32.259Z",
+    "lastActivityAt": "2026-01-22T22:15:32.259Z",
+    "createdAt": "2026-01-22T22:15:32.260Z",
+    "updatedAt": "2026-01-22T22:15:32.260Z",
+    "__v": 0
+  },
+  {
+    "_id": "6972d7f1cd7477a69d515197",
+    "user": "6972d7f1cd7477a69d515195",
+    "wid": "ws_1767eb3a7e42",
+    "name": "DgjsXCZuSBktqTpqkfCssH",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-23T02:07:45.164Z",
+    "lastActivityAt": "2026-01-23T02:07:45.164Z",
+    "createdAt": "2026-01-23T02:07:45.164Z",
+    "updatedAt": "2026-01-23T02:07:45.164Z",
+    "__v": 0
+  },
+  {
+    "_id": "6972e50ccd7477a69d5154ed",
+    "user": "6972e50ccd7477a69d5154eb",
+    "wid": "ws_1be7093c99af",
+    "name": "vpdljicRGiAklpPhRrqdX",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-23T03:03:40.757Z",
+    "lastActivityAt": "2026-01-23T03:03:40.757Z",
+    "createdAt": "2026-01-23T03:03:40.758Z",
+    "updatedAt": "2026-01-23T03:03:40.758Z",
+    "__v": 0
+  },
+  {
+    "_id": "6972fc5dcd7477a69d515846",
+    "user": "6972fc5dcd7477a69d515844",
+    "wid": "ws_1e835ba427c9",
+    "name": "gKWHEDLkCvDzvCSZlymlS",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-23T04:43:09.750Z",
+    "lastActivityAt": "2026-01-23T04:43:09.750Z",
+    "createdAt": "2026-01-23T04:43:09.750Z",
+    "updatedAt": "2026-01-23T04:43:09.750Z",
+    "__v": 0
+  },
+  {
+    "_id": "69730810ae583cb12e6e8edb",
+    "user": "69730810ae583cb12e6e8ed9",
+    "wid": "ws_a0be8fbc98a2",
+    "name": "CentraLearn",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-23T05:33:04.523Z",
+    "lastActivityAt": "2026-01-23T14:39:42.069Z",
+    "createdAt": "2026-01-23T05:33:04.524Z",
+    "updatedAt": "2026-01-23T14:39:42.072Z",
+    "__v": 0
+  },
+  {
+    "_id": "69731f973732d26375456806",
+    "user": "69731f973732d26375456804",
+    "wid": "ws_eb40152b4e5c",
+    "name": "Plan Genie Inc.",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-23T07:13:27.820Z",
+    "lastActivityAt": "2026-01-23T07:45:15.230Z",
+    "createdAt": "2026-01-23T07:13:27.820Z",
+    "updatedAt": "2026-01-23T07:45:15.231Z",
+    "__v": 0
+  },
+  {
+    "_id": "697353bdcd7477a69d516b54",
+    "user": "697353bdcd7477a69d516b52",
+    "wid": "ws_90026c7a80d7",
+    "name": "EOppsuwPWrqTkbPgbNaaAgr",
+    "description": "",
+    "industry": "",
+    "status": "active",
+    "defaultWorkspace": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "aiSettings": {
+      "features": {
+        "visionSuggestions": true,
+        "valueSuggestions": true,
+        "swotAnalysis": true,
+        "marketAnalysis": true,
+        "financialSuggestions": true,
+        "actionPlanSuggestions": true,
+        "coreProjectSuggestions": true
+      },
+      "enabled": true
+    },
+    "notificationPreferences": {
+      "email": {
+        "weeklyDigest": true,
+        "dailyWish": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true
+      },
+      "emailFrequency": {
+        "digest": "weekly",
+        "dailyWish": "daily",
+        "reviewReminders": "weekly",
+        "deadlineAlerts": "daily",
+        "teamActivity": "weekly"
+      },
+      "inApp": {
+        "taskUpdates": true,
+        "reviewReminders": true,
+        "deadlineAlerts": true,
+        "teamActivity": true,
+        "aiInsights": true
+      },
+      "timing": {
+        "digestDay": 5,
+        "digestHour": 9,
+        "quietHoursStart": null,
+        "quietHoursEnd": null
+      }
+    },
+    "exportSettings": {
+      "formats": {
+        "pdf": true,
+        "docx": true,
+        "csv": true
+      },
+      "content": {
+        "plan": true,
+        "strategyCanvas": true,
+        "departments": true,
+        "financials": true
+      },
+      "enabled": true,
+      "minRole": null
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2026-01-23T10:55:57.278Z",
+    "lastActivityAt": "2026-01-23T10:55:57.278Z",
+    "createdAt": "2026-01-23T10:55:57.278Z",
+    "updatedAt": "2026-01-23T10:55:57.278Z",
+    "__v": 0
+  }
+]

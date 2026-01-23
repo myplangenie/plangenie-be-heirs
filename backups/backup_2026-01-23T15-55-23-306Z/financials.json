@@ -1,0 +1,173 @@
+[
+  {
+    "_id": "69031a632c389b360b37825e",
+    "user": "6902f6e58d0d3a49714de018",
+    "metrics": {
+      "monthlyRevenue": "$120,540",
+      "monthlyCosts": "$74,320",
+      "netProfit": "$46,220",
+      "burnRate": "14 months"
+    },
+    "chart": [
+      {
+        "name": "Jan",
+        "Revenue": 10,
+        "Cost": 7,
+        "Profit": 8,
+        "_id": "69031a632c389b360b37825f"
+      },
+      {
+        "name": "Feb",
+        "Revenue": 10,
+        "Cost": 7,
+        "Profit": 8,
+        "_id": "69031a632c389b360b378260"
+      },
+      {
+        "name": "Mar",
+        "Revenue": 10,
+        "Cost": 7,
+        "Profit": 8,
+        "_id": "69031a632c389b360b378261"
+      },
+      {
+        "name": "Apr",
+        "Revenue": 19,
+        "Cost": 15,
+        "Profit": 16,
+        "_id": "69031a632c389b360b378262"
+      },
+      {
+        "name": "May",
+        "Revenue": 10,
+        "Cost": 7,
+        "Profit": 8,
+        "_id": "69031a632c389b360b378263"
+      },
+      {
+        "name": "Jun",
+        "Revenue": 19,
+        "Cost": 15,
+        "Profit": 16,
+        "_id": "69031a632c389b360b378264"
+      }
+    ],
+    "revenueBars": [
+      42,
+      48,
+      55,
+      61,
+      58,
+      66,
+      74,
+      80,
+      78,
+      85,
+      92,
+      96
+    ],
+    "cashflowBars": [
+      12,
+      22,
+      16,
+      28,
+      24,
+      36,
+      40,
+      32,
+      44,
+      48,
+      38,
+      52
+    ],
+    "assumptions": [
+      {
+        "key": "growth",
+        "assumption": "Monthly Growth Rate",
+        "control": "input",
+        "placeholder": "e.g 10%",
+        "ai": "12%",
+        "aiClass": "text-emerald-600 font-semibold",
+        "rationale": "Based on current market momentum and product-market fit"
+      },
+      {
+        "key": "churn",
+        "assumption": "Customer Churn Rate",
+        "control": "input",
+        "placeholder": "e.g 10%",
+        "ai": "3%",
+        "aiClass": "text-amber-600 font-semibold",
+        "rationale": "Based on current market momentum and product-market fit"
+      },
+      {
+        "key": "acv",
+        "assumption": "Average Contract Value",
+        "control": "input",
+        "placeholder": "e.g $1200",
+        "ai": "$1,450",
+        "aiClass": "text-primary font-semibold",
+        "rationale": "Based on current market momentum and product-market fit"
+      },
+      {
+        "key": "margin",
+        "assumption": "Operating Margin Target",
+        "control": "input",
+        "placeholder": "e.g 30%",
+        "ai": "30%",
+        "aiClass": "text-primary font-semibold",
+        "rationale": "Based on current market momentum and product-market fit"
+      },
+      {
+        "key": "recognition",
+        "assumption": "Revenue Recognition",
+        "control": "select",
+        "placeholder": "",
+        "ai": "Monthly",
+        "aiClass": "text-primary font-semibold",
+        "rationale": "Based on current market momentum and product-market fit"
+      }
+    ],
+    "createdAt": "2025-10-30T07:57:24.008Z",
+    "updatedAt": "2026-01-03T15:17:08.480Z",
+    "__v": 0,
+    "workspace": "695932f25c7dd36581e83cd0"
+  },
+  {
+    "_id": "692db77345eebeee3f677835",
+    "user": "6916186423f83e5b9bae0f22",
+    "chart": [],
+    "revenueBars": [],
+    "cashflowBars": [],
+    "assumptions": [
+      {
+        "key": "growth",
+        "value": "5",
+        "control": "input"
+      },
+      {
+        "key": "margin",
+        "value": "60",
+        "control": "input"
+      },
+      {
+        "key": "churn",
+        "value": "",
+        "control": "input"
+      },
+      {
+        "key": "acv",
+        "value": "",
+        "control": "input"
+      },
+      {
+        "key": "revenueRecog",
+        "value": "",
+        "control": "input"
+      }
+    ],
+    "createdAt": "2025-12-01T15:42:43.156Z",
+    "updatedAt": "2026-01-03T15:17:40.606Z",
+    "__v": 1,
+    "workspace": "695130344db73e493a55c301"
+  }
+]

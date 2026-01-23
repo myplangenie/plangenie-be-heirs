@@ -1,0 +1,126 @@
+[
+  {
+    "_id": "69031b672219e4b6f714e660",
+    "user": "6902f6e58d0d3a49714de018",
+    "nid": "n_l6s7cq8w",
+    "title": "Overdue: Update Q2 Marketing Strategy",
+    "description": "This task was due yesterday. Department: Marketing | Owner: Emily Davis",
+    "type": "task",
+    "severity": "danger",
+    "time": "2 hours ago",
+    "actions": [
+      {
+        "label": "View task",
+        "kind": "primary",
+        "_id": "69031b672219e4b6f714e661"
+      }
+    ],
+    "read": false,
+    "__v": 0,
+    "createdAt": "2025-10-30T08:01:43.132Z",
+    "updatedAt": "2026-01-03T15:17:08.183Z",
+    "workspace": "695932f25c7dd36581e83cd0"
+  },
+  {
+    "_id": "69031b672219e4b6f714e664",
+    "user": "6902f6e58d0d3a49714de018",
+    "nid": "n_nn0ah8y2",
+    "title": "Sarah Johnson commented on Marketing Plan",
+    "description": "Great progress on the social media strategy! Let's discuss the influencer partnerships in tomorrow's meeting.",
+    "type": "collaboration",
+    "severity": "success",
+    "time": "2 hours ago",
+    "read": false,
+    "actions": [],
+    "__v": 0,
+    "createdAt": "2025-10-30T08:01:43.133Z",
+    "updatedAt": "2026-01-03T15:17:08.183Z",
+    "workspace": "695932f25c7dd36581e83cd0"
+  },
+  {
+    "_id": "69031b672219e4b6f714e662",
+    "user": "6902f6e58d0d3a49714de018",
+    "nid": "n_k9bzwgb2",
+    "title": "Task Due in 2 Days: Financial Report Q1",
+    "description": "Department: Finance | Progress: 75% | Owner: Mike Chen",
+    "type": "task",
+    "severity": "warning",
+    "time": "2 hours ago",
+    "actions": [
+      {
+        "label": "View progress",
+        "kind": "primary",
+        "_id": "69031b672219e4b6f714e663"
+      }
+    ],
+    "read": false,
+    "__v": 0,
+    "createdAt": "2025-10-30T08:01:43.133Z",
+    "updatedAt": "2026-01-03T15:17:08.183Z",
+    "workspace": "695932f25c7dd36581e83cd0"
+  },
+  {
+    "_id": "69267e8e176561fb208906fa",
+    "nid": "collab-69267e8dead01782d63373d0",
+    "user": "691aac329c24195fa5b6f4d8",
+    "__v": 0,
+    "actions": [
+      {
+        "label": "Accept",
+        "kind": "primary",
+        "_id": "69267e8eead01782d63373d5"
+      },
+      {
+        "label": "Decline",
+        "kind": "secondary",
+        "_id": "69267e8eead01782d63373d6"
+      }
+    ],
+    "createdAt": "2025-11-26T04:14:06.281Z",
+    "data": {
+      "collabId": "69267e8dead01782d63373d0",
+      "ownerId": "6924e87d9601b2cbdbd90fd7",
+      "ownerName": "Chike Okwara"
+    },
+    "description": "Chike Okwara invited you to view their PlanGenie dashboard (read-only).",
+    "read": false,
+    "severity": "info",
+    "time": "now",
+    "title": "Collaboration invite from Chike Okwara",
+    "type": "collaboration",
+    "updatedAt": "2026-01-03T15:18:27.908Z",
+    "workspace": "695933425c7dd36581e83dc4"
+  },
+  {
+    "_id": "692978d8176561fb208b41fe",
+    "nid": "collab-692978d80eb4a4cb6c06ca44",
+    "user": "6927a20bddeefc8082b0460b",
+    "__v": 0,
+    "actions": [
+      {
+        "label": "Accept",
+        "kind": "primary",
+        "_id": "692978d80eb4a4cb6c06ca49"
+      },
+      {
+        "label": "Decline",
+        "kind": "secondary",
+        "_id": "692978d80eb4a4cb6c06ca4a"
+      }
+    ],
+    "createdAt": "2025-11-28T10:26:32.720Z",
+    "data": {
+      "collabId": "692978d80eb4a4cb6c06ca44",
+      "ownerId": "692965ec0eb4a4cb6c06c7a3",
+      "ownerName": "Chike Okwara"
+    },
+    "description": "Chike Okwara invited you to view their PlanGenie dashboard (read-only).",
+    "read": false,
+    "severity": "info",
+    "time": "now",
+    "title": "Collaboration invite from Chike Okwara",
+    "type": "collaboration",
+    "updatedAt": "2026-01-03T15:19:02.991Z",
+    "workspace": "695933655c7dd36581e83e39"
+  }
+]
