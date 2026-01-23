@@ -169,7 +169,7 @@ exports.getSummary = async (req, res, next) => {
       snapshot: { vision, ubp, purpose, bhag },
       team: teamList,
     };
-    // Compute readiness: Core Strategic Projects presence
+    // Compute readiness: Core Projects presence
     const coreProjectDetails = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
     const coreProjectsFlat = Array.isArray(a.coreProjects) ? a.coreProjects.filter((s)=> String(s||'').trim()) : [];
     const coreProjectsCount = coreProjectDetails.length || coreProjectsFlat.length || 0;
@@ -586,7 +586,7 @@ exports.saveCompiledPlan = async (req, res, next) => {
       a.finTargetProfitMarginPct = String(f.targetProfitMarginPct || a.finTargetProfitMarginPct || '');
       a.finIsNonprofit = String(f.isNonprofit || a.finIsNonprofit || '');
     }
-    // Core Strategic Projects
+    // Core Projects
     // PROTECTION: Don't reduce count significantly without explicit confirmation
     if (Array.isArray(cp.coreProjects)) {
       const v = cp.coreProjects.map((s) => String(s || '')).filter((s) => s && s.trim());
@@ -603,7 +603,7 @@ exports.saveCompiledPlan = async (req, res, next) => {
         a.coreProjects = v;
       }
     }
-    // Core Strategic Projects (detailed: deliverables with completion)
+    // Core Projects (detailed: deliverables with completion)
     if (Array.isArray(cp.coreProjectDetails)) {
       try {
         const all = (cp.coreProjectDetails || []).map((p) => ({
@@ -3315,7 +3315,7 @@ exports.exportPlanDocx = async (req, res, next) => {
       financialsTable,
 
       new Paragraph({ children: [new TextRun({ text: '', break: 1 })], pageBreakBefore: true }),
-      heading('Core Strategic Projects'),
+      heading('Core Projects'),
       ...(() => {
         const details = Array.isArray(plan.coreProjectDetails) ? plan.coreProjectDetails : [];
         const titles = Array.isArray(plan.coreProjects) ? plan.coreProjects : [];
@@ -3408,7 +3408,7 @@ exports.exportPlanDocx = async (req, res, next) => {
       return `<div class="box"><div style="font-weight:700">${escapeHtml(labelFor(key))}</div>${items || '<div style="font-size:12px;color:#666">No actions captured.</div>'}</div>`;
     }).join('');
 
-    // Core Strategic Projects HTML
+    // Core Projects HTML
     const coreList = (Array.isArray(plan.coreProjectDetails) && plan.coreProjectDetails.length)
       ? plan.coreProjectDetails
       : (Array.isArray(plan.coreProjects) ? plan.coreProjects.map((t)=>({ title: String(t||'').trim(), deliverables: [] })) : []);
@@ -3499,7 +3499,7 @@ exports.exportPlanDocx = async (req, res, next) => {
       <div class="box"><table><thead><tr><th>Product/Service</th><th>Description</th><th>Unit Cost</th><th>Price</th><th>Monthly Volume</th></tr></thead><tbody>${products || '<tr><td colspan="5">—</td></tr>'}</tbody></table></div>
       <h3>Organizational Structure</h3>
       <div class="box">${orgBlock}</div>
-      <h3>Core Strategic Projects</h3>
+      <h3>Core Projects</h3>
       ${coreHtml}
       ${financialProse ? `<h3>Financials</h3><div class="box"><div class="label">Financial Section</div><div>${escapeHtml(financialProse).replace(/\n/g,'<br/>')}</div></div>` : ''}
       <h3>Financial Forecasting</h3>

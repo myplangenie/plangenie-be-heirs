@@ -207,7 +207,7 @@ exports.generateInsights = async (req, res, next) => {
 
     // Build context for AI
     const projectsContext = (projects || []).map(p => {
-      let ctx = `- ${p.title} (${p.type === 'core' ? 'Core Strategic Project' : p.department || 'Departmental'})`;
+      let ctx = `- ${p.title} (${p.type === 'core' ? 'Core Project' : p.department || 'Departmental'})`;
       if (p.goal) ctx += `\n  Goal: ${p.goal}`;
       if (p.ownerName) ctx += `\n  Owner: ${p.ownerName}`;
       if (p.dueWhen) ctx += `\n  Due: ${p.dueWhen}`;

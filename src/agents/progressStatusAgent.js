@@ -46,7 +46,7 @@ const PLAN_SECTIONS = {
   market: {
     name: 'Market Analysis',
     weight: 15,
-    fields: ['marketCustomer', 'marketPartners', 'marketCompetitors'],
+    checkMarket: true, // Uses new Competitor CRUD model via context._competitors
     description: 'Target market and competitive landscape',
   },
   swot: {
@@ -102,6 +102,28 @@ function calculateSectionCompletion(context) {
         } else {
           missingFields.push(`swot${field.charAt(0).toUpperCase() + field.slice(1)}`);
         }
+      }
+    } else if (config.checkMarket) {
+      // Check Market from answers + new Competitor CRUD model
+      const marketFields = ['marketCustomer', 'marketPartners'];
+      total = 3; // marketCustomer, marketPartners, competitors
+
+      // Check marketCustomer and marketPartners from answers/context
+      for (const field of marketFields) {
+        const value = answers[field] || context[field];
+        if (value && String(value).trim().length > 0) {
+          filled++;
+        } else {
+          missingFields.push(field);
+        }
+      }
+
+      // Check competitors from new Competitor CRUD model (via context._competitors)
+      const competitors = context._competitors || [];
+      if (competitors.length > 0) {
+        filled++;
+      } else {
+        missingFields.push('marketCompetitors');
       }
     } else if (config.fields) {
       // Regular field checks

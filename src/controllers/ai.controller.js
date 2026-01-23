@@ -80,15 +80,21 @@ function buildAnswersContext(ob, options = {}) {
     if (a.ubp) lines.push(`UBP: ${String(a.ubp).trim()}`);
     if (a.purpose) lines.push(`Purpose: ${String(a.purpose).trim()}`);
     if (a.visionBhag) lines.push(`Long-Term Strategic Vision (BHAG): ${String(a.visionBhag).trim()}`);
-    if (a.vision1y) lines.push(`1-Year Goals: ${(String(a.vision1y).trim().split('\n').filter(Boolean).join('; '))}`);
+    if (a.vision1y) {
+      const goals = String(a.vision1y).trim().split('\n').filter(Boolean);
+      if (goals.length > 0) {
+        const numberedGoals = goals.map((g, i) => `[${i}] ${g}`).join('; ');
+        lines.push(`1-Year Goals (indexed): ${numberedGoals}`);
+      }
+    }
     if (a.vision3y) lines.push(`3-Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
     if (a.valuesCore) lines.push(`Core Values: ${String(a.valuesCore).trim()}`);
     if (a.cultureFeeling) lines.push(`Culture & Behaviors: ${String(a.cultureFeeling).trim()}`);
-    // SWOT - from new SwotEntry model with fallback to answers
-    const strengths = swotEntries.filter(s => s.type === 'strength').map(s => s.text).filter(Boolean);
-    const weaknesses = swotEntries.filter(s => s.type === 'weakness').map(s => s.text).filter(Boolean);
-    const opportunities = swotEntries.filter(s => s.type === 'opportunity').map(s => s.text).filter(Boolean);
-    const threats = swotEntries.filter(s => s.type === 'threat').map(s => s.text).filter(Boolean);
+    // SWOT - from new SwotEntry model with fallback to answers (field is entryType, not type)
+    const strengths = swotEntries.filter(s => s.entryType === 'strength').map(s => s.text).filter(Boolean);
+    const weaknesses = swotEntries.filter(s => s.entryType === 'weakness').map(s => s.text).filter(Boolean);
+    const opportunities = swotEntries.filter(s => s.entryType === 'opportunity').map(s => s.text).filter(Boolean);
+    const threats = swotEntries.filter(s => s.entryType === 'threat').map(s => s.text).filter(Boolean);
     if (strengths.length) lines.push(`Strengths: ${strengths.join('; ')}`);
     else if (a.swotStrengths) lines.push(`Strengths: ${String(a.swotStrengths).trim()}`);
     if (weaknesses.length) lines.push(`Weaknesses: ${weaknesses.join('; ')}`);
@@ -146,7 +152,7 @@ function buildAnswersContext(ob, options = {}) {
   }
 }
 
-// Build a richer, user-aware context for Core Strategic Project suggestions
+// Build a richer, user-aware context for Core Project suggestions
 // Includes: Onboarding profile, fallback to User.companyName, key onboarding answers,
 // existing core projects, departments summary, and active team members (limited).
 // Updated to fetch from new individual CRUD models (CoreProject, Competitor, SwotEntry, Product)
@@ -210,18 +216,25 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     if (answers.ubp) vvParts.push(`UBP: ${String(answers.ubp).trim()}`);
     if (answers.purpose) vvParts.push(`Purpose: ${String(answers.purpose).trim()}`);
     if (answers.visionBhag) vvParts.push(`BHAG: ${String(answers.visionBhag).trim()}`);
-    if (answers.vision1y) vvParts.push(`1-Year Goals: ${String(answers.vision1y).trim().split('\n').filter(Boolean).join('; ')}`);
+    if (answers.vision1y) {
+      // Provide numbered list of 1-year goals for proper index matching
+      const goals = String(answers.vision1y).trim().split('\n').filter(Boolean);
+      if (goals.length > 0) {
+        const numberedGoals = goals.map((g, i) => `  [${i}] ${g}`).join('\n');
+        vvParts.push(`1-Year Goals (indexed for linkedGoalIndex):\n${numberedGoals}`);
+      }
+    }
     if (answers.vision3y) vvParts.push(`3-Year Goals: ${String(answers.vision3y).trim().split('\n').filter(Boolean).join('; ')}`);
     if (answers.valuesCore) vvParts.push(`Core Values: ${String(answers.valuesCore).trim()}`);
     if (answers.cultureFeeling) vvParts.push(`Culture & Behaviors: ${String(answers.cultureFeeling).trim()}`);
     const vvText = vvParts.length ? `\n\nVision & Values:\n- ${vvParts.join('\n- ')}` : '';
 
-    // SWOT Analysis - from new SwotEntry model with fallback to answers
+    // SWOT Analysis - from new SwotEntry model with fallback to answers (field is entryType, not type)
     const swotLines = [];
-    const strengths = swotEntries.filter(s => s.type === 'strength').map(s => s.text).filter(Boolean);
-    const weaknesses = swotEntries.filter(s => s.type === 'weakness').map(s => s.text).filter(Boolean);
-    const opportunities = swotEntries.filter(s => s.type === 'opportunity').map(s => s.text).filter(Boolean);
-    const threats = swotEntries.filter(s => s.type === 'threat').map(s => s.text).filter(Boolean);
+    const strengths = swotEntries.filter(s => s.entryType === 'strength').map(s => s.text).filter(Boolean);
+    const weaknesses = swotEntries.filter(s => s.entryType === 'weakness').map(s => s.text).filter(Boolean);
+    const opportunities = swotEntries.filter(s => s.entryType === 'opportunity').map(s => s.text).filter(Boolean);
+    const threats = swotEntries.filter(s => s.entryType === 'threat').map(s => s.text).filter(Boolean);
     if (strengths.length) swotLines.push(`Strengths: ${strengths.join('; ')}`);
     else if (answers.swotStrengths) swotLines.push(`Strengths: ${String(answers.swotStrengths).trim()}`);
     if (weaknesses.length) swotLines.push(`Weaknesses: ${weaknesses.join('; ')}`);
@@ -301,7 +314,7 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     if (answers.finIsNonprofit) finLines.push(`Organization Type: Non-profit`);
     const finText = finLines.length ? `\n\nFinancial Overview:\n- ${finLines.join('\n- ')}` : '';
 
-    // Existing Core Strategic Projects - from new CoreProject model with fallback to answers
+    // Existing Core Projects - from new CoreProject model with fallback to answers
     let coreProjectsText = '';
     try {
       // Prefer new CoreProject model
@@ -317,7 +330,7 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
           }).filter(Boolean);
           return ['- ' + head, ...dlines].filter(Boolean).join('\n');
         }).filter(Boolean);
-        if (lines.length) coreProjectsText = `\n\nExisting Core Strategic Projects:\n${lines.join('\n')}`;
+        if (lines.length) coreProjectsText = `\n\nExisting Core Projects:\n${lines.join('\n')}`;
       } else if (Array.isArray(answers.coreProjectDetails) && answers.coreProjectDetails.length) {
         // Fallback to answers.coreProjectDetails
         const lines = answers.coreProjectDetails.slice(0, 5).map((p) => {
@@ -331,9 +344,9 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
           }).filter(Boolean);
           return ['- ' + head, ...dlines].filter(Boolean).join('\n');
         }).filter(Boolean);
-        if (lines.length) coreProjectsText = `\n\nExisting Core Strategic Projects:\n${lines.join('\n')}`;
+        if (lines.length) coreProjectsText = `\n\nExisting Core Projects:\n${lines.join('\n')}`;
       } else if (Array.isArray(answers.coreProjects) && answers.coreProjects.length) {
-        coreProjectsText = `\n\nExisting Core Strategic Projects:\n- ${answers.coreProjects.map((s)=>String(s||'').trim()).filter(Boolean).slice(0, 8).join('\n- ')}`;
+        coreProjectsText = `\n\nExisting Core Projects:\n- ${answers.coreProjects.map((s)=>String(s||'').trim()).filter(Boolean).slice(0, 8).join('\n- ')}`;
       }
     } catch {}
 
@@ -1192,10 +1205,10 @@ exports.rewriteCultureFeeling = async (req, res) => {
 // SWOT: strengths, weaknesses, opportunities, threats
 exports.suggestSwotStrengths = async (req, res) => {
   try {
-    const { input } = req.body || {};
+    const { input, existing } = req.body || {};
     const userId = req.user?.id;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Strengths (short phrases)', input, contextText, n: 3 });
+    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Strengths (short phrases)', input, contextText, n: 3, existing });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1208,10 +1221,10 @@ exports.suggestSwotStrengths = async (req, res) => {
 
 exports.suggestSwotWeaknesses = async (req, res) => {
   try {
-    const { input } = req.body || {};
+    const { input, existing } = req.body || {};
     const userId = req.user?.id;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Weaknesses (short phrases)', input, contextText, n: 3 });
+    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Weaknesses (short phrases)', input, contextText, n: 3, existing });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1224,10 +1237,10 @@ exports.suggestSwotWeaknesses = async (req, res) => {
 
 exports.suggestSwotOpportunities = async (req, res) => {
   try {
-    const { input } = req.body || {};
+    const { input, existing } = req.body || {};
     const userId = req.user?.id;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Opportunities (short phrases)', input, contextText, n: 3 });
+    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Opportunities (short phrases)', input, contextText, n: 3, existing });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1240,11 +1253,11 @@ exports.suggestSwotOpportunities = async (req, res) => {
 
 exports.suggestSwotThreats = async (req, res) => {
   try {
-    const { input } = req.body || {};
+    const { input, existing } = req.body || {};
     const userId = req.user?.id;
     const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const contextText = baseCtx;
-    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Threats (short phrases)', input, contextText, n: 3 });
+    const suggestions = await callOpenAIListPhrases({ type: 'SWOT Threats (short phrases)', input, contextText, n: 3, existing });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -2035,7 +2048,7 @@ exports.suggestActionKpi = async (req, res) => {
     const { input } = req.body || {};
     const userId = req.user?.id;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    const suggestion = await callOpenAI({ type: 'KPI metric specification (short phrase)', input, contextText });
+    const suggestion = await callOpenAI({ type: 'Quantifiable KPI with specific numeric target (e.g., "80% completion rate", "Increase sales by 25%", "Reduce response time to under 2 hours", "$50K quarterly revenue"). Must include a realistic, measurable number.', input, contextText });
     return res.json({ suggestion });
   } catch (err) {
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate suggestion';
@@ -2048,7 +2061,7 @@ exports.rewriteActionKpi = async (req, res) => {
     const { text } = req.body || {};
     const userId = req.user?.id;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    const rewrite = await callOpenAIRewrite({ type: 'KPI metric specification (short phrase)', text, contextText });
+    const rewrite = await callOpenAIRewrite({ type: 'Quantifiable KPI with specific numeric target (e.g., "80% completion rate", "Increase sales by 25%", "Reduce response time to under 2 hours", "$50K quarterly revenue"). Must include a realistic, measurable number.', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to rewrite';
@@ -2083,7 +2096,7 @@ exports.rewriteActionCost = async (req, res) => {
   }
 };
 
-// Suggest a full Core Strategic Project (title, goal, dueWhen, ownerName?, deliverables with kpi+dueWhen)
+// Suggest a full Core Project (title, goal, dueWhen, ownerName?, deliverables with kpi+dueWhen)
 exports.suggestCoreProject = async (req, res) => {
   try {
     const { input = '', n } = req.body || {};
@@ -2127,10 +2140,10 @@ exports.suggestCoreProject = async (req, res) => {
       `- Early deliverables should be quick wins (achievable in days/weeks). Later deliverables are bigger milestones.`,
       `- DO NOT set all deliverables months away. Spread them: some this week, some this month, some later.`,
       '- The overall project dueWhen must be at or after the latest deliverable dueWhen.',
-      '- Keep title short (3–6 words). Keep KPIs concise (short metric phrase).',
+      '- Keep title short (3–6 words). KPIs MUST be quantifiable with specific numeric targets (e.g., "80% completion rate", "Increase by 25%", "$10K cost savings", "95% satisfaction score"). Every KPI needs a realistic, measurable number.',
       '- priority: Always assign one of "high", "medium", or "low" based on strategic importance.',
       '- cost: If the project involves budget/resources, provide a realistic estimate (e.g., "$5,000" or "$10,000-$15,000"). Leave empty if not applicable.',
-      '- linkedGoalIndex: If the context includes 1-year goals, return the 0-based index of the most relevant goal this project supports. Return 0 if unsure.',
+      '- linkedGoalIndex: IMPORTANT - Look at the numbered 1-Year Goals in the context (marked with [0], [1], [2], etc.). Analyze which goal this specific project BEST supports and return that index. Different projects should link to different goals when appropriate. Do NOT default to 0 - carefully match each project to its most relevant goal.',
     ].join('\n');
 
     const user = [
@@ -2254,7 +2267,7 @@ exports.suggestCoreProject = async (req, res) => {
     return res.status(500).json({ message });
   }
 };
-// Core Strategic Projects: suggest 8 high-level deliverables
+// Core Projects: suggest 8 high-level deliverables
 exports.suggestCoreDeliverables = async (req, res) => {
   try {
     const { input, n } = req.body || {};
@@ -2330,7 +2343,7 @@ exports.suggestActionAll = async (req, res) => {
 
     const [goal, kpi, rawTitle] = await Promise.all([
       callOpenAI({ type: 'action plan goal (1-2 sentences)', input, contextText }),
-      callOpenAI({ type: 'KPI metric (short phrase)', input, contextText }),
+      callOpenAI({ type: 'Quantifiable KPI with specific numeric target (e.g., "80% completion rate", "Increase sales by 25%", "Reduce response time to under 2 hours", "$50K quarterly revenue"). Must include a realistic, measurable number.', input, contextText }),
       callOpenAI({ type: 'project title ONLY (3-6 words max). Examples: "Local Tech Partnerships Initiative", "Customer Feedback System", "Mobile App Development". Return ONLY the title, no descriptions or other fields.', input, contextText }),
     ]);
 
@@ -2366,7 +2379,7 @@ exports.suggestDeptGoalsBulk = async (req, res) => {
     for (const sec of sections) {
       const label = (sec && sec.label) ? String(sec.label) : '';
       const key = (sec && sec.key) ? String(sec.key) : label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      // Default desired count: Core Strategic Projects => 6, otherwise 5 (unless overridden by 'n')
+      // Default desired count: Core Projects => 6, otherwise 5 (unless overridden by 'n')
       const desired = (typeof n === 'number' && n > 0) ? n : (/core\s+strategic\s+projects/i.test(label) ? 6 : 5);
       const input = `${contextText}\nSection: ${label}\nTask: Provide ${desired} concise, distinct high-level options. Avoid overlap.`;
       const suggestions = await callOpenAIList({ type: 'high-level departmental goals', input, contextText, n: desired });
@@ -2713,7 +2726,7 @@ exports.extractValuesCoreKeywords = async (req, res) => {
 };
 
 // Short-phrase helpers for SWOT generation
-async function callOpenAIListPhrases({ type, input, contextText, n = 3 }) {
+async function callOpenAIListPhrases({ type, input, contextText, n = 3, existing = [] }) {
   const client = getOpenAI();
   const system = 'You are a creative business planning assistant. Generate fresh, unique suggestions each time. Return short, concrete phrases.';
   let ragText = '';
@@ -2725,6 +2738,10 @@ async function callOpenAIListPhrases({ type, input, contextText, n = 3 }) {
   } catch(_){}
   // Add randomization hint to encourage variety
   const randomSeed = Math.random().toString(36).substring(2, 8);
+  // Build exclusion list from existing items
+  const existingList = Array.isArray(existing) && existing.length > 0
+    ? `\n\nIMPORTANT - Do NOT suggest any of these existing items (or similar variations):\n${existing.map(e => `- ${e}`).join('\n')}`
+    : '';
   const userPrompt = [
     contextText || '',
     ragText || '',
@@ -2736,6 +2753,7 @@ async function callOpenAIListPhrases({ type, input, contextText, n = 3 }) {
     '- Think of specific, actionable items relevant to THIS business.',
     '- Avoid punctuation except hyphens when necessary.',
     `- Output ONLY a strict JSON array of strings (length exactly ${n}).`,
+    existingList,
     '',
     input ? `User input: ${input}` : 'User input: (none provided)',
     `[Variation hint: ${randomSeed}]`

@@ -2,7 +2,13 @@ const Onboarding = require('../models/Onboarding');
 const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
 const User = require('../models/User');
-const { getWorkspaceFilter } = require('../utils/workspaceQuery');
+const CoreProject = require('../models/CoreProject');
+const DepartmentProject = require('../models/DepartmentProject');
+const Product = require('../models/Product');
+const OrgPosition = require('../models/OrgPosition');
+const Competitor = require('../models/Competitor');
+const SwotEntry = require('../models/SwotEntry');
+const { getWorkspaceFilter, getWorkspaceId } = require('../utils/workspaceQuery');
 
 // Optional internal knowledge (Business Trainer)
 let rag;
@@ -170,10 +176,13 @@ function buildContextText(ob, stats, extras) {
     up.role && `User Role: ${up.role}`,
     userFullName && `User Name: ${userFullName}`,
     typeof stats?.teamMembersCount === 'number' && `Active Team Members: ${stats.teamMembersCount}`,
-    typeof stats?.coreProjectsCount === 'number' && `Core Strategic Projects: ${stats.coreProjectsCount}`,
+    typeof stats?.departmentsCount === 'number' && `Departments: ${stats.departmentsCount}`,
+    typeof stats?.coreProjectsCount === 'number' && `Core Projects: ${stats.coreProjectsCount}`,
     typeof stats?.departmentalProjectsCount === 'number' && `Departmental Projects: ${stats.departmentalProjectsCount}`,
     typeof stats?.productsCount === 'number' && `Products/Services: ${stats.productsCount}`,
     typeof stats?.orgPositionsCount === 'number' && `Organization Positions: ${stats.orgPositionsCount}`,
+    typeof stats?.competitorsCount === 'number' && stats.competitorsCount > 0 && `Competitors: ${stats.competitorsCount}`,
+    typeof stats?.swotCount === 'number' && stats.swotCount > 0 && `SWOT Entries: ${stats.swotCount}`,
     typeof stats?.oneYearGoalsCount === 'number' && stats.oneYearGoalsCount > 0 && `1-Year Goals: ${stats.oneYearGoalsCount}`,
     typeof stats?.threeYearGoalsCount === 'number' && stats.threeYearGoalsCount > 0 && `3-Year Goals: ${stats.threeYearGoalsCount}`,
   ].filter(Boolean);
@@ -280,7 +289,7 @@ function buildContextText(ob, stats, extras) {
     if (derived.length) derivedText = `\n\nDerived Metrics (approx):\n- ${derived.join('\n- ')}`;
   } catch {}
 
-  // Section: Core Strategic Projects (detailed)
+  // Section: Core Projects (detailed)
   let coreProjectsText = '';
   try {
     const cps = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
@@ -304,9 +313,9 @@ function buildContextText(ob, stats, extras) {
         }).filter(Boolean);
         return ['- ' + head, meta && '  - ' + meta, ...dlines].filter(Boolean).join('\n');
       });
-      coreProjectsText = `\n\nCore Strategic Projects:\n${lines.join('\n')}`;
+      coreProjectsText = `\n\nCore Projects:\n${lines.join('\n')}`;
     } else if (Array.isArray(a.coreProjects) && a.coreProjects.length) {
-      coreProjectsText = `\n\nCore Strategic Projects:\n- ${a.coreProjects.map((s)=>String(s||'').trim()).filter(Boolean).join('\n- ')}`;
+      coreProjectsText = `\n\nCore Projects:\n- ${a.coreProjects.map((s)=>String(s||'').trim()).filter(Boolean).join('\n- ')}`;
     }
   } catch {}
 
@@ -433,34 +442,62 @@ exports.respond = async (req, res) => {
 
     // Derive simple, real user stats to ground AI responses
     let stats = {};
+    // Store fetched data from new CRUD models for use in tool calls
+    let crudData = { coreProjects: [], deptProjects: [], products: [], orgPositions: [], competitors: [], swotEntries: [] };
     try {
       if (userId) {
-        let [me, teamMembersCount, teamMembers, departments] = await Promise.all([
+        const workspaceId = getWorkspaceId(req);
+        const crudFilter = { user: userId, isDeleted: { $ne: true } };
+        if (workspaceId) crudFilter.workspace = workspaceId;
+
+        let [me, teamMembersCount, teamMembers, departments, coreProjects, deptProjects, products, orgPositions, competitors, swotEntries] = await Promise.all([
           User.findById(userId).lean().exec(),
           TeamMember.countDocuments({ ...wsFilter, status: 'Active' }).exec(),
           TeamMember.find({ ...wsFilter, status: 'Active' }).select('name email role department status').limit(200).lean().exec(),
           Department.find(wsFilter).select('name status owner dueDate').limit(50).lean().exec(),
+          // New CRUD models
+          CoreProject.find(crudFilter).sort({ order: 1 }).lean(),
+          DepartmentProject.find(crudFilter).sort({ order: 1 }).lean(),
+          Product.find(crudFilter).sort({ order: 1 }).lean(),
+          OrgPosition.find(crudFilter).sort({ order: 1 }).lean(),
+          Competitor.find(crudFilter).sort({ order: 1 }).lean(),
+          SwotEntry.find(crudFilter).sort({ order: 1 }).lean(),
         ]);
+
+        // Store for use in runTool
+        crudData = { coreProjects: coreProjects || [], deptProjects: deptProjects || [], products: products || [], orgPositions: orgPositions || [], competitors: competitors || [], swotEntries: swotEntries || [] };
+
         const a = (ob && ob.answers) || {};
-        // Prefer orgPositions (Settings source of truth) over TeamMember collection
+        // Prefer orgPositions from new OrgPosition model, fallback to answers
         try {
-          const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+          const org = orgPositions && orgPositions.length > 0 ? orgPositions : (Array.isArray(a.orgPositions) ? a.orgPositions : []);
           if (org.length) {
             const active = org.filter((p) => String(p?.status || 'Active').trim() === 'Active');
             teamMembers = active.map((p) => ({
               name: String(p?.name || '').trim(),
               email: String(p?.email || '').trim(),
-              role: String(p?.position || '').trim(),
+              role: String(p?.position || p?.role || '').trim(),
               department: String(p?.department || '').trim(),
               status: 'Active',
             }));
             teamMembersCount = teamMembers.length;
           }
         } catch {}
-        // Derive departments from compiled plan if DB collection has none (use saved customizable sections or assignment keys)
+        // Derive departments from DepartmentProject model or fallback
         try {
           const canon = (s) => String(s || '').trim().toLowerCase();
-          if (!Array.isArray(departments) || departments.length === 0) {
+          if ((!Array.isArray(departments) || departments.length === 0) && deptProjects && deptProjects.length > 0) {
+            // Get unique departments from DepartmentProject
+            const deptSet = new Set();
+            deptProjects.forEach((p) => {
+              const dk = String(p?.departmentKey || '').trim();
+              if (dk) deptSet.add(dk);
+            });
+            const label = (k) => ({
+              marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability'
+            }[k] || k);
+            departments = Array.from(deptSet).map((k) => ({ name: label(k) }));
+          } else if (!Array.isArray(departments) || departments.length === 0) {
             const label = (k) => ({
               marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability'
             }[k] || k);
@@ -470,31 +507,25 @@ exports.respond = async (req, res) => {
             } else {
               Object.keys(a.actionAssignments || {}).forEach((k)=> { const nm = label(k); if (nm) list.push({ name: nm }); });
             }
-            // Deduplicate by name
             const uniq = Array.from(new Map(list.map((d)=> [canon(d.name), d])).values());
             departments = uniq;
           }
         } catch {}
 
-        const coreProjectsCount = Array.isArray(a?.coreProjectDetails) && a.coreProjectDetails.length
-          ? a.coreProjectDetails.length
-          : (Array.isArray(a?.coreProjects) ? a.coreProjects.length : 0);
-        // Count departmental projects (action items across all departments)
-        let departmentalProjectsCount = 0;
-        try {
-          Object.values(a.actionAssignments || {}).forEach((arr) => {
-            if (Array.isArray(arr)) departmentalProjectsCount += arr.length;
-          });
-        } catch {}
-        // Count products
-        const productsCount = Array.isArray(a.products) ? a.products.length : 0;
-        // Count org positions
-        const orgPositionsCount = Array.isArray(a.orgPositions) ? a.orgPositions.length : 0;
+        // Use new CRUD models for counts, fallback to answers
+        const coreProjectsCount = coreProjects.length > 0 ? coreProjects.length : (Array.isArray(a?.coreProjectDetails) ? a.coreProjectDetails.length : (Array.isArray(a?.coreProjects) ? a.coreProjects.length : 0));
+        const departmentalProjectsCount = deptProjects.length > 0 ? deptProjects.length : (() => { let c = 0; Object.values(a.actionAssignments || {}).forEach((arr) => { if (Array.isArray(arr)) c += arr.length; }); return c; })();
+        const productsCount = products.length > 0 ? products.length : (Array.isArray(a.products) ? a.products.length : 0);
+        const orgPositionsCount = orgPositions.length > 0 ? orgPositions.length : (Array.isArray(a.orgPositions) ? a.orgPositions.length : 0);
+        const competitorsCount = competitors.length;
+        const swotCount = swotEntries.length;
         // Count 1-year goals
         const oneYearGoalsCount = String(a.vision1y || '').trim().split('\n').filter(Boolean).length;
         // Count 3-year goals
         const threeYearGoalsCount = String(a.vision3y || '').trim().split('\n').filter(Boolean).length;
-        stats = { teamMembersCount, coreProjectsCount, departmentalProjectsCount, productsCount, orgPositionsCount, oneYearGoalsCount, threeYearGoalsCount };
+        // Count departments
+        const departmentsCount = (departments || []).length;
+        stats = { teamMembersCount, departmentsCount, coreProjectsCount, departmentalProjectsCount, productsCount, orgPositionsCount, competitorsCount, swotCount, oneYearGoalsCount, threeYearGoalsCount };
         // Build context with expanded extras
         const contextText = buildContextText(ob, stats, { teamMembers, departments, user: me });
 
@@ -557,30 +588,60 @@ exports.respond = async (req, res) => {
           { type: 'function', function: { name: 'get_org_positions', description: 'Get organizational structure and positions.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 100 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_overdue_tasks', description: 'Get tasks and deadlines that are past their due date (overdue).', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 100 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_upcoming_tasks', description: 'Get tasks and deadlines due in the future (not yet overdue).', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 100 }, days: { type: 'number', description: 'Optional: only include tasks due within this many days' } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_swot_analysis', description: 'Get SWOT analysis (strengths, weaknesses, opportunities, threats).', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_competitors', description: 'Get list of competitors with their advantages.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 20 } }, additionalProperties: false } } },
         ];
 
         const aAns = (ob && ob.answers) || {};
         const deadlineItems = () => {
           const parseDate = (s) => { const d = new Date(String(s||'')); return isNaN(d.getTime()) ? null : d; };
           const items = [];
+          // Use new DepartmentProject model with fallback to answers
           try {
-            Object.entries(aAns.actionAssignments || {}).forEach(([dept, arr]) => {
-              (arr || []).forEach((u) => {
-                const d = parseDate(u?.dueWhen); if (!d) return;
-                const goal = String(u?.goal || '').trim();
-                const owner = `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim();
+            if (crudData.deptProjects && crudData.deptProjects.length > 0) {
+              crudData.deptProjects.forEach((p) => {
+                const d = parseDate(p?.dueWhen); if (!d) return;
+                const goal = String(p?.title || '').trim();
+                const owner = `${String(p?.firstName||'').trim()} ${String(p?.lastName||'').trim()}`.trim();
+                const dept = p?.departmentKey || '';
                 items.push({ when: d, label: [goal, dept && `Dept: ${dept}`, owner && `Owner: ${owner}`].filter(Boolean).join(' | ') });
+                // Also add deliverables
+                (Array.isArray(p?.deliverables) ? p.deliverables : []).forEach((del) => {
+                  const dt = parseDate(del?.dueWhen); if (!dt) return;
+                  const txt = String(del?.text || '').trim();
+                  items.push({ when: dt, label: [goal && `Project: ${goal}`, txt, owner && `Owner: ${owner}`].filter(Boolean).join(' | ') });
+                });
               });
-            });
+            } else {
+              Object.entries(aAns.actionAssignments || {}).forEach(([dept, arr]) => {
+                (arr || []).forEach((u) => {
+                  const d = parseDate(u?.dueWhen); if (!d) return;
+                  const goal = String(u?.goal || '').trim();
+                  const owner = `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim();
+                  items.push({ when: d, label: [goal, dept && `Dept: ${dept}`, owner && `Owner: ${owner}`].filter(Boolean).join(' | ') });
+                });
+              });
+            }
           } catch {}
+          // Use new CoreProject model with fallback to answers
           try {
-            (Array.isArray(aAns.coreProjectDetails) ? aAns.coreProjectDetails : []).forEach((p) => {
-              (Array.isArray(p?.deliverables) ? p.deliverables : []).forEach((d) => {
-                const dt = parseDate(d?.dueWhen); if (!dt) return;
-                const txt = String(d?.text || '').trim();
-                items.push({ when: dt, label: [p?.title && `Project: ${String(p.title).trim()}`, txt].filter(Boolean).join(' | ') });
+            if (crudData.coreProjects && crudData.coreProjects.length > 0) {
+              crudData.coreProjects.forEach((p) => {
+                (Array.isArray(p?.deliverables) ? p.deliverables : []).forEach((d) => {
+                  const dt = parseDate(d?.dueWhen); if (!dt) return;
+                  const txt = String(d?.text || '').trim();
+                  items.push({ when: dt, label: [p?.title && `Project: ${String(p.title).trim()}`, txt].filter(Boolean).join(' | ') });
+                });
               });
-            });
+            } else {
+              (Array.isArray(aAns.coreProjectDetails) ? aAns.coreProjectDetails : []).forEach((p) => {
+                (Array.isArray(p?.deliverables) ? p.deliverables : []).forEach((d) => {
+                  const dt = parseDate(d?.dueWhen); if (!dt) return;
+                  const txt = String(d?.text || '').trim();
+                  items.push({ when: dt, label: [p?.title && `Project: ${String(p.title).trim()}`, txt].filter(Boolean).join(' | ') });
+                });
+              });
+            }
           } catch {}
           items.sort((x, y) => x.when - y.when);
           return items;
@@ -598,11 +659,28 @@ exports.respond = async (req, res) => {
             case 'get_team_members': { const limit = limitNum(args?.limit, 20, 200); return { list: (teamMembers || []).slice(0, limit).map((t)=>({ name: t?.name||'', role: t?.role||'', department: t?.department||'', email: t?.email||'' })) }; }
             case 'get_departments_count': return { count: (departments || []).length };
             case 'get_departments': { const limit = limitNum(args?.limit, 20, 100); return { list: (departments || []).slice(0, limit).map((d)=>({ name: d?.name||'', status: d?.status||'', owner: d?.owner||'', dueDate: d?.dueDate||'' })) }; }
-            case 'get_core_projects_count': { let count = 0; if (Array.isArray(aAns?.coreProjectDetails) && aAns.coreProjectDetails.length) count = aAns.coreProjectDetails.length; else if (Array.isArray(aAns?.coreProjects)) count = aAns.coreProjects.length; return { count }; }
-            case 'get_core_projects': { const limit = limitNum(args?.limit, 10, 50); const list = []; if (Array.isArray(aAns?.coreProjectDetails) && aAns.coreProjectDetails.length) { aAns.coreProjectDetails.forEach((p) => list.push({ title: String(p?.title||'').trim(), ownerName: p?.ownerName || '', dueWhen: p?.dueWhen || '', deliverables: Array.isArray(p?.deliverables) ? p.deliverables : [] })); } else if (Array.isArray(aAns?.coreProjects)) { aAns.coreProjects.forEach((t) => list.push({ title: String(t||'').trim() })); } return { list: list.slice(0, limit) }; }
+            case 'get_core_projects_count': {
+              // Use new CoreProject model with fallback
+              if (crudData.coreProjects && crudData.coreProjects.length > 0) return { count: crudData.coreProjects.length };
+              let count = 0; if (Array.isArray(aAns?.coreProjectDetails) && aAns.coreProjectDetails.length) count = aAns.coreProjectDetails.length; else if (Array.isArray(aAns?.coreProjects)) count = aAns.coreProjects.length; return { count };
+            }
+            case 'get_core_projects': {
+              const limit = limitNum(args?.limit, 10, 50);
+              const list = [];
+              // Use new CoreProject model with fallback
+              if (crudData.coreProjects && crudData.coreProjects.length > 0) {
+                crudData.coreProjects.forEach((p) => list.push({ title: String(p?.title||'').trim(), ownerName: p?.ownerName || '', dueWhen: p?.dueWhen || '', goal: p?.goal || '', priority: p?.priority || '', deliverables: Array.isArray(p?.deliverables) ? p.deliverables : [] }));
+              } else if (Array.isArray(aAns?.coreProjectDetails) && aAns.coreProjectDetails.length) {
+                aAns.coreProjectDetails.forEach((p) => list.push({ title: String(p?.title||'').trim(), ownerName: p?.ownerName || '', dueWhen: p?.dueWhen || '', deliverables: Array.isArray(p?.deliverables) ? p.deliverables : [] }));
+              } else if (Array.isArray(aAns?.coreProjects)) {
+                aAns.coreProjects.forEach((t) => list.push({ title: String(t||'').trim() }));
+              }
+              return { list: list.slice(0, limit) };
+            }
             case 'get_core_deliverables_count': {
               let count = 0;
-              const projects = Array.isArray(aAns?.coreProjectDetails) ? aAns.coreProjectDetails : [];
+              // Use new CoreProject model with fallback
+              const projects = (crudData.coreProjects && crudData.coreProjects.length > 0) ? crudData.coreProjects : (Array.isArray(aAns?.coreProjectDetails) ? aAns.coreProjectDetails : []);
               projects.forEach((p) => {
                 const dels = Array.isArray(p?.deliverables) ? p.deliverables : [];
                 dels.forEach((d) => { if (!d?.done) count++; });
@@ -611,6 +689,8 @@ exports.respond = async (req, res) => {
             }
             case 'get_deadlines': { const limit = limitNum(args?.limit, 20, 200); return { list: deadlineItems().slice(0, limit).map((d)=>({ date: d.when.toISOString().slice(0,10), label: d.label })) }; }
             case 'get_departmental_projects_count': {
+              // Use new DepartmentProject model with fallback
+              if (crudData.deptProjects && crudData.deptProjects.length > 0) return { count: crudData.deptProjects.length };
               const assignments = aAns.actionAssignments || {};
               let count = 0;
               Object.values(assignments).forEach((arr) => {
@@ -621,41 +701,84 @@ exports.respond = async (req, res) => {
             case 'get_departmental_projects': {
               const limit = limitNum(args?.limit, 20, 200);
               const filterDept = args?.department ? String(args.department).trim().toLowerCase() : null;
-              const assignments = aAns.actionAssignments || {};
               const list = [];
-              Object.entries(assignments).forEach(([dept, arr]) => {
-                if (filterDept && dept.toLowerCase() !== filterDept) return;
-                (arr || []).forEach((u) => {
-                  const goal = String(u?.goal || '').trim();
+              // Use new DepartmentProject model with fallback
+              if (crudData.deptProjects && crudData.deptProjects.length > 0) {
+                crudData.deptProjects.forEach((p) => {
+                  const dept = p?.departmentKey || '';
+                  if (filterDept && dept.toLowerCase() !== filterDept) return;
+                  const goal = String(p?.title || '').trim();
                   if (!goal) return;
                   list.push({
                     department: dept,
                     goal,
-                    owner: `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim() || undefined,
-                    milestone: String(u?.milestone || '').trim() || undefined,
-                    kpi: String(u?.kpi || '').trim() || undefined,
-                    resources: String(u?.resources || '').trim() || undefined,
-                    dueWhen: String(u?.dueWhen || '').trim() || undefined,
-                    deliverables: Array.isArray(u?.deliverables) ? u.deliverables.map((d) => ({ text: String(d?.text || '').trim(), done: Boolean(d?.done), kpi: d?.kpi || undefined, dueWhen: d?.dueWhen || undefined })) : [],
+                    owner: `${String(p?.firstName||'').trim()} ${String(p?.lastName||'').trim()}`.trim() || undefined,
+                    milestone: String(p?.milestone || '').trim() || undefined,
+                    kpi: String(p?.kpi || '').trim() || undefined,
+                    resources: String(p?.resources || '').trim() || undefined,
+                    dueWhen: String(p?.dueWhen || '').trim() || undefined,
+                    status: p?.status || undefined,
+                    deliverables: Array.isArray(p?.deliverables) ? p.deliverables.map((d) => ({ text: String(d?.text || '').trim(), done: Boolean(d?.done), kpi: d?.kpi || undefined, dueWhen: d?.dueWhen || undefined })) : [],
                   });
                 });
-              });
+              } else {
+                const assignments = aAns.actionAssignments || {};
+                Object.entries(assignments).forEach(([dept, arr]) => {
+                  if (filterDept && dept.toLowerCase() !== filterDept) return;
+                  (arr || []).forEach((u) => {
+                    const goal = String(u?.goal || '').trim();
+                    if (!goal) return;
+                    list.push({
+                      department: dept,
+                      goal,
+                      owner: `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim() || undefined,
+                      milestone: String(u?.milestone || '').trim() || undefined,
+                      kpi: String(u?.kpi || '').trim() || undefined,
+                      resources: String(u?.resources || '').trim() || undefined,
+                      dueWhen: String(u?.dueWhen || '').trim() || undefined,
+                      deliverables: Array.isArray(u?.deliverables) ? u.deliverables.map((d) => ({ text: String(d?.text || '').trim(), done: Boolean(d?.done), kpi: d?.kpi || undefined, dueWhen: d?.dueWhen || undefined })) : [],
+                    });
+                  });
+                });
+              }
               return { list: list.slice(0, limit) };
             }
             case 'get_departmental_deliverables_count': {
               let count = 0;
-              const assignments = aAns.actionAssignments || {};
-              Object.values(assignments).forEach((arr) => {
-                if (!Array.isArray(arr)) return;
-                arr.forEach((u) => {
-                  const dels = Array.isArray(u?.deliverables) ? u.deliverables : [];
+              // Use new DepartmentProject model with fallback
+              if (crudData.deptProjects && crudData.deptProjects.length > 0) {
+                crudData.deptProjects.forEach((p) => {
+                  const dels = Array.isArray(p?.deliverables) ? p.deliverables : [];
                   dels.forEach((d) => { if (!d?.done) count++; });
                 });
-              });
+              } else {
+                const assignments = aAns.actionAssignments || {};
+                Object.values(assignments).forEach((arr) => {
+                  if (!Array.isArray(arr)) return;
+                  arr.forEach((u) => {
+                    const dels = Array.isArray(u?.deliverables) ? u.deliverables : [];
+                    dels.forEach((d) => { if (!d?.done) count++; });
+                  });
+                });
+              }
               return { count };
             }
             case 'get_products': {
               const limit = limitNum(args?.limit, 20, 50);
+              // Use new Product model with fallback
+              if (crudData.products && crudData.products.length > 0) {
+                return {
+                  list: crudData.products.slice(0, limit).map((p) => ({
+                    name: String(p?.name || '').trim() || undefined,
+                    description: String(p?.description || '').trim() || undefined,
+                    price: p?.price || undefined,
+                    unitCost: p?.unitCost || undefined,
+                    pricing: String(p?.pricing || '').trim() || undefined,
+                    monthlyVolume: p?.monthlyVolume || undefined,
+                    category: p?.category || undefined,
+                  }))
+                };
+              }
               const products = Array.isArray(aAns.products) ? aAns.products : [];
               return {
                 list: products.slice(0, limit).map((p) => ({
@@ -669,6 +792,8 @@ exports.respond = async (req, res) => {
               };
             }
             case 'get_products_count': {
+              // Use new Product model with fallback
+              if (crudData.products && crudData.products.length > 0) return { count: crudData.products.length };
               const products = Array.isArray(aAns.products) ? aAns.products : [];
               return { count: products.length };
             }
@@ -708,16 +833,37 @@ exports.respond = async (req, res) => {
               };
             }
             case 'get_market_info': {
-              const competitorNames = Array.isArray(aAns.competitorNames) ? aAns.competitorNames : [];
+              // Use new Competitor model with fallback
+              let competitorNames = [];
+              let competitorAdvantages = [];
+              if (crudData.competitors && crudData.competitors.length > 0) {
+                competitorNames = crudData.competitors.map((c) => c.name).filter(Boolean);
+                competitorAdvantages = crudData.competitors.map((c) => c.advantage).filter(Boolean);
+              } else {
+                competitorNames = Array.isArray(aAns.competitorNames) ? aAns.competitorNames : [];
+              }
               return {
-                idealCustomer: String(aAns.marketCustomer || '').trim() || undefined,
-                partners: String(aAns.partnersDesc || '').trim() || undefined,
-                competitorNotes: String(aAns.compNotes || '').trim() || undefined,
+                idealCustomer: String(aAns.marketCustomer || aAns.targetCustomer || '').trim() || undefined,
+                partners: String(aAns.partnersDesc || aAns.partners || '').trim() || undefined,
+                competitorNotes: String(aAns.compNotes || aAns.competitorsNotes || '').trim() || undefined,
                 competitorNames: competitorNames.length ? competitorNames : undefined,
+                competitorAdvantages: competitorAdvantages.length ? competitorAdvantages : undefined,
               };
             }
             case 'get_org_positions': {
               const limit = limitNum(args?.limit, 50, 100);
+              // Use new OrgPosition model with fallback
+              if (crudData.orgPositions && crudData.orgPositions.length > 0) {
+                return {
+                  list: crudData.orgPositions.slice(0, limit).map((p) => ({
+                    name: String(p?.name || '').trim() || undefined,
+                    position: String(p?.position || p?.role || '').trim() || undefined,
+                    department: String(p?.department || '').trim() || undefined,
+                    email: String(p?.email || '').trim() || undefined,
+                    status: String(p?.status || 'Active').trim(),
+                  }))
+                };
+              }
               const org = Array.isArray(aAns.orgPositions) ? aAns.orgPositions : [];
               return {
                 list: org.slice(0, limit).map((p) => ({
@@ -763,6 +909,48 @@ exports.respond = async (req, res) => {
                   daysUntilDue: Math.floor((d.when - now) / (1000 * 60 * 60 * 24)),
                   label: d.label
                 }))
+              };
+            }
+            case 'get_swot_analysis': {
+              // Use new SwotEntry model with fallback to answers (field is entryType, not type)
+              if (crudData.swotEntries && crudData.swotEntries.length > 0) {
+                const strengths = crudData.swotEntries.filter((s) => s.entryType === 'strength').map((s) => s.text).filter(Boolean);
+                const weaknesses = crudData.swotEntries.filter((s) => s.entryType === 'weakness').map((s) => s.text).filter(Boolean);
+                const opportunities = crudData.swotEntries.filter((s) => s.entryType === 'opportunity').map((s) => s.text).filter(Boolean);
+                const threats = crudData.swotEntries.filter((s) => s.entryType === 'threat').map((s) => s.text).filter(Boolean);
+                return {
+                  strengths: strengths.length ? strengths : undefined,
+                  weaknesses: weaknesses.length ? weaknesses : undefined,
+                  opportunities: opportunities.length ? opportunities : undefined,
+                  threats: threats.length ? threats : undefined,
+                  count: crudData.swotEntries.length,
+                };
+              }
+              // Fallback to answers
+              return {
+                strengths: aAns.swotStrengths ? String(aAns.swotStrengths).trim().split('\n').filter(Boolean) : undefined,
+                weaknesses: aAns.swotWeaknesses ? String(aAns.swotWeaknesses).trim().split('\n').filter(Boolean) : undefined,
+                opportunities: aAns.swotOpportunities ? String(aAns.swotOpportunities).trim().split('\n').filter(Boolean) : undefined,
+                threats: aAns.swotThreats ? String(aAns.swotThreats).trim().split('\n').filter(Boolean) : undefined,
+              };
+            }
+            case 'get_competitors': {
+              const limit = limitNum(args?.limit, 10, 20);
+              // Use new Competitor model with fallback
+              if (crudData.competitors && crudData.competitors.length > 0) {
+                return {
+                  count: crudData.competitors.length,
+                  list: crudData.competitors.slice(0, limit).map((c) => ({
+                    name: String(c?.name || '').trim() || undefined,
+                    advantage: String(c?.advantage || '').trim() || undefined,
+                  }))
+                };
+              }
+              // Fallback to answers
+              const competitorNames = Array.isArray(aAns.competitorNames) ? aAns.competitorNames : [];
+              return {
+                count: competitorNames.length,
+                list: competitorNames.slice(0, limit).map((name) => ({ name: String(name).trim() }))
               };
             }
             default: return {};

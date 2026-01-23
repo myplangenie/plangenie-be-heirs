@@ -223,7 +223,7 @@ function buildDocumentXml(groups) {
       rewriteMarketPartners: 'Rewrite — Partners & Channels',
       suggestMarketCompetitors: 'Competitive Landscape',
       rewriteMarketCompetitors: 'Rewrite — Competitive Landscape',
-      suggestCoreProject: 'Core Strategic Project Proposal',
+      suggestCoreProject: 'Core Project Proposal',
       suggestCoreDeliverables: 'Core Project Deliverables',
       suggestActionAll: 'Action Plan Fields (All)',
       suggestDeptGoalsBulk: 'Departmental Goals (Bulk)',
@@ -252,7 +252,7 @@ function buildDocumentXml(groups) {
     if (lower.includes('culture') && lower.includes('brand')) return 'Culture & Brand Experience';
     if (lower.includes('long-term') && lower.includes('vision')) return 'Long‑Term Strategic Vision';
     if (lower.includes('kpi') && lower.includes('sections')) return 'Action Insight Sections';
-    if (lower.includes('core strategic project')) return 'Core Strategic Project Proposal';
+    if (lower.includes('core strategic project')) return 'Core Project Proposal';
     if (lower.includes('competitor')) return 'Competitive Landscape';
     if (lower.includes('partners')) return 'Partners & Channels';
     if (lower.includes('departmental goals')) return 'Departmental Goals';

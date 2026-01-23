@@ -43,6 +43,7 @@ const FinancialBaselineSchema = new mongoose.Schema({
     commissions: { type: Number, default: 0 },
     shipping: { type: Number, default: 0 },
     other: { type: Number, default: 0 },
+    otherTitle: { type: String, default: '' },
   },
 
   // Cost Bucket 2: "Costs we pay no matter what"
@@ -57,6 +58,7 @@ const FinancialBaselineSchema = new mongoose.Schema({
     utilities: { type: Number, default: 0 },
     marketing: { type: Number, default: 0 },
     other: { type: Number, default: 0 },
+    otherTitle: { type: String, default: '' },
   },
 
   // Cash Position

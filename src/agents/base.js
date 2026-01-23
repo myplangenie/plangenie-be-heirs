@@ -188,11 +188,11 @@ async function buildAgentContext(userId, workspaceId = null) {
   const marketCompetitors = competitorNames.join(', ');
   const competitorAdvantages = competitorAdvantagesList.join('; ');
 
-  // Build SWOT strings from new SwotEntry model
-  const swotStrengths = swotEntries.filter(s => s.type === 'strength').map(s => s.text).join('\n');
-  const swotWeaknesses = swotEntries.filter(s => s.type === 'weakness').map(s => s.text).join('\n');
-  const swotOpportunities = swotEntries.filter(s => s.type === 'opportunity').map(s => s.text).join('\n');
-  const swotThreats = swotEntries.filter(s => s.type === 'threat').map(s => s.text).join('\n');
+  // Build SWOT strings from new SwotEntry model (field is entryType, not type)
+  const swotStrengths = swotEntries.filter(s => s.entryType === 'strength').map(s => s.text).join('\n');
+  const swotWeaknesses = swotEntries.filter(s => s.entryType === 'weakness').map(s => s.text).join('\n');
+  const swotOpportunities = swotEntries.filter(s => s.entryType === 'opportunity').map(s => s.text).join('\n');
+  const swotThreats = swotEntries.filter(s => s.entryType === 'threat').map(s => s.text).join('\n');
 
   // Map core projects to the expected format
   const coreProjectDetails = coreProjects.map(p => ({

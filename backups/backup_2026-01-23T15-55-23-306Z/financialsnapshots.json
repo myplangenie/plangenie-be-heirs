@@ -1,0 +1,659 @@
+[
+  {
+    "_id": "695387add189d8bef753f69a",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": null,
+    "revenue": {
+      "monthlyRevenue": 5000,
+      "revenueGrowthPct": 5,
+      "isRecurring": true,
+      "recurringPct": 50,
+      "confidence": 100
+    },
+    "costs": {
+      "monthlyCosts": 60,
+      "fixedCosts": 70,
+      "variableCostsPct": 10,
+      "biggestCostCategory": "Inventory & Materials",
+      "confidence": 100
+    },
+    "cash": {
+      "currentCash": 10000,
+      "monthlyBurn": 0,
+      "expectedFunding": 20000,
+      "fundingMonth": 2,
+      "fundingYear": 2027,
+      "confidence": 100
+    },
+    "metrics": {
+      "netProfit": 4940,
+      "profitMarginPct": 99,
+      "healthScore": 100,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": true,
+    "assumptions": [],
+    "createdAt": "2025-12-30T08:05:01.426Z",
+    "updatedAt": "2026-01-07T06:36:18.509Z",
+    "__v": 0,
+    "lastUpdatedSection": "cash"
+  },
+  {
+    "_id": "695c344e3e94b14ff9d7b06d",
+    "user": "695c2c8ee32bf19ca9041886",
+    "workspace": null,
+    "revenue": {
+      "monthlyRevenue": 10000,
+      "revenueGrowthPct": 5,
+      "isRecurring": true,
+      "recurringPct": 50,
+      "confidence": 100
+    },
+    "costs": {
+      "monthlyCosts": 5000,
+      "fixedCosts": 2000,
+      "variableCostsPct": 20,
+      "biggestCostCategory": "Payroll & Salaries",
+      "confidence": 100
+    },
+    "cash": {
+      "currentCash": 10000,
+      "monthlyBurn": 0,
+      "expectedFunding": 38,
+      "fundingMonth": 7,
+      "confidence": 100
+    },
+    "metrics": {
+      "netProfit": 5000,
+      "profitMarginPct": 50,
+      "healthScore": 100,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": true,
+    "assumptions": [],
+    "createdAt": "2026-01-05T21:59:42.577Z",
+    "updatedAt": "2026-01-05T22:24:11.717Z",
+    "__v": 0,
+    "lastUpdatedSection": "cash"
+  },
+  {
+    "_id": "695dbabb3577214989df8020",
+    "user": "695dba2a3577214989df7fd1",
+    "workspace": null,
+    "revenue": {
+      "monthlyRevenue": 0,
+      "revenueGrowthPct": 0,
+      "isRecurring": false,
+      "recurringPct": 0,
+      "confidence": 0
+    },
+    "costs": {
+      "monthlyCosts": 0,
+      "fixedCosts": 0,
+      "variableCostsPct": 0,
+      "confidence": 0
+    },
+    "cash": {
+      "currentCash": 0,
+      "monthlyBurn": 0,
+      "expectedFunding": 0,
+      "confidence": 0
+    },
+    "metrics": {
+      "netProfit": 0,
+      "profitMarginPct": 0,
+      "healthScore": 20,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": false,
+    "assumptions": [],
+    "createdAt": "2026-01-07T01:45:31.424Z",
+    "updatedAt": "2026-01-07T01:45:31.424Z",
+    "__v": 0
+  },
+  {
+    "_id": "695e2a09f15d20ef28b852ce",
+    "user": "695e24e53932b44a07110322",
+    "workspace": null,
+    "revenue": {
+      "monthlyRevenue": 5000,
+      "revenueGrowthPct": 10,
+      "isRecurring": true,
+      "recurringPct": 70,
+      "confidence": 100
+    },
+    "costs": {
+      "monthlyCosts": 3000,
+      "fixedCosts": 3000,
+      "variableCostsPct": 30,
+      "biggestCostCategory": "Payroll & Salaries",
+      "confidence": 100
+    },
+    "cash": {
+      "currentCash": 5000,
+      "monthlyBurn": 0,
+      "expectedFunding": 50000,
+      "fundingMonth": 5,
+      "fundingYear": 2026,
+      "confidence": 100
+    },
+    "metrics": {
+      "netProfit": 2000,
+      "profitMarginPct": 40,
+      "healthScore": 100,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": true,
+    "assumptions": [],
+    "createdAt": "2026-01-07T09:40:25.639Z",
+    "updatedAt": "2026-01-07T10:30:58.698Z",
+    "__v": 0,
+    "lastUpdatedSection": "cash"
+  },
+  {
+    "_id": "695e49e2335e8ed061f7a222",
+    "user": "695e48d3335e8ed061f7a1de",
+    "workspace": null,
+    "revenue": {
+      "monthlyRevenue": 0,
+      "revenueGrowthPct": 0,
+      "isRecurring": false,
+      "recurringPct": 0,
+      "confidence": 0
+    },
+    "costs": {
+      "monthlyCosts": 0,
+      "fixedCosts": 0,
+      "variableCostsPct": 0,
+      "confidence": 0
+    },
+    "cash": {
+      "currentCash": 0,
+      "monthlyBurn": 0,
+      "expectedFunding": 0,
+      "confidence": 0
+    },
+    "metrics": {
+      "netProfit": 0,
+      "profitMarginPct": 0,
+      "healthScore": 20,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": false,
+    "assumptions": [],
+    "createdAt": "2026-01-07T11:56:18.106Z",
+    "updatedAt": "2026-01-07T11:56:18.106Z",
+    "__v": 0
+  },
+  {
+    "_id": "695e7f13f0d126a92c7efa5c",
+    "user": "695e7ebaf0d126a92c7efa16",
+    "workspace": null,
+    "revenue": {
+      "monthlyRevenue": 3000,
+      "revenueGrowthPct": 10,
+      "isRecurring": true,
+      "recurringPct": 70,
+      "confidence": 100
+    },
+    "costs": {
+      "monthlyCosts": 0,
+      "fixedCosts": 0,
+      "variableCostsPct": 0,
+      "confidence": 0
+    },
+    "cash": {
+      "currentCash": 0,
+      "monthlyBurn": 0,
+      "expectedFunding": 0,
+      "confidence": 0
+    },
+    "metrics": {
+      "netProfit": 3000,
+      "profitMarginPct": 100,
+      "healthScore": 47,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": false,
+    "assumptions": [],
+    "createdAt": "2026-01-07T15:43:15.030Z",
+    "updatedAt": "2026-01-07T16:06:08.148Z",
+    "__v": 0,
+    "lastUpdatedSection": "revenue"
+  },
+  {
+    "_id": "695e83377d1802f036a1220b",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": "695130344db73e493a55c301",
+    "revenue": {
+      "monthlyRevenue": 113680,
+      "revenueGrowthPct": 0,
+      "isRecurring": false,
+      "recurringPct": 0,
+      "confidence": 100
+    },
+    "costs": {
+      "monthlyCosts": 0,
+      "fixedCosts": 0,
+      "variableCostsPct": 0,
+      "confidence": 0,
+      "biggestCostCategory": []
+    },
+    "cash": {
+      "currentCash": 0,
+      "monthlyBurn": 0,
+      "expectedFunding": 0,
+      "confidence": 50
+    },
+    "metrics": {
+      "netProfit": 113680,
+      "profitMarginPct": 100,
+      "healthScore": 60,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": true,
+    "assumptions": [],
+    "createdAt": "2026-01-07T16:00:55.148Z",
+    "updatedAt": "2026-01-15T05:09:57.930Z",
+    "__v": 1,
+    "lastUpdatedSection": "revenue"
+  },
+  {
+    "_id": "695e847955d7f18449986192",
+    "user": "695e7ebaf0d126a92c7efa16",
+    "workspace": "695e7ebaf0d126a92c7efa18",
+    "revenue": {
+      "monthlyRevenue": 0,
+      "revenueGrowthPct": 0,
+      "isRecurring": false,
+      "recurringPct": 0,
+      "confidence": 0
+    },
+    "costs": {
+      "monthlyCosts": 2500,
+      "fixedCosts": 3000,
+      "variableCostsPct": 70,
+      "biggestCostCategory": [
+        "Payroll & Salaries"
+      ],
+      "confidence": 100
+    },
+    "cash": {
+      "currentCash": 5000,
+      "monthlyBurn": 2500,
+      "expectedFunding": 50000,
+      "fundingMonth": 6,
+      "fundingYear": 2028,
+      "confidence": 100
+    },
+    "metrics": {
+      "netProfit": -2500,
+      "profitMarginPct": 0,
+      "healthScore": 53,
+      "monthsOfRunway": 22,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": true,
+    "assumptions": [],
+    "createdAt": "2026-01-07T16:06:17.949Z",
+    "updatedAt": "2026-01-07T16:45:44.437Z",
+    "__v": 1,
+    "lastUpdatedSection": "cash"
+  },
+  {
+    "_id": "695eca85c140d79fea125f27",
+    "user": "695ec942c140d79fea125b5d",
+    "workspace": "695ec942c140d79fea125b5f",
+    "revenue": {
+      "monthlyRevenue": 40000,
+      "revenueGrowthPct": 5,
+      "isRecurring": false,
+      "recurringPct": 0,
+      "confidence": 100
+    },
+    "costs": {
+      "monthlyCosts": 1000,
+      "fixedCosts": 500,
+      "variableCostsPct": 20,
+      "biggestCostCategory": [
+        "Payroll & Salaries",
+        "Marketing & Ads"
+      ],
+      "confidence": 100
+    },
+    "cash": {
+      "currentCash": 1000,
+      "monthlyBurn": 0,
+      "expectedFunding": 500,
+      "fundingMonth": 8,
+      "fundingYear": 2026,
+      "confidence": 100
+    },
+    "metrics": {
+      "netProfit": 39000,
+      "profitMarginPct": 98,
+      "healthScore": 100,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": true,
+    "assumptions": [],
+    "createdAt": "2026-01-07T21:05:09.799Z",
+    "updatedAt": "2026-01-07T21:24:38.107Z",
+    "__v": 0,
+    "lastUpdatedSection": "cash"
+  },
+  {
+    "_id": "695ed9cec140d79fea126d65",
+    "user": "695ec942c140d79fea125b5d",
+    "workspace": "695ed85fc140d79fea126b18",
+    "revenue": {
+      "monthlyRevenue": 0,
+      "revenueGrowthPct": 0,
+      "isRecurring": false,
+      "recurringPct": 0,
+      "confidence": 0
+    },
+    "costs": {
+      "monthlyCosts": 0,
+      "fixedCosts": 0,
+      "variableCostsPct": 0,
+      "biggestCostCategory": [],
+      "confidence": 0
+    },
+    "cash": {
+      "currentCash": 0,
+      "monthlyBurn": 0,
+      "expectedFunding": 0,
+      "confidence": 0
+    },
+    "metrics": {
+      "netProfit": 0,
+      "profitMarginPct": 0,
+      "healthScore": 20,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": false,
+    "assumptions": [],
+    "createdAt": "2026-01-07T22:10:22.425Z",
+    "updatedAt": "2026-01-07T22:10:22.425Z",
+    "__v": 0
+  },
+  {
+    "_id": "695fe99624ad03a594e2aff2",
+    "user": "695fe8ce24ad03a594e2afb3",
+    "workspace": "695fe8cf24ad03a594e2afb5",
+    "revenue": {
+      "monthlyRevenue": 20880,
+      "revenueGrowthPct": 5,
+      "isRecurring": true,
+      "recurringPct": 25,
+      "confidence": 100
+    },
+    "costs": {
+      "monthlyCosts": 1200,
+      "fixedCosts": 1000,
+      "variableCostsPct": 20,
+      "biggestCostCategory": [
+        "Payroll & Salaries"
+      ],
+      "confidence": 100
+    },
+    "cash": {
+      "currentCash": 10000,
+      "monthlyBurn": 0,
+      "expectedFunding": 0,
+      "confidence": 50
+    },
+    "metrics": {
+      "netProfit": 19680,
+      "profitMarginPct": 94,
+      "healthScore": 87,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": true,
+    "assumptions": [],
+    "createdAt": "2026-01-08T17:29:58.537Z",
+    "updatedAt": "2026-01-08T18:25:24.192Z",
+    "__v": 0,
+    "lastUpdatedSection": "cash"
+  },
+  {
+    "_id": "696187c77d3eed3d5355a1ba",
+    "user": "696186ea7d3eed3d5355a176",
+    "workspace": "696186ea7d3eed3d5355a178",
+    "revenue": {
+      "monthlyRevenue": 150000,
+      "revenueGrowthPct": 5,
+      "isRecurring": true,
+      "recurringPct": 50,
+      "confidence": 100
+    },
+    "costs": {
+      "monthlyCosts": 10000,
+      "fixedCosts": 5000,
+      "variableCostsPct": 30,
+      "biggestCostCategory": [
+        "Payroll & Salaries",
+        "Marketing & Ads",
+        "Rent & Facilities"
+      ],
+      "confidence": 100
+    },
+    "cash": {
+      "currentCash": 10000,
+      "monthlyBurn": 0,
+      "expectedFunding": 10000,
+      "fundingMonth": 3,
+      "fundingYear": 2026,
+      "confidence": 100
+    },
+    "metrics": {
+      "netProfit": 140000,
+      "profitMarginPct": 93,
+      "healthScore": 100,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": true,
+    "assumptions": [],
+    "createdAt": "2026-01-09T22:57:11.959Z",
+    "updatedAt": "2026-01-09T23:18:43.081Z",
+    "__v": 0,
+    "lastUpdatedSection": "cash"
+  },
+  {
+    "_id": "696796e2af319cf832eb3c02",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": "695da092db01be6299710a0a",
+    "revenue": {
+      "monthlyRevenue": 0,
+      "revenueGrowthPct": 0,
+      "isRecurring": false,
+      "recurringPct": 0,
+      "confidence": 0
+    },
+    "costs": {
+      "monthlyCosts": 0,
+      "fixedCosts": 0,
+      "variableCostsPct": 0,
+      "biggestCostCategory": [],
+      "confidence": 0
+    },
+    "cash": {
+      "currentCash": 0,
+      "monthlyBurn": 0,
+      "expectedFunding": 0,
+      "confidence": 0
+    },
+    "metrics": {
+      "netProfit": 0,
+      "profitMarginPct": 0,
+      "healthScore": 20,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": false,
+    "assumptions": [],
+    "createdAt": "2026-01-14T13:15:14.694Z",
+    "updatedAt": "2026-01-14T13:15:14.694Z",
+    "__v": 0
+  },
+  {
+    "_id": "6967b3a5af319cf832eb40b9",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": "6967b396af319cf832eb4082",
+    "revenue": {
+      "monthlyRevenue": 0,
+      "revenueGrowthPct": 0,
+      "isRecurring": false,
+      "recurringPct": 0,
+      "confidence": 0
+    },
+    "costs": {
+      "monthlyCosts": 0,
+      "fixedCosts": 0,
+      "variableCostsPct": 0,
+      "biggestCostCategory": [],
+      "confidence": 0
+    },
+    "cash": {
+      "currentCash": 0,
+      "monthlyBurn": 0,
+      "expectedFunding": 0,
+      "confidence": 0
+    },
+    "metrics": {
+      "netProfit": 0,
+      "profitMarginPct": 0,
+      "healthScore": 20,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": false,
+    "assumptions": [],
+    "createdAt": "2026-01-14T15:17:57.751Z",
+    "updatedAt": "2026-01-14T15:17:57.751Z",
+    "__v": 0
+  },
+  {
+    "_id": "696a8e33aa4e6a9951a0ee01",
+    "user": "696a8d23aa4e6a9951a0ed62",
+    "workspace": "696a8d23aa4e6a9951a0ed64",
+    "revenue": {
+      "monthlyRevenue": 0,
+      "revenueGrowthPct": 0,
+      "isRecurring": false,
+      "recurringPct": 0,
+      "confidence": 0
+    },
+    "costs": {
+      "monthlyCosts": 0,
+      "fixedCosts": 0,
+      "variableCostsPct": 0,
+      "biggestCostCategory": [],
+      "confidence": 0
+    },
+    "cash": {
+      "currentCash": 0,
+      "monthlyBurn": 0,
+      "expectedFunding": 0,
+      "confidence": 0
+    },
+    "metrics": {
+      "netProfit": 0,
+      "profitMarginPct": 0,
+      "healthScore": 20,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": false,
+    "assumptions": [],
+    "createdAt": "2026-01-16T19:14:59.949Z",
+    "updatedAt": "2026-01-16T19:14:59.949Z",
+    "__v": 0
+  },
+  {
+    "_id": "6973093dae583cb12e6e8fff",
+    "user": "69730810ae583cb12e6e8ed9",
+    "workspace": "69730810ae583cb12e6e8edb",
+    "revenue": {
+      "monthlyRevenue": 0,
+      "revenueGrowthPct": 0,
+      "isRecurring": false,
+      "recurringPct": 0,
+      "confidence": 0
+    },
+    "costs": {
+      "monthlyCosts": 0,
+      "fixedCosts": 0,
+      "variableCostsPct": 0,
+      "biggestCostCategory": [],
+      "confidence": 0
+    },
+    "cash": {
+      "currentCash": 0,
+      "monthlyBurn": 0,
+      "expectedFunding": 0,
+      "confidence": 0
+    },
+    "metrics": {
+      "netProfit": 0,
+      "profitMarginPct": 0,
+      "healthScore": 20,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": false,
+    "assumptions": [],
+    "createdAt": "2026-01-23T05:38:05.502Z",
+    "updatedAt": "2026-01-23T05:38:05.502Z",
+    "__v": 0
+  },
+  {
+    "_id": "6973206d3732d263754568f2",
+    "user": "69731f973732d26375456804",
+    "workspace": "69731f973732d26375456806",
+    "revenue": {
+      "monthlyRevenue": 0,
+      "revenueGrowthPct": 0,
+      "isRecurring": false,
+      "recurringPct": 0,
+      "confidence": 0
+    },
+    "costs": {
+      "monthlyCosts": 0,
+      "fixedCosts": 0,
+      "variableCostsPct": 0,
+      "biggestCostCategory": [],
+      "confidence": 0
+    },
+    "cash": {
+      "currentCash": 0,
+      "monthlyBurn": 0,
+      "expectedFunding": 0,
+      "confidence": 0
+    },
+    "metrics": {
+      "netProfit": 0,
+      "profitMarginPct": 0,
+      "healthScore": 20,
+      "monthsOfRunway": null,
+      "breakEvenMonth": null
+    },
+    "completedOnboarding": false,
+    "assumptions": [],
+    "createdAt": "2026-01-23T07:17:01.281Z",
+    "updatedAt": "2026-01-23T07:17:01.281Z",
+    "__v": 0
+  }
+]

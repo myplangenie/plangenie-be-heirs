@@ -840,8 +840,12 @@ exports.getAISuggestions = async (req, res, next) => {
     // Get cached priorities
     const cache = await PriorityCache.findOne({ user: userId, workspace: ws._id }).lean();
 
-    // Build context for AI
+    // Build context for AI - use weeklyTop3, fallback to upcomingItems if empty
     let priorities = cache?.weeklyTop3 || [];
+    const hasWeeklyItems = priorities.length > 0;
+    if (!hasWeeklyItems && cache?.upcomingItems?.length > 0) {
+      priorities = cache.upcomingItems;
+    }
     const today = new Date();
 
     // Filter out items that had recent actions (within the last 24 hours)
@@ -891,13 +895,15 @@ exports.getAISuggestions = async (req, res, next) => {
     });
 
     // Build AI prompt
-    const prompt = `You are an AI assistant for a business planning app. Analyze the user's current priorities and provide actionable suggestions.
+    const contextType = hasWeeklyItems ? 'weekly priorities' : 'upcoming priorities';
+    const prompt = `You are an AI assistant for a business planning app. Analyze the user's ${contextType} and provide actionable suggestions.
 
-Current priorities:
+Current ${contextType}:
 ${prioritySummary || 'No priorities found'}
 
 Overdue items: ${overdueItems.length}
 Items due in next 3 days: ${itemsDueSoon.length}
+${!hasWeeklyItems ? 'Note: No items due this week. Showing upcoming items instead.' : ''}
 Today's date: ${today.toISOString().split('T')[0]}
 
 Based on this, provide 1-3 specific, actionable suggestions. For each suggestion, respond in this exact JSON format:
@@ -915,9 +921,10 @@ Based on this, provide 1-3 specific, actionable suggestions. For each suggestion
 Rules:
 - Only suggest "reschedule" for overdue items or items with unrealistic deadlines
 - Only suggest "complete" if an item seems like it might already be done based on context
-- Use "reprioritize" to suggest focusing on something specific
+- Use "reprioritize" to suggest focusing on something specific or to start working on upcoming items early
 - Keep reasons concise (under 20 words)
-- If everything looks good, return an empty suggestions array
+- If there are upcoming items but nothing urgent, suggest which one to start working on first
+- Only return empty suggestions array if there are truly no items to work on
 - For reschedule, suggest a realistic new date (usually 3-7 days from today)`;
 
     let suggestions = [];

@@ -60,7 +60,7 @@ exports.updateWorkCosts = async (req, res) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     const workspaceId = req.workspace?._id || null;
-    const { total, contractors, materials, commissions, shipping, other } = req.body;
+    const { total, contractors, materials, commissions, shipping, other, otherTitle } = req.body;
 
     let baseline;
     try {
@@ -77,6 +77,7 @@ exports.updateWorkCosts = async (req, res) => {
     if (commissions !== undefined) baseline.workRelatedCosts.commissions = commissions;
     if (shipping !== undefined) baseline.workRelatedCosts.shipping = shipping;
     if (other !== undefined) baseline.workRelatedCosts.other = other;
+    if (otherTitle !== undefined) baseline.workRelatedCosts.otherTitle = otherTitle;
 
     // If breakdown provided but no total, calculate total
     if (total === undefined) {
@@ -113,7 +114,7 @@ exports.updateFixedCosts = async (req, res) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     const workspaceId = req.workspace?._id || null;
-    const { total, salaries, rent, software, insurance, utilities, marketing, other } = req.body;
+    const { total, salaries, rent, software, insurance, utilities, marketing, other, otherTitle } = req.body;
 
     let baseline;
     try {
@@ -132,6 +133,7 @@ exports.updateFixedCosts = async (req, res) => {
     if (utilities !== undefined) baseline.fixedCosts.utilities = utilities;
     if (marketing !== undefined) baseline.fixedCosts.marketing = marketing;
     if (other !== undefined) baseline.fixedCosts.other = other;
+    if (otherTitle !== undefined) baseline.fixedCosts.otherTitle = otherTitle;
 
     // If breakdown provided but no total, calculate total
     if (total === undefined) {

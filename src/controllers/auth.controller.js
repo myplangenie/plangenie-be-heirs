@@ -8,6 +8,7 @@ const Collaboration = require('../models/Collaboration');
 const Workspace = require('../models/Workspace');
 const Onboarding = require('../models/Onboarding');
 const RefreshToken = require('../models/RefreshToken');
+const Notification = require('../models/Notification');
 const { effectivePlan, plans } = require('../config/entitlements');
 const {
   ACCESS_TOKEN_COOKIE,
@@ -165,10 +166,11 @@ exports.register = async (req, res) => {
   });
 
   // Auto-create default workspace for the user
+  let newWorkspace = null;
   try {
     const workspaceName = companyName || `${firstName || 'My'}'s Workspace`;
     const wid = `ws_${crypto.randomBytes(6).toString('hex')}`;
-    await Workspace.create({
+    newWorkspace = await Workspace.create({
       user: user._id,
       wid,
       name: workspaceName,
@@ -176,6 +178,27 @@ exports.register = async (req, res) => {
     });
   } catch (wsErr) {
     console.error('[auth] Failed to auto-create workspace:', wsErr?.message || wsErr);
+  }
+
+  // Create welcome notification for new user
+  if (newWorkspace) {
+    try {
+      await Notification.create({
+        user: user._id,
+        workspace: newWorkspace._id,
+        nid: `welcome_${user._id}`,
+        title: 'Welcome to Plan Genie!',
+        description: 'We\'re excited to have you on board. Start by completing your business plan to unlock the full potential of Plan Genie.',
+        type: 'ai',
+        severity: 'success',
+        time: 'Just now',
+        actions: [
+          { label: 'Get Started', kind: 'primary' },
+        ],
+      });
+    } catch (notifErr) {
+      console.error('[auth] Failed to create welcome notification:', notifErr?.message || notifErr);
+    }
   }
 
   // Send verification email (best-effort)

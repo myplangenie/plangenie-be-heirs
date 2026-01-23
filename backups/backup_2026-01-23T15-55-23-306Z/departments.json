@@ -1,0 +1,63 @@
+[
+  {
+    "_id": "69030afce82840a7447489c7",
+    "user": "6902f6e58d0d3a49714de018",
+    "name": "Technology",
+    "owner": "Emily Davis",
+    "dueDate": "March 31, 2025",
+    "progress": 75,
+    "status": "at-risk",
+    "__v": 0,
+    "createdAt": "2025-10-30T06:51:40.965Z",
+    "updatedAt": "2026-01-03T15:17:09.055Z",
+    "workspace": "695932f25c7dd36581e83cd0"
+  },
+  {
+    "_id": "69030afce82840a7447489c6",
+    "user": "6902f6e58d0d3a49714de018",
+    "name": "Sales",
+    "owner": "Emily Davis",
+    "dueDate": "March 31, 2025",
+    "progress": 75,
+    "status": "in-progress",
+    "__v": 0,
+    "createdAt": "2025-10-30T06:51:40.965Z",
+    "updatedAt": "2026-01-03T15:17:09.055Z",
+    "workspace": "695932f25c7dd36581e83cd0"
+  },
+  {
+    "_id": "69030afce82840a7447489c5",
+    "user": "6902f6e58d0d3a49714de018",
+    "name": "Marketing",
+    "owner": "Emily Davis",
+    "dueDate": "March 31, 2025",
+    "progress": 100,
+    "status": "on-track",
+    "__v": 0,
+    "createdAt": "2025-10-30T06:51:40.965Z",
+    "updatedAt": "2026-01-03T15:17:09.055Z",
+    "workspace": "695932f25c7dd36581e83cd0"
+  },
+  {
+    "_id": "6914c93aadf17ea1836b47b6",
+    "name": "Marketing",
+    "user": "6914c08d4a5b21ac61c18296",
+    "__v": 0,
+    "createdAt": "2025-11-12T17:51:54.641Z",
+    "owner": "Ife Adeleke",
+    "status": "in-progress",
+    "updatedAt": "2026-01-03T15:17:37.127Z",
+    "workspace": "6959330e5c7dd36581e83d38"
+  },
+  {
+    "_id": "6914c95cadf17ea1836b47cd",
+    "user": "6914c08d4a5b21ac61c18296",
+    "name": "Sales",
+    "__v": 0,
+    "createdAt": "2025-11-12T17:52:28.278Z",
+    "owner": "Ife Adeleke",
+    "status": "in-progress",
+    "updatedAt": "2026-01-03T15:17:37.127Z",
+    "workspace": "6959330e5c7dd36581e83d38"
+  }
+]

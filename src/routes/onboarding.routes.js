@@ -125,9 +125,9 @@ router.post('/actions/cost/suggest', requireContributor, requireAI('actions'), r
 router.post('/actions/cost/rewrite', requireContributor, requireAI('actions'), requireFeature('aiActionPlans'), ai.rewriteActionCost);
 // Allow Lite users to use the bulk suggest-all for action plan fields
 router.post('/actions/suggest-all', requireContributor, requireAI('actions'), ai.suggestActionAll);
-// Core Strategic Projects deliverables
+// Core Projects deliverables
 router.post('/actions/core/deliverables', requireContributor, requireAI('core'), requireFeature('aiCoreProjects'), ai.suggestCoreDeliverables);
-// Core Strategic Project (full) suggestion
+// Core Project (full) suggestion
 router.post('/actions/core/project/suggest', requireContributor, requireAI('core'), requireFeature('aiCoreProjects'), ai.suggestCoreProject);
 // Bulk goals per department/section
 // Allow Lite users to generate section goals used by core projects workflows

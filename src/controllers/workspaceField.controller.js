@@ -99,7 +99,11 @@ exports.getField = async (req, res, next) => {
     const wsFilter = getWorkspaceFilter(req);
     const ob = await Onboarding.findOne(wsFilter).lean();
 
-    const value = ob?.answers?.[fieldName] ?? null;
+    let value = ob?.answers?.[fieldName] ?? null;
+    // Handle legacy field name: 'bhag' might be stored as 'visionBhag' in older data
+    if (fieldName === 'bhag' && value === null) {
+      value = ob?.answers?.visionBhag ?? null;
+    }
     return res.json({ field: fieldName, value });
   } catch (err) {
     next(err);
@@ -228,7 +232,12 @@ exports.getFields = async (req, res, next) => {
 
     const result = {};
     fields.forEach(f => {
-      result[f] = ob?.answers?.[f] ?? null;
+      let value = ob?.answers?.[f] ?? null;
+      // Handle legacy field name: 'bhag' might be stored as 'visionBhag' in older data
+      if (f === 'bhag' && value === null) {
+        value = ob?.answers?.visionBhag ?? null;
+      }
+      result[f] = value;
     });
 
     return res.json({ values: result });

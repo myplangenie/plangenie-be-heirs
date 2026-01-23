@@ -7,7 +7,7 @@ const plans = {
       financials: false,
       aiCompetitors: false,
       aiCustomerAnalysis: false,
-      // Allow AI for Core Strategic Projects in Lite
+      // Allow AI for Core Projects in Lite
       aiCoreProjects: true,
       // Departmental action-plan AI remains off for Lite
       aiActionPlans: false,
