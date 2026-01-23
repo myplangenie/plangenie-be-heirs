@@ -2,6 +2,11 @@ const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
 const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
+const CoreProject = require('../models/CoreProject');
+const Competitor = require('../models/Competitor');
+const SwotEntry = require('../models/SwotEntry');
+const Product = require('../models/Product');
+const OrgPosition = require('../models/OrgPosition');
 const { getWorkspaceFilter } = require('../utils/workspaceQuery');
 let rag;
 try {
@@ -42,11 +47,12 @@ function buildContextText(ob) {
   return fields.length ? `Context about the business:\n- ${fields.join('\n- ')}` : '';
 }
 
-function buildAnswersContext(ob) {
+function buildAnswersContext(ob, options = {}) {
   try {
     const a = (ob && ob.answers) || {};
     const bp = (ob && ob.businessProfile) || {};
     const up = (ob && ob.userProfile) || {};
+    const { swotEntries = [], competitors = [] } = options;
     const lines = [];
 
     // Business Profile from initial onboarding
@@ -78,20 +84,35 @@ function buildAnswersContext(ob) {
     if (a.vision3y) lines.push(`3-Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
     if (a.valuesCore) lines.push(`Core Values: ${String(a.valuesCore).trim()}`);
     if (a.cultureFeeling) lines.push(`Culture & Behaviors: ${String(a.cultureFeeling).trim()}`);
-    // SWOT
-    if (a.swotStrengths) lines.push(`Strengths: ${String(a.swotStrengths).trim()}`);
-    if (a.swotWeaknesses) lines.push(`Weaknesses: ${String(a.swotWeaknesses).trim()}`);
-    if (a.swotOpportunities) lines.push(`Opportunities: ${String(a.swotOpportunities).trim()}`);
-    if (a.swotThreats) lines.push(`Threats: ${String(a.swotThreats).trim()}`);
+    // SWOT - from new SwotEntry model with fallback to answers
+    const strengths = swotEntries.filter(s => s.type === 'strength').map(s => s.text).filter(Boolean);
+    const weaknesses = swotEntries.filter(s => s.type === 'weakness').map(s => s.text).filter(Boolean);
+    const opportunities = swotEntries.filter(s => s.type === 'opportunity').map(s => s.text).filter(Boolean);
+    const threats = swotEntries.filter(s => s.type === 'threat').map(s => s.text).filter(Boolean);
+    if (strengths.length) lines.push(`Strengths: ${strengths.join('; ')}`);
+    else if (a.swotStrengths) lines.push(`Strengths: ${String(a.swotStrengths).trim()}`);
+    if (weaknesses.length) lines.push(`Weaknesses: ${weaknesses.join('; ')}`);
+    else if (a.swotWeaknesses) lines.push(`Weaknesses: ${String(a.swotWeaknesses).trim()}`);
+    if (opportunities.length) lines.push(`Opportunities: ${opportunities.join('; ')}`);
+    else if (a.swotOpportunities) lines.push(`Opportunities: ${String(a.swotOpportunities).trim()}`);
+    if (threats.length) lines.push(`Threats: ${threats.join('; ')}`);
+    else if (a.swotThreats) lines.push(`Threats: ${String(a.swotThreats).trim()}`);
     // Market & Competition
-    if (a.marketCustomer) lines.push(`Target Customer: ${String(a.marketCustomer).trim()}`);
-    if (a.custType) lines.push(`Customer Type: ${String(a.custType).trim()}`);
-    if (a.partnersDesc) lines.push(`Partners: ${String(a.partnersDesc).trim()}`);
-    if (a.compNotes) lines.push(`Competitor Notes: ${String(a.compNotes).trim()}`);
-    if (Array.isArray(a.competitorNames) && a.competitorNames.length) {
+    if (a.marketCustomer || a.targetCustomer) lines.push(`Target Customer: ${String(a.marketCustomer || a.targetCustomer).trim()}`);
+    if (a.custType || a.targetMarket) lines.push(`Customer Type: ${String(a.custType || a.targetMarket).trim()}`);
+    if (a.partnersDesc || a.partners) lines.push(`Partners: ${String(a.partnersDesc || a.partners).trim()}`);
+    if (a.compNotes || a.competitorsNotes) lines.push(`Competitor Notes: ${String(a.compNotes || a.competitorsNotes).trim()}`);
+    // Use new Competitor model with fallback to answers
+    const competitorNames = competitors.map(c => c.name).filter(Boolean);
+    const competitorAdvantagesList = competitors.map(c => c.advantage).filter(Boolean);
+    if (competitorNames.length) {
+      lines.push(`Competitors: ${competitorNames.slice(0, 8).join(', ')}`);
+    } else if (Array.isArray(a.competitorNames) && a.competitorNames.length) {
       lines.push(`Competitors: ${a.competitorNames.slice(0, 8).join(', ')}`);
     }
-    if (Array.isArray(a.competitorAdvantages) && a.competitorAdvantages.length) {
+    if (competitorAdvantagesList.length) {
+      lines.push(`Competitive Advantages: ${competitorAdvantagesList.slice(0, 8).join('; ')}`);
+    } else if (Array.isArray(a.competitorAdvantages) && a.competitorAdvantages.length) {
       lines.push(`Competitive Advantages: ${a.competitorAdvantages.slice(0, 8).join(', ')}`);
     }
     // Products with full details
@@ -128,15 +149,27 @@ function buildAnswersContext(ob) {
 // Build a richer, user-aware context for Core Strategic Project suggestions
 // Includes: Onboarding profile, fallback to User.companyName, key onboarding answers,
 // existing core projects, departments summary, and active team members (limited).
+// Updated to fetch from new individual CRUD models (CoreProject, Competitor, SwotEntry, Product)
 async function buildCoreProjectContextForUser(userId, workspaceId = null) {
   try {
     const wsFilter = { user: userId };
     if (workspaceId) wsFilter.workspace = workspaceId;
-    const [ob, user, departments, teamMembers] = await Promise.all([
+
+    // Filter for new individual models (workspace-aware, not deleted)
+    const crudFilter = { user: userId, isDeleted: { $ne: true } };
+    if (workspaceId) crudFilter.workspace = workspaceId;
+
+    const [ob, user, departments, teamMembers, coreProjects, competitors, swotEntries, products, orgPositions] = await Promise.all([
       userId ? Onboarding.findOne(wsFilter) : null,
       userId ? User.findById(userId) : null,
       userId ? Department.find(wsFilter).select('name status owner dueDate').limit(50).lean().exec() : [],
       userId ? TeamMember.find({ ...wsFilter, status: 'Active' }).select('name role department email status').limit(200).lean().exec() : [],
+      // New individual CRUD models
+      userId ? CoreProject.find(crudFilter).sort({ order: 1 }).lean() : [],
+      userId ? Competitor.find(crudFilter).sort({ order: 1 }).lean() : [],
+      userId ? SwotEntry.find(crudFilter).sort({ order: 1 }).lean() : [],
+      userId ? Product.find(crudFilter).sort({ order: 1 }).lean() : [],
+      userId ? OrgPosition.find(crudFilter).sort({ order: 1 }).lean() : [],
     ]);
 
     // Profile section (with fallback business name)
@@ -183,34 +216,63 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     if (answers.cultureFeeling) vvParts.push(`Culture & Behaviors: ${String(answers.cultureFeeling).trim()}`);
     const vvText = vvParts.length ? `\n\nVision & Values:\n- ${vvParts.join('\n- ')}` : '';
 
-    // SWOT Analysis
+    // SWOT Analysis - from new SwotEntry model with fallback to answers
     const swotLines = [];
-    if (answers.swotStrengths) swotLines.push(`Strengths: ${String(answers.swotStrengths).trim()}`);
-    if (answers.swotWeaknesses) swotLines.push(`Weaknesses: ${String(answers.swotWeaknesses).trim()}`);
-    if (answers.swotOpportunities) swotLines.push(`Opportunities: ${String(answers.swotOpportunities).trim()}`);
-    if (answers.swotThreats) swotLines.push(`Threats: ${String(answers.swotThreats).trim()}`);
+    const strengths = swotEntries.filter(s => s.type === 'strength').map(s => s.text).filter(Boolean);
+    const weaknesses = swotEntries.filter(s => s.type === 'weakness').map(s => s.text).filter(Boolean);
+    const opportunities = swotEntries.filter(s => s.type === 'opportunity').map(s => s.text).filter(Boolean);
+    const threats = swotEntries.filter(s => s.type === 'threat').map(s => s.text).filter(Boolean);
+    if (strengths.length) swotLines.push(`Strengths: ${strengths.join('; ')}`);
+    else if (answers.swotStrengths) swotLines.push(`Strengths: ${String(answers.swotStrengths).trim()}`);
+    if (weaknesses.length) swotLines.push(`Weaknesses: ${weaknesses.join('; ')}`);
+    else if (answers.swotWeaknesses) swotLines.push(`Weaknesses: ${String(answers.swotWeaknesses).trim()}`);
+    if (opportunities.length) swotLines.push(`Opportunities: ${opportunities.join('; ')}`);
+    else if (answers.swotOpportunities) swotLines.push(`Opportunities: ${String(answers.swotOpportunities).trim()}`);
+    if (threats.length) swotLines.push(`Threats: ${threats.join('; ')}`);
+    else if (answers.swotThreats) swotLines.push(`Threats: ${String(answers.swotThreats).trim()}`);
     const swotText = swotLines.length ? `\n\nSWOT Analysis:\n- ${swotLines.join('\n- ')}` : '';
 
-    // Market & Competition
+    // Market & Competition - from new Competitor model with fallback to answers
     const marketLines = [];
-    if (answers.marketCustomer) marketLines.push(`Target Customer: ${String(answers.marketCustomer).trim()}`);
-    if (answers.custType) marketLines.push(`Customer Type: ${String(answers.custType).trim()}`);
-    if (answers.partnersDesc) marketLines.push(`Partners: ${String(answers.partnersDesc).trim()}`);
-    if (answers.compNotes) marketLines.push(`Competitors Notes: ${String(answers.compNotes).trim()}`);
-    if (Array.isArray(answers.competitorNames) && answers.competitorNames.length) {
+    if (answers.marketCustomer || answers.targetCustomer) marketLines.push(`Target Customer: ${String(answers.marketCustomer || answers.targetCustomer).trim()}`);
+    if (answers.custType || answers.targetMarket) marketLines.push(`Customer Type: ${String(answers.custType || answers.targetMarket).trim()}`);
+    if (answers.partnersDesc || answers.partners) marketLines.push(`Partners: ${String(answers.partnersDesc || answers.partners).trim()}`);
+    if (answers.compNotes || answers.competitorsNotes) marketLines.push(`Competitors Notes: ${String(answers.compNotes || answers.competitorsNotes).trim()}`);
+    // Use new Competitor model with fallback to answers
+    const competitorNames = competitors.map(c => c.name).filter(Boolean);
+    const competitorAdvantagesList = competitors.map(c => c.advantage).filter(Boolean);
+    if (competitorNames.length) {
+      marketLines.push(`Competitor Names: ${competitorNames.slice(0, 8).join(', ')}`);
+    } else if (Array.isArray(answers.competitorNames) && answers.competitorNames.length) {
       const names = answers.competitorNames.map(String).map((s) => s.trim()).filter(Boolean).slice(0, 8).join(', ');
       if (names) marketLines.push(`Competitor Names: ${names}`);
     }
-    if (Array.isArray(answers.competitorAdvantages) && answers.competitorAdvantages.length) {
+    if (competitorAdvantagesList.length) {
+      marketLines.push(`Competitive Advantages: ${competitorAdvantagesList.slice(0, 8).join('; ')}`);
+    } else if (Array.isArray(answers.competitorAdvantages) && answers.competitorAdvantages.length) {
       const advantages = answers.competitorAdvantages.map(String).map((s) => s.trim()).filter(Boolean).slice(0, 8).join(', ');
       if (advantages) marketLines.push(`Competitive Advantages: ${advantages}`);
     }
     const marketText = marketLines.length ? `\n\nMarket & Competition:\n- ${marketLines.join('\n- ')}` : '';
 
-    // Products & Services
+    // Products & Services - from new Product model with fallback to answers
     let productsText = '';
     try {
-      if (Array.isArray(answers.products) && answers.products.length) {
+      // Prefer new Product model
+      if (products && products.length) {
+        const productLines = products.slice(0, 10).map((p) => {
+          const parts = [
+            p?.name && `Name: ${String(p.name).trim()}`,
+            p?.description && `Desc: ${String(p.description).trim()}`,
+            (p?.price || p?.pricing) && `Price: $${p.price || p.pricing}`,
+            p?.unitCost && `Cost: $${p.unitCost}`,
+            p?.monthlyVolume && `Monthly Volume: ${p.monthlyVolume}`,
+          ].filter(Boolean);
+          return parts.length ? '- ' + parts.join(' | ') : '';
+        }).filter(Boolean);
+        if (productLines.length) productsText = `\n\nProducts & Services:\n${productLines.join('\n')}`;
+      } else if (Array.isArray(answers.products) && answers.products.length) {
+        // Fallback to answers.products
         const productLines = answers.products.slice(0, 10).map((p) => {
           const parts = [
             p?.product && `Name: ${String(p.product).trim()}`,
@@ -239,10 +301,25 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     if (answers.finIsNonprofit) finLines.push(`Organization Type: Non-profit`);
     const finText = finLines.length ? `\n\nFinancial Overview:\n- ${finLines.join('\n- ')}` : '';
 
-    // Existing Core Strategic Projects (to avoid duplicates and leverage context)
+    // Existing Core Strategic Projects - from new CoreProject model with fallback to answers
     let coreProjectsText = '';
     try {
-      if (Array.isArray(answers.coreProjectDetails) && answers.coreProjectDetails.length) {
+      // Prefer new CoreProject model
+      if (coreProjects && coreProjects.length) {
+        const lines = coreProjects.slice(0, 5).map((p) => {
+          const head = [String(p?.title || '').trim(), p?.ownerName && `Owner: ${String(p.ownerName).trim()}`].filter(Boolean).join(' — ');
+          const dlines = (Array.isArray(p?.deliverables) ? p.deliverables : []).slice(0, 3).map((d) => {
+            const txt = String(d?.text || '').trim();
+            const kpi = String(d?.kpi || '').trim();
+            const due = String(d?.dueWhen || '').trim();
+            const bits = [txt && `• ${txt}`, kpi && `KPI: ${kpi}`, due && `Due: ${due}`].filter(Boolean);
+            return bits.length ? '  - ' + bits.join(' | ') : '';
+          }).filter(Boolean);
+          return ['- ' + head, ...dlines].filter(Boolean).join('\n');
+        }).filter(Boolean);
+        if (lines.length) coreProjectsText = `\n\nExisting Core Strategic Projects:\n${lines.join('\n')}`;
+      } else if (Array.isArray(answers.coreProjectDetails) && answers.coreProjectDetails.length) {
+        // Fallback to answers.coreProjectDetails
         const lines = answers.coreProjectDetails.slice(0, 5).map((p) => {
           const head = [String(p?.title || '').trim(), p?.ownerName && `Owner: ${String(p.ownerName).trim()}`].filter(Boolean).join(' — ');
           const dlines = (Array.isArray(p?.deliverables) ? p.deliverables : []).slice(0, 3).map((d) => {
@@ -2015,7 +2092,7 @@ exports.suggestCoreProject = async (req, res) => {
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const client = getOpenAI();
 
-    const wanted = (typeof n === 'number' && n > 0) ? Math.min(8, Math.max(1, n)) : 4;
+    const wanted = (typeof n === 'number' && n > 0) ? Math.min(12, Math.max(1, n)) : 8;
 
     // Calculate example dates for the prompt - starting from current week
     const now = new Date();
@@ -2042,7 +2119,7 @@ exports.suggestCoreProject = async (req, res) => {
       'You are a helpful business planning assistant.',
       'Propose a core strategic project based ONLY on the provided business context and input. Do not fabricate external statistics.',
       'Return a single JSON object with the following shape:',
-      '{ "title": string, "goal": string, "dueWhen": string(YYYY-MM-DD), "ownerName"?: string, "deliverables": [{ "text": string, "kpi": string, "dueWhen": string(YYYY-MM-DD) }] }',
+      '{ "title": string, "goal": string, "dueWhen": string(YYYY-MM-DD), "priority": "high"|"medium"|"low", "cost"?: string, "ownerName"?: string, "linkedGoalIndex"?: number, "deliverables": [{ "text": string, "kpi": string, "dueWhen": string(YYYY-MM-DD) }] }',
       'Constraints:',
       `- Deliverables array length: ${wanted}. Each item must have a unique KPI and dueWhen (YYYY-MM-DD).`,
       `- CRITICAL: The FIRST deliverable MUST be due within the first 1-2 weeks (use dates like ${week1} or ${week2}). Users need immediate action items for their weekly priorities.`,
@@ -2051,6 +2128,9 @@ exports.suggestCoreProject = async (req, res) => {
       `- DO NOT set all deliverables months away. Spread them: some this week, some this month, some later.`,
       '- The overall project dueWhen must be at or after the latest deliverable dueWhen.',
       '- Keep title short (3–6 words). Keep KPIs concise (short metric phrase).',
+      '- priority: Always assign one of "high", "medium", or "low" based on strategic importance.',
+      '- cost: If the project involves budget/resources, provide a realistic estimate (e.g., "$5,000" or "$10,000-$15,000"). Leave empty if not applicable.',
+      '- linkedGoalIndex: If the context includes 1-year goals, return the 0-based index of the most relevant goal this project supports. Return 0 if unsure.',
     ].join('\n');
 
     const user = [
@@ -2094,11 +2174,20 @@ exports.suggestCoreProject = async (req, res) => {
       }
       return v;
     };
+    // Normalize priority
+    const normPriority = (p) => {
+      const v = String(p || '').toLowerCase().trim();
+      if (['high', 'medium', 'low'].includes(v)) return v;
+      return 'medium'; // default to medium if not specified
+    };
     const out = {
       title: String(obj.title || '').slice(0, 120).trim(),
       goal: String(obj.goal || '').slice(0, 1000).trim(),
+      priority: normPriority(obj.priority),
+      cost: obj.cost ? String(obj.cost).trim() : undefined,
       ownerName: obj.ownerName ? String(obj.ownerName).trim() : undefined,
       dueWhen: ensureFuture(obj.dueWhen),
+      linkedGoalIndex: typeof obj.linkedGoalIndex === 'number' ? obj.linkedGoalIndex : 0,
       deliverables: Array.isArray(obj.deliverables) ? obj.deliverables.slice(0, wanted).map((d) => ({
         text: String(d?.text || '').trim(),
         kpi: String(d?.kpi || '').trim(),
@@ -2137,7 +2226,23 @@ exports.suggestCoreProject = async (req, res) => {
       });
     }
 
-    // Set project due date to 12 months from now if missing
+    // Set project due date to the last deliverable's due date (or 12 months if no deliverables)
+    if (out.deliverables && out.deliverables.length > 0) {
+      // Find the latest deliverable due date
+      let latestDate = null;
+      out.deliverables.forEach((d) => {
+        if (d.dueWhen) {
+          const dt = new Date(d.dueWhen + 'T00:00:00Z');
+          if (!latestDate || dt > latestDate) {
+            latestDate = dt;
+          }
+        }
+      });
+      if (latestDate) {
+        out.dueWhen = latestDate.toISOString().slice(0, 10);
+      }
+    }
+    // Fallback to 12 months from now if still missing
     if (!out.dueWhen) {
       const projectDue = new Date();
       projectDue.setFullYear(projectDue.getFullYear() + 1);
@@ -2149,13 +2254,14 @@ exports.suggestCoreProject = async (req, res) => {
     return res.status(500).json({ message });
   }
 };
-// Core Strategic Projects: suggest 3–4 high-level deliverables
+// Core Strategic Projects: suggest 8 high-level deliverables
 exports.suggestCoreDeliverables = async (req, res) => {
   try {
-    const { input } = req.body || {};
+    const { input, n } = req.body || {};
     const userId = req.user?.id;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    const suggestions = await callOpenAIList({ type: 'core strategic project deliverables (3–4 high-level items)', input, contextText, n: 4 });
+    const wanted = (typeof n === 'number' && n > 0) ? Math.min(12, Math.max(1, n)) : 8;
+    const suggestions = await callOpenAIList({ type: `project deliverables (${wanted} high-level items)`, input, contextText, n: wanted });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -2726,6 +2832,22 @@ exports.redistributeDeliverableDueDates = async (req, res) => {
       }
     });
 
+    // Set each project's dueWhen to its last deliverable's due date
+    Object.values(assignments).forEach((projects) => {
+      if (!Array.isArray(projects)) return;
+      projects.forEach((project) => {
+        if (!project?.deliverables?.length) return;
+        let latestDate = null;
+        project.deliverables.forEach((d) => {
+          if (d?.dueWhen) {
+            const dt = new Date(d.dueWhen + 'T00:00:00Z');
+            if (!latestDate || dt > latestDate) latestDate = dt;
+          }
+        });
+        if (latestDate) project.dueWhen = formatYmd(latestDate);
+      });
+    });
+
     return res.json({ assignments });
   } catch (err) {
     const message = err?.message || 'Failed to redistribute deliverable due dates';
@@ -2780,6 +2902,19 @@ exports.redistributeCoreProjectDueDates = async (req, res) => {
       if (project?.deliverables?.[ref.deliverableIdx]) {
         project.deliverables[ref.deliverableIdx].dueWhen = formatYmd(dueDate);
       }
+    });
+
+    // Set each project's dueWhen to its last deliverable's due date
+    coreProjectDetails.forEach((project) => {
+      if (!project?.deliverables?.length) return;
+      let latestDate = null;
+      project.deliverables.forEach((d) => {
+        if (d?.dueWhen) {
+          const dt = new Date(d.dueWhen + 'T00:00:00Z');
+          if (!latestDate || dt > latestDate) latestDate = dt;
+        }
+      });
+      if (latestDate) project.dueWhen = formatYmd(latestDate);
     });
 
     return res.json({ coreProjectDetails });
@@ -2882,6 +3017,37 @@ exports.redistributeAllDueDates = async (req, res) => {
       }
     });
 
+    // Set each core project's dueWhen to its last deliverable's due date
+    if (Array.isArray(coreProjectDetails)) {
+      coreProjectDetails.forEach((project) => {
+        if (!project?.deliverables?.length) return;
+        let latestDate = null;
+        project.deliverables.forEach((d) => {
+          if (d?.dueWhen) {
+            const dt = new Date(d.dueWhen + 'T00:00:00Z');
+            if (!latestDate || dt > latestDate) latestDate = dt;
+          }
+        });
+        if (latestDate) project.dueWhen = formatYmd(latestDate);
+      });
+    }
+
+    // Set each departmental project's dueWhen to its last deliverable's due date
+    Object.values(assignments).forEach((projects) => {
+      if (!Array.isArray(projects)) return;
+      projects.forEach((project) => {
+        if (!project?.deliverables?.length) return;
+        let latestDate = null;
+        project.deliverables.forEach((d) => {
+          if (d?.dueWhen) {
+            const dt = new Date(d.dueWhen + 'T00:00:00Z');
+            if (!latestDate || dt > latestDate) latestDate = dt;
+          }
+        });
+        if (latestDate) project.dueWhen = formatYmd(latestDate);
+      });
+    });
+
     return res.json({ coreProjectDetails, assignments });
   } catch (err) {
     const message = err?.message || 'Failed to redistribute all due dates';
@@ -2946,9 +3112,239 @@ exports.assignNewProjectDueDates = async (req, res) => {
       return { ...d, dueWhen: formatYmd(dueDate) };
     });
 
+    // Set project dueWhen to the last deliverable's due date
+    let latestDate = null;
+    project.deliverables.forEach((d) => {
+      if (d?.dueWhen) {
+        const dt = new Date(d.dueWhen + 'T00:00:00Z');
+        if (!latestDate || dt > latestDate) latestDate = dt;
+      }
+    });
+    if (latestDate) project.dueWhen = formatYmd(latestDate);
+
     return res.json({ project });
   } catch (err) {
     const message = err?.message || 'Failed to assign new project due dates';
+    return res.status(500).json({ message });
+  }
+};
+
+/**
+ * Spread a single project's deliverables considering existing deliverables across ALL projects.
+ * - Collects all existing deliverable dates from coreProjectDetails and assignments
+ * - Finds gaps in the schedule over the next 12 months
+ * - Spreads new deliverables (without dates) into those gaps
+ * - Never changes existing dates
+ * Body: {
+ *   project: { deliverables: [...] },
+ *   existingCoreProjects?: Array<{ deliverables: [...] }>,
+ *   existingAssignments?: Record<string, Array<{ deliverables: [...] }>>
+ * }
+ */
+exports.spreadProjectDeliverablesIncremental = async (req, res) => {
+  try {
+    const { project, existingCoreProjects = [], existingAssignments = {} } = req.body || {};
+
+    if (!project || !Array.isArray(project.deliverables) || !project.deliverables.length) {
+      return res.json({ project });
+    }
+
+    const formatYmd = (d) => d.toISOString().split('T')[0];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const oneYearLater = new Date(now);
+    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+    const totalDays = Math.floor((oneYearLater - now) / (1000 * 60 * 60 * 24));
+
+    // Collect ALL existing deliverable dates from all projects (excluding current project)
+    const existingDates = [];
+
+    // From core projects
+    if (Array.isArray(existingCoreProjects)) {
+      existingCoreProjects.forEach((p) => {
+        if (!Array.isArray(p?.deliverables)) return;
+        p.deliverables.forEach((d) => {
+          if (d?.dueWhen) {
+            const dt = new Date(d.dueWhen + 'T00:00:00Z');
+            if (dt >= now && dt <= oneYearLater) {
+              existingDates.push(dt);
+            }
+          }
+        });
+      });
+    }
+
+    // From departmental projects
+    Object.values(existingAssignments).forEach((projects) => {
+      if (!Array.isArray(projects)) return;
+      projects.forEach((p) => {
+        if (!Array.isArray(p?.deliverables)) return;
+        p.deliverables.forEach((d) => {
+          if (d?.dueWhen) {
+            const dt = new Date(d.dueWhen + 'T00:00:00Z');
+            if (dt >= now && dt <= oneYearLater) {
+              existingDates.push(dt);
+            }
+          }
+        });
+      });
+    });
+
+    // Also include any existing dates from this project's deliverables
+    project.deliverables.forEach((d) => {
+      if (d?.dueWhen) {
+        const dt = new Date(d.dueWhen + 'T00:00:00Z');
+        if (dt >= now && dt <= oneYearLater) {
+          existingDates.push(dt);
+        }
+      }
+    });
+
+    // Sort existing dates chronologically
+    existingDates.sort((a, b) => a - b);
+
+    // Count how many new deliverables need dates
+    const newDeliverables = project.deliverables.filter((d) => !d.dueWhen);
+    const newCount = newDeliverables.length;
+
+    if (newCount === 0) {
+      // All deliverables already have dates, just set project dueWhen
+      let latestDate = null;
+      project.deliverables.forEach((d) => {
+        if (d?.dueWhen) {
+          const dt = new Date(d.dueWhen + 'T00:00:00Z');
+          if (!latestDate || dt > latestDate) latestDate = dt;
+        }
+      });
+      if (latestDate) project.dueWhen = formatYmd(latestDate);
+      return res.json({ project });
+    }
+
+    // Find available slots in the year
+    let availableSlots = [];
+
+    if (existingDates.length === 0) {
+      // No existing deliverables - spread across the full year
+      // First deliverable within 1-2 weeks, last near end of year
+      const interval = totalDays / (newCount + 1);
+      for (let i = 0; i < newCount; i++) {
+        let dayOffset;
+        if (i === 0) {
+          // First: 7-14 days out
+          dayOffset = Math.floor(Math.random() * 7) + 7;
+        } else if (i === newCount - 1) {
+          // Last: near end of year (last 30 days)
+          dayOffset = totalDays - Math.floor(Math.random() * 30);
+        } else {
+          // Middle: spread with variance
+          const basePos = (i + 1) * interval;
+          const variance = interval * 0.2;
+          dayOffset = Math.round(basePos + (Math.random() * variance * 2 - variance));
+        }
+        availableSlots.push(Math.max(7, Math.min(totalDays - 7, dayOffset)));
+      }
+    } else {
+      // Have existing deliverables - find gaps and spread into them
+      // Convert existing dates to day offsets from now
+      const existingOffsets = existingDates.map((dt) =>
+        Math.floor((dt - now) / (1000 * 60 * 60 * 24))
+      );
+
+      // Find gaps between existing dates
+      const gaps = [];
+      // Gap from now to first existing
+      if (existingOffsets[0] > 14) {
+        gaps.push({ start: 7, end: existingOffsets[0] - 7, size: existingOffsets[0] - 14 });
+      }
+      // Gaps between existing dates
+      for (let i = 0; i < existingOffsets.length - 1; i++) {
+        const gapStart = existingOffsets[i] + 7;
+        const gapEnd = existingOffsets[i + 1] - 7;
+        if (gapEnd > gapStart) {
+          gaps.push({ start: gapStart, end: gapEnd, size: gapEnd - gapStart });
+        }
+      }
+      // Gap from last existing to end of year
+      const lastOffset = existingOffsets[existingOffsets.length - 1];
+      if (lastOffset < totalDays - 14) {
+        gaps.push({ start: lastOffset + 7, end: totalDays - 7, size: totalDays - 14 - lastOffset });
+      }
+
+      // If no gaps found, create minimal spacing throughout the year
+      if (gaps.length === 0 || gaps.reduce((sum, g) => sum + g.size, 0) < newCount * 7) {
+        // Force spread with minimum 3-day spacing
+        const allOffsets = [...existingOffsets];
+        const interval = totalDays / (newCount + existingOffsets.length + 1);
+        for (let i = 0; i < newCount; i++) {
+          let dayOffset = Math.round((i + 1) * interval + Math.random() * 5);
+          // Ensure minimum spacing from existing
+          while (allOffsets.some((o) => Math.abs(o - dayOffset) < 3)) {
+            dayOffset = (dayOffset + 3) % totalDays;
+            if (dayOffset < 7) dayOffset = 7;
+          }
+          availableSlots.push(dayOffset);
+          allOffsets.push(dayOffset);
+        }
+      } else {
+        // Distribute new deliverables proportionally across gaps
+        const totalGapSize = gaps.reduce((sum, g) => sum + g.size, 0);
+        let slotsAssigned = 0;
+
+        gaps.forEach((gap) => {
+          // Calculate how many deliverables to put in this gap (proportional to gap size)
+          let slotsForGap = Math.round((gap.size / totalGapSize) * newCount);
+          // Ensure at least 1 if there's space and we have remaining
+          if (slotsForGap === 0 && gap.size >= 7 && slotsAssigned < newCount) {
+            slotsForGap = 1;
+          }
+          // Don't exceed remaining count
+          slotsForGap = Math.min(slotsForGap, newCount - slotsAssigned);
+
+          if (slotsForGap > 0) {
+            const gapInterval = gap.size / (slotsForGap + 1);
+            for (let i = 0; i < slotsForGap; i++) {
+              const offset = gap.start + Math.round((i + 1) * gapInterval);
+              availableSlots.push(Math.max(gap.start, Math.min(gap.end, offset)));
+              slotsAssigned++;
+            }
+          }
+        });
+
+        // If we still have unassigned slots, add them at the end
+        while (slotsAssigned < newCount) {
+          const lastSlot = availableSlots.length > 0 ? availableSlots[availableSlots.length - 1] : 30;
+          availableSlots.push(Math.min(totalDays - 7, lastSlot + 14));
+          slotsAssigned++;
+        }
+      }
+    }
+
+    // Sort slots chronologically
+    availableSlots.sort((a, b) => a - b);
+
+    // Assign dates to deliverables that don't have them
+    let slotIdx = 0;
+    project.deliverables = project.deliverables.map((d) => {
+      if (d.dueWhen) return d; // Keep existing date
+      if (slotIdx >= availableSlots.length) return d;
+      const dueDate = new Date(now);
+      dueDate.setDate(dueDate.getDate() + availableSlots[slotIdx++]);
+      return { ...d, dueWhen: formatYmd(dueDate) };
+    });
+
+    // Set project dueWhen to the last deliverable's due date
+    let latestDate = null;
+    project.deliverables.forEach((d) => {
+      if (d?.dueWhen) {
+        const dt = new Date(d.dueWhen + 'T00:00:00Z');
+        if (!latestDate || dt > latestDate) latestDate = dt;
+      }
+    });
+    if (latestDate) project.dueWhen = formatYmd(latestDate);
+
+    return res.json({ project });
+  } catch (err) {
+    const message = err?.message || 'Failed to spread project deliverables';
     return res.status(500).json({ message });
   }
 };

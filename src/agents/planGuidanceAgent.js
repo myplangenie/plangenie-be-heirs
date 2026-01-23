@@ -41,8 +41,8 @@ async function generateGuidance(userId, options = {}) {
     }
   }
 
-  // Extract and score all items using existing scoring service
-  const items = scoringService.extractItems(context._rawAnswers);
+  // Extract and score all items using new CRUD models (CoreProject, DepartmentProject)
+  const items = await scoringService.extractItemsFromModels(userId, workspaceId);
   const scoringContext = { allItems: items };
 
   const scoredItems = items.map((item) => {

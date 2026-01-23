@@ -5,6 +5,8 @@
 
 const Onboarding = require('../models/Onboarding');
 const PriorityCache = require('../models/PriorityCache');
+const CoreProject = require('../models/CoreProject');
+const DepartmentProject = require('../models/DepartmentProject');
 
 // Scoring weights
 const WEIGHTS = {
@@ -331,18 +333,105 @@ function getMonthlyThrust(scoredItems) {
 }
 
 /**
+ * Extract items directly from new CRUD models (CoreProject, DepartmentProject)
+ * This replaces extractItems for new API usage
+ */
+async function extractItemsFromModels(userId, workspaceId) {
+  const items = [];
+  const crudFilter = { user: userId, isDeleted: { $ne: true } };
+  if (workspaceId) crudFilter.workspace = workspaceId;
+
+  // Fetch from new CRUD models in parallel
+  const [coreProjects, deptProjects] = await Promise.all([
+    CoreProject.find(crudFilter).sort({ order: 1 }).lean(),
+    DepartmentProject.find(crudFilter).sort({ order: 1 }).lean(),
+  ]);
+
+  // Extract from CoreProjects
+  coreProjects.forEach((p, pIndex) => {
+    const projectTitle = String(p?.title || '').trim();
+    if (!projectTitle) return;
+
+    // Add the project itself
+    items.push({
+      title: projectTitle,
+      dueWhen: p?.dueWhen || null,
+      goal: p?.goal || null,
+      kpi: null,
+      source: { type: 'project', projectIndex: pIndex, projectId: p._id?.toString() },
+      deliverableCount: Array.isArray(p?.deliverables) ? p.deliverables.length : 0,
+      owner: p?.ownerName || null,
+    });
+
+    // Add deliverables
+    const deliverables = Array.isArray(p?.deliverables) ? p.deliverables : [];
+    deliverables.forEach((d, dIndex) => {
+      const text = String(d?.text || '').trim();
+      if (!text || d?.done) return; // Skip completed deliverables
+
+      items.push({
+        title: text,
+        dueWhen: d?.dueWhen || null,
+        goal: p?.goal || null,
+        kpi: d?.kpi || null,
+        source: { type: 'deliverable', projectIndex: pIndex, deliverableIndex: dIndex, projectId: p._id?.toString() },
+        projectTitle,
+        owner: p?.ownerName || null,
+      });
+    });
+  });
+
+  // Extract from DepartmentProjects
+  deptProjects.forEach((assignment, aIndex) => {
+    const projectTitle = String(assignment?.title || '').trim();
+    if (!projectTitle) return;
+
+    // Skip completed items
+    const status = String(assignment?.status || '').toLowerCase();
+    if (status === 'completed') return;
+
+    const dept = assignment?.departmentKey || 'general';
+
+    // Add the departmental project itself
+    items.push({
+      title: projectTitle,
+      dueWhen: assignment?.dueWhen || null,
+      goal: assignment?.goal || null,
+      kpi: null,
+      source: { type: 'goal', department: dept, goalIndex: aIndex, projectId: assignment._id?.toString() },
+      owner: [assignment?.firstName, assignment?.lastName].filter(Boolean).join(' ').trim(),
+      deliverableCount: Array.isArray(assignment?.deliverables) ? assignment.deliverables.length : 0,
+    });
+
+    // Add deliverables from departmental projects
+    const deliverables = Array.isArray(assignment?.deliverables) ? assignment.deliverables : [];
+    deliverables.forEach((d, dIndex) => {
+      const text = String(d?.text || '').trim();
+      if (!text || d?.done) return; // Skip completed deliverables
+
+      items.push({
+        title: text,
+        dueWhen: d?.dueWhen || null,
+        goal: assignment?.goal || null,
+        kpi: d?.kpi || null,
+        source: { type: 'dept_deliverable', department: dept, goalIndex: aIndex, deliverableIndex: dIndex, projectId: assignment._id?.toString() },
+        projectTitle,
+        owner: [assignment?.firstName, assignment?.lastName].filter(Boolean).join(' ').trim(),
+      });
+    });
+  });
+
+  return items;
+}
+
+/**
  * Recalculate and cache priorities for a user's workspace
+ * Uses new CRUD models (CoreProject, DepartmentProject) instead of Onboarding.answers
  */
 async function recalculateAndCache(userId, workspaceId) {
   try {
-    // Get onboarding data for this specific workspace
-    const filter = { user: userId };
-    if (workspaceId) filter.workspace = workspaceId;
-    const ob = await Onboarding.findOne(filter).lean();
-    const answers = ob?.answers || {};
-
-    // Extract and score all items
-    const items = extractItems(answers);
+    // Extract items from new CRUD models
+    const items = await extractItemsFromModels(userId, workspaceId);
     const context = { allItems: items };
 
     const scoredItems = items.map((item) => {
@@ -388,6 +477,7 @@ module.exports = {
   WEIGHTS,
   calculateScore,
   extractItems,
+  extractItemsFromModels,
   getWeeklyTop3,
   getUpcomingItems,
   getMonthlyThrust,

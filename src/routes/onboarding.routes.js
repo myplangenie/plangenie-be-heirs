@@ -140,6 +140,8 @@ router.post('/actions/core/redistribute-due-dates', requireContributor, ai.redis
 router.post('/actions/redistribute-all-due-dates', requireContributor, ai.redistributeAllDueDates);
 // Assign due dates only to a new project's deliverables (for post-onboarding dashboard use)
 router.post('/actions/assign-new-project-due-dates', requireContributor, ai.assignNewProjectDueDates);
+// Spread a single project's deliverables considering existing deliverables across all projects
+router.post('/actions/spread-project-deliverables-incremental', requireContributor, ai.spreadProjectDeliverablesIncremental);
 router.post('/financial/forecast/rewrite', requireContributor, requireAI('financial'), requireFeature('financials'), ai.rewriteFinancialForecast);
 
 // 1-Year Goals CRUD

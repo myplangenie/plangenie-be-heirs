@@ -15,6 +15,11 @@ const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
 const RevenueStream = require('../models/RevenueStream');
 const FinancialBaseline = require('../models/FinancialBaseline');
+const CoreProject = require('../models/CoreProject');
+const Competitor = require('../models/Competitor');
+const SwotEntry = require('../models/SwotEntry');
+const Product = require('../models/Product');
+const OrgPosition = require('../models/OrgPosition');
 
 // Cache TTL configurations (in milliseconds)
 const CACHE_TTL = {
@@ -110,6 +115,7 @@ async function invalidateCache(userId, agentType, workspaceId = null) {
 
 /**
  * Build comprehensive context for agents from user data
+ * Uses new individual CRUD models (CoreProject, Competitor, SwotEntry, etc.)
  */
 async function buildAgentContext(userId, workspaceId = null) {
   const obFilter = { user: userId };
@@ -127,13 +133,35 @@ async function buildAgentContext(userId, workspaceId = null) {
   const baselineFilter = { user: userId };
   if (workspaceId) baselineFilter.workspace = workspaceId;
 
-  const [ob, user, departments, teamMembers, revenueStreams, financialBaseline] = await Promise.all([
+  // Filter for new individual models (workspace-aware, not deleted)
+  const crudFilter = { user: userId, isDeleted: { $ne: true } };
+  if (workspaceId) crudFilter.workspace = workspaceId;
+
+  const [
+    ob,
+    user,
+    departments,
+    teamMembers,
+    revenueStreams,
+    financialBaseline,
+    coreProjects,
+    competitors,
+    swotEntries,
+    products,
+    orgPositions,
+  ] = await Promise.all([
     Onboarding.findOne(obFilter).lean(),
     User.findById(userId).lean(),
     Department.find(deptFilter).select('name status owner dueDate progress').limit(50).lean(),
     TeamMember.find(tmFilter).select('name role department').limit(100).lean(),
     RevenueStream.find(streamFilter).lean(),
     FinancialBaseline.findOne(baselineFilter).lean(),
+    // New individual CRUD models
+    CoreProject.find(crudFilter).sort({ order: 1 }).lean(),
+    Competitor.find(crudFilter).sort({ order: 1 }).lean(),
+    SwotEntry.find(crudFilter).sort({ order: 1 }).lean(),
+    Product.find(crudFilter).sort({ order: 1 }).lean(),
+    OrgPosition.find(crudFilter).sort({ order: 1 }).lean(),
   ]);
 
   const bp = ob?.businessProfile || {};
@@ -154,6 +182,32 @@ async function buildAgentContext(userId, workspaceId = null) {
       : 0;
   }
 
+  // Build competitor strings from new Competitor model
+  const competitorNames = competitors.map(c => c.name).filter(Boolean);
+  const competitorAdvantagesList = competitors.map(c => c.advantage).filter(Boolean);
+  const marketCompetitors = competitorNames.join(', ');
+  const competitorAdvantages = competitorAdvantagesList.join('; ');
+
+  // Build SWOT strings from new SwotEntry model
+  const swotStrengths = swotEntries.filter(s => s.type === 'strength').map(s => s.text).join('\n');
+  const swotWeaknesses = swotEntries.filter(s => s.type === 'weakness').map(s => s.text).join('\n');
+  const swotOpportunities = swotEntries.filter(s => s.type === 'opportunity').map(s => s.text).join('\n');
+  const swotThreats = swotEntries.filter(s => s.type === 'threat').map(s => s.text).join('\n');
+
+  // Map core projects to the expected format
+  const coreProjectDetails = coreProjects.map(p => ({
+    title: p.title || '',
+    goal: p.goal || '',
+    cost: p.cost || '',
+    dueWhen: p.dueWhen || '',
+    priority: p.priority || 'medium',
+    ownerId: p.ownerId,
+    ownerName: p.ownerName,
+    deliverables: p.deliverables || [],
+    linkedGoals: p.linkedGoals || [],
+    departments: p.departments || [],
+  }));
+
   return {
     // User profile
     fullName: up.fullName || user?.fullName || '',
@@ -167,48 +221,54 @@ async function buildAgentContext(userId, workspaceId = null) {
     businessStage: bp.businessStage || '',
     location: [bp.city, bp.country].filter(Boolean).join(', '),
 
-    // Vision & Strategy
+    // Vision & Strategy (from Onboarding.answers via WorkspaceField API)
     ubp: answers.ubp || '',
     purpose: answers.purpose || '',
     vision1y: answers.vision1y || '',
     vision3y: answers.vision3y || '',
-    visionBhag: answers.visionBhag || '',
+    visionBhag: answers.visionBhag || answers.bhag || '',
     valuesCore: answers.valuesCore || '',
     cultureFeeling: answers.cultureFeeling || '',
 
-    // Market
-    marketCustomer: answers.marketCustomer || '',
-    marketPartners: answers.marketPartners || '',
-    marketCompetitors: answers.marketCompetitors || '',
-    competitorAdvantages: answers.competitorAdvantages || '',
+    // Market (from Onboarding.answers + new Competitor model)
+    marketCustomer: answers.marketCustomer || answers.targetCustomer || '',
+    marketPartners: answers.marketPartners || answers.partners || '',
+    marketCompetitors: marketCompetitors || answers.marketCompetitors || '',
+    competitorAdvantages: competitorAdvantages || answers.competitorAdvantages || '',
+    competitorsNotes: answers.competitorsNotes || '',
 
-    // Products/Services - v2 data (RevenueStreams)
+    // Products/Services - v2 data (RevenueStreams) + new Product model
     revenueStreams: revenueStreams || [],
     revenueAggregate,
+    products: products || [],
 
     // Financial data - v2 data (FinancialBaseline)
     financialBaseline: financialBaseline || null,
 
-    // Projects & Action Plans
-    coreProjectDetails: answers.coreProjectDetails || [],
+    // Projects & Action Plans (from new CoreProject model)
+    coreProjectDetails,
+    coreProjects: coreProjects || [],
     actionAssignments: answers.actionAssignments || {},
 
-    // Team
+    // Team & Org (+ new OrgPosition model)
     departments,
     teamMembers,
     teamMemberCount: teamMembers.length,
+    orgPositions: orgPositions || [],
 
-    // SWOT
+    // SWOT (from new SwotEntry model)
     swot: {
-      strengths: answers.swotStrengths || '',
-      weaknesses: answers.swotWeaknesses || '',
-      opportunities: answers.swotOpportunities || '',
-      threats: answers.swotThreats || '',
+      strengths: swotStrengths || answers.swotStrengths || '',
+      weaknesses: swotWeaknesses || answers.swotWeaknesses || '',
+      opportunities: swotOpportunities || answers.swotOpportunities || '',
+      threats: swotThreats || answers.swotThreats || '',
     },
 
-    // Raw answers for advanced use
+    // Raw data for advanced use
     _rawAnswers: answers,
     _user: user,
+    _competitors: competitors,
+    _swotEntries: swotEntries,
   };
 }
 

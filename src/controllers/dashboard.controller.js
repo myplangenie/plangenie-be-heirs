@@ -14,6 +14,8 @@ const PlanSection = require('../models/PlanSection');
 const RevenueStream = require('../models/RevenueStream');
 const FinancialBaseline = require('../models/FinancialBaseline');
 const TeamMember = require('../models/TeamMember');
+const CoreProject = require('../models/CoreProject');
+const DepartmentProject = require('../models/DepartmentProject');
 const financialSnapshotService = require('../services/financialSnapshotService');
 const nodeCrypto = require('crypto');
 const { PutObjectCommand } = require('@aws-sdk/client-s3');
@@ -523,23 +525,50 @@ exports.saveCompiledPlan = async (req, res, next) => {
     }
     // Market
     if (cp.market) {
+      if (typeof cp.market.custType !== 'undefined') a.custType = String(cp.market.custType || '');
       if (typeof cp.market.customer !== 'undefined') a.marketCustomer = String(cp.market.customer || '');
+      if (typeof cp.market.partnersYN !== 'undefined') a.partnersYN = String(cp.market.partnersYN || '');
       if (typeof cp.market.partners !== 'undefined') a.partnersDesc = String(cp.market.partners || '');
       if (typeof cp.market.competitors !== 'undefined') a.compNotes = String(cp.market.competitors || '');
-      if (typeof cp.market.competitorNames !== 'undefined' && Array.isArray(cp.market.competitorNames)) a.competitorNames = cp.market.competitorNames.map(String);
+      // PROTECTION: competitorNames - only update if incoming has data or existing is empty
+      if (typeof cp.market.competitorNames !== 'undefined' && Array.isArray(cp.market.competitorNames)) {
+        const incoming = cp.market.competitorNames.map(String).filter(s => s.trim());
+        const existing = Array.isArray(a.competitorNames) ? a.competitorNames : [];
+        if (incoming.length > 0 || existing.length === 0) {
+          a.competitorNames = incoming;
+        } else {
+          console.log(`[saveCompiledPlan] BLOCKED: competitorNames replacement (incoming=${incoming.length}, existing=${existing.length})`);
+        }
+      }
     }
     // Products (preserve legacy pricing while accepting new structured fields)
-    if (Array.isArray(cp.products)) a.products = cp.products.map((p)=>({
-      product: String(p.product||''),
-      description: String(p.description||''),
-      pricing: typeof p.pricing !== 'undefined' ? String(p.pricing||'') : undefined,
-      unitCost: typeof p.unitCost !== 'undefined' ? String(p.unitCost||'') : undefined,
-      price: typeof p.price !== 'undefined' ? String(p.price||'') : undefined,
-      monthlyVolume: typeof p.monthlyVolume !== 'undefined' ? String(p.monthlyVolume||'') : undefined,
-    }));
+    // PROTECTION: Only update if incoming has data or existing is empty
+    if (Array.isArray(cp.products)) {
+      const incoming = cp.products.map((p)=>({
+        product: String(p.product||''),
+        description: String(p.description||''),
+        pricing: typeof p.pricing !== 'undefined' ? String(p.pricing||'') : undefined,
+        unitCost: typeof p.unitCost !== 'undefined' ? String(p.unitCost||'') : undefined,
+        price: typeof p.price !== 'undefined' ? String(p.price||'') : undefined,
+        monthlyVolume: typeof p.monthlyVolume !== 'undefined' ? String(p.monthlyVolume||'') : undefined,
+      })).filter(p => p.product.trim());
+      const existing = Array.isArray(a.products) ? a.products : [];
+      if (incoming.length > 0 || existing.length === 0) {
+        a.products = incoming;
+      } else {
+        console.log(`[saveCompiledPlan] BLOCKED: products replacement (incoming=${incoming.length}, existing=${existing.length})`);
+      }
+    }
     // Org (team members)
+    // PROTECTION: Only update if incoming has data or existing is empty
     if (Array.isArray(cp.org)) {
-      a.orgPositions = cp.org.map((n)=>({ id: n.id || undefined, name: String(n.name||''), position: String(n.position||''), department: n.department || null, parentId: n.parentId || null, role: '' }));
+      const incoming = cp.org.map((n)=>({ id: n.id || undefined, name: String(n.name||''), position: String(n.position||''), department: n.department || null, parentId: n.parentId || null, role: '' })).filter(p => p.name.trim() || p.position.trim());
+      const existing = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+      if (incoming.length > 0 || existing.length === 0) {
+        a.orgPositions = incoming;
+      } else {
+        console.log(`[saveCompiledPlan] BLOCKED: orgPositions replacement (incoming=${incoming.length}, existing=${existing.length})`);
+      }
     }
     // Financial
     if (cp.financial) {
@@ -558,13 +587,21 @@ exports.saveCompiledPlan = async (req, res, next) => {
       a.finIsNonprofit = String(f.isNonprofit || a.finIsNonprofit || '');
     }
     // Core Strategic Projects
+    // PROTECTION: Don't reduce count significantly without explicit confirmation
     if (Array.isArray(cp.coreProjects)) {
       const v = cp.coreProjects.map((s) => String(s || '')).filter((s) => s && s.trim());
       const limit = ent.getLimit(user, 'maxCoreProjects');
       if (limit && v.length > limit) {
         return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 core projects', plan, limit, limitKey: 'maxCoreProjects', upgradeTo: 'pro' });
       }
-      a.coreProjects = v;
+      const existing = Array.isArray(a.coreProjects) ? a.coreProjects : [];
+      const isExplicitClear = v.length === 0 && (!Array.isArray(cp.coreProjectDetails) || cp.coreProjectDetails.length === 0);
+      // Block if incoming would reduce count (potential partial data loss)
+      if (v.length > 0 && existing.length > 0 && v.length < existing.length && !cp._confirmReduction) {
+        console.log(`[saveCompiledPlan] BLOCKED: coreProjects reduction (incoming=${v.length}, existing=${existing.length}). Send _confirmReduction:true to force.`);
+      } else if (v.length > 0 || isExplicitClear) {
+        a.coreProjects = v;
+      }
     }
     // Core Strategic Projects (detailed: deliverables with completion)
     if (Array.isArray(cp.coreProjectDetails)) {
@@ -594,27 +631,40 @@ exports.saveCompiledPlan = async (req, res, next) => {
         if (limit && all.length > limit) {
           return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 core projects', plan, limit, limitKey: 'maxCoreProjects', upgradeTo: 'pro' });
         }
-        a.coreProjectDetails = all;
+        // PROTECTION: Don't reduce count significantly without explicit confirmation
+        const existing = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
+        const isExplicitClear = all.length === 0 && (!Array.isArray(cp.coreProjects) || cp.coreProjects.length === 0);
+        // Block if incoming would reduce count (potential partial data loss)
+        if (all.length > 0 && existing.length > 0 && all.length < existing.length && !cp._confirmReduction) {
+          console.log(`[saveCompiledPlan] BLOCKED: coreProjectDetails reduction (incoming=${all.length}, existing=${existing.length}). Send _confirmReduction:true to force.`);
+        } else if (all.length > 0 || isExplicitClear) {
+          a.coreProjectDetails = all;
+        }
       } catch (_) {
         // ignore malformed payloads
       }
     }
     // Persist customizable action plan sections (user-defined department list with labels)
+    // PROTECTION: Only update if incoming has data or existing is empty
     if (Array.isArray(cp.actionSections)) {
       try {
         const norm = (cp.actionSections || []).map((s) => ({
           key: String(s && s.key || '').trim(),
           label: String(s && s.label || '').trim(),
         })).filter((s) => s.key);
-        a.actionSections = norm;
+        const existing = Array.isArray(a.actionSections) ? a.actionSections : [];
+        if (norm.length > 0 || existing.length === 0) {
+          a.actionSections = norm;
+        } else {
+          console.log(`[saveCompiledPlan] BLOCKED: actionSections replacement (incoming=${norm.length}, existing=${existing.length})`);
+        }
       } catch {}
     }
-    // Action plans (departmental)
+    // Action plans (departmental) - MERGE instead of replace to prevent data loss
     if (cp.actionPlans && typeof cp.actionPlans === 'object') {
       if (!require('../config/entitlements').hasFeature(user, 'departmentPlans')) {
         return res.status(402).json({ code: 'UPGRADE_REQUIRED', message: 'This feature requires Plan Genie Pro', feature: 'departmentPlans', plan, upgradeTo: 'pro' });
       }
-      const norm = {};
       const deriveStatus = (prog) => {
         const n = Number(prog);
         if (isFinite(n)) {
@@ -624,15 +674,26 @@ exports.saveCompiledPlan = async (req, res, next) => {
         }
         return 'Not started';
       };
+      // Start with existing assignments to preserve departments not in incoming data
+      const existing = a.actionAssignments || {};
+      const merged = { ...existing };
+      // Track what's being changed for logging
+      const incomingKeys = Object.keys(cp.actionPlans);
+      const existingKeys = Object.keys(existing);
+      // Log potential issues
+      if (incomingKeys.length < existingKeys.length) {
+        console.log(`[saveCompiledPlan] actionPlans MERGE: incoming=${incomingKeys.length} keys, existing=${existingKeys.length} keys - preserving non-overlapping departments`);
+      }
+      // Merge incoming data - only update departments that are explicitly sent
       Object.keys(cp.actionPlans).forEach((k) => {
         const arr = Array.isArray(cp.actionPlans[k]) ? cp.actionPlans[k] : [];
-        norm[k] = arr.map((u) => ({
+        merged[k] = arr.map((u) => ({
           ...u,
           status: u && u.status ? u.status : deriveStatus(u && (u.progress)),
           progress: (u && typeof u.progress === 'number') ? Math.max(0, Math.min(100, Math.round(u.progress))) : 0,
         }));
       });
-      a.actionAssignments = norm;
+      a.actionAssignments = merged;
     }
     ob.answers = a;
     try { ob.markModified && ob.markModified('answers'); } catch {}
@@ -666,8 +727,8 @@ exports.getCompiledPlan = async (req, res, next) => {
       userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
       businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '', ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '' },
       vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', bhag: a.visionBhag || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
-      values: { core: a.valuesCore || '', culture: a.cultureFeeling || '', traits: Array.isArray(a.valuesCoreKeywords) ? a.valuesCoreKeywords.filter((t)=> typeof t === 'string' && t.trim()).slice(0, 3) : [] },
-      market: { customer: a.marketCustomer || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
+      values: { core: a.valuesCore || '', culture: a.cultureFeeling || '', traits: Array.isArray(a.valuesCoreKeywords) ? a.valuesCoreKeywords.filter((t)=> typeof t === 'string' && t.trim()) : [] },
+      market: { custType: a.custType || '', customer: a.marketCustomer || '', partnersYN: a.partnersYN || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
       products: Array.isArray(a.products) ? a.products : [],
       org: Array.isArray(a.orgPositions) ? a.orgPositions.map((p)=>({ id: p.id, name: p.name, position: p.position, department: p.department || null, parentId: p.parentId || null })) : [],
       financial: {
@@ -684,13 +745,80 @@ exports.getCompiledPlan = async (req, res, next) => {
         targetProfitMarginPct: a.finTargetProfitMarginPct || '',
         isNonprofit: a.finIsNonprofit || '',
       },
-      actionPlans: a.actionAssignments || {},
+      // Note: actionPlans and coreProjectDetails are populated below from new models
+      actionPlans: {},
       actionSections: Array.isArray(a.actionSections) ? a.actionSections.map((s)=>({ key: String(s && s.key || '').trim(), label: String(s && s.label || '').trim() })) : undefined,
-      coreProjects: Array.isArray(a.coreProjects) ? a.coreProjects : [],
-      coreProjectDetails: Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [],
+      coreProjects: [],
+      coreProjectDetails: [],
       generatedAt: new Date().toISOString(),
       version: '1.0',
     };
+
+    // Fetch core projects from new CoreProject model
+    try {
+      const coreProjects = await CoreProject.find({
+        ...wsFilter,
+        isDeleted: false,
+      }).sort({ order: 1 }).lean();
+
+      plan.coreProjects = coreProjects.map(p => p.title);
+      plan.coreProjectDetails = coreProjects.map(p => ({
+        _id: p._id,
+        title: p.title,
+        description: p.description,
+        goal: p.goal,
+        cost: p.cost,
+        dueWhen: p.dueWhen,
+        priority: p.priority,
+        ownerId: p.ownerId,
+        ownerName: p.ownerName,
+        linkedGoals: p.linkedGoals,
+        departments: p.departments,
+        deliverables: (p.deliverables || []).map(d => ({
+          _id: d._id,
+          text: d.text,
+          done: d.done,
+          kpi: d.kpi,
+          dueWhen: d.dueWhen,
+        })),
+      }));
+    } catch (e) {
+      console.error('getCompiledPlan: Error fetching core projects:', e);
+    }
+
+    // Fetch department projects from new DepartmentProject model
+    try {
+      const deptProjects = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
+
+      // Convert to actionPlans format expected by consumers
+      const actionPlans = {};
+      for (const [deptKey, projects] of Object.entries(deptProjects)) {
+        actionPlans[deptKey] = projects.map(p => ({
+          _id: p._id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          title: p.title,
+          goal: p.goal,
+          milestone: p.milestone,
+          resources: p.resources,
+          dueWhen: p.dueWhen,
+          cost: p.cost,
+          linkedCoreProject: p.linkedCoreProject,
+          linkedGoal: p.linkedGoal,
+          deliverables: (p.deliverables || []).map(d => ({
+            _id: d._id,
+            text: d.text,
+            done: d.done,
+            kpi: d.kpi,
+            dueWhen: d.dueWhen,
+          })),
+        }));
+      }
+      plan.actionPlans = actionPlans;
+    } catch (e) {
+      console.error('getCompiledPlan: Error fetching department projects:', e);
+    }
+
     // Apply department filtering for restricted collaborators
     if (hasDepartmentRestriction(req.user)) {
       const filtered = filterCompiledPlan(plan, req.user.allowedDepartments);
@@ -708,10 +836,28 @@ exports.getNotifications = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    // Build dynamic task notifications from onboarding action assignments
-    const ob = await Onboarding.findOne(wsFilter).lean().exec();
-    const a = ob?.answers || {};
-    let assignments = a.actionAssignments || {};
+
+    // Build dynamic task notifications from DepartmentProject model (not legacy Onboarding)
+    let assignments = {};
+    try {
+      const deptProjects = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
+      // Convert to assignments format for notification generation
+      for (const [deptKey, projects] of Object.entries(deptProjects)) {
+        assignments[deptKey] = projects.map(p => ({
+          _id: p._id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          goal: p.goal || p.title,
+          dueWhen: p.dueWhen,
+          progress: 0, // Could compute from deliverables completion if needed
+          status: 'Not started',
+          deliverables: p.deliverables || [],
+        }));
+      }
+    } catch (e) {
+      console.error('getNotifications: Error fetching department projects:', e);
+    }
+
     // Filter assignments for department-restricted collaborators
     if (hasDepartmentRestriction(req.user)) {
       assignments = filterActionAssignments(assignments, req.user.allowedDepartments);
@@ -1916,9 +2062,9 @@ exports.exportPlanPdf = async (req, res, next) => {
           userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
           businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '', ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '' },
           vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', bhag: a.visionBhag || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
-          values: { core: a.valuesCore || '', culture: a.cultureFeeling || '', traits: Array.isArray(a.valuesCoreKeywords) ? a.valuesCoreKeywords.filter((t)=> typeof t === 'string' && t.trim()).slice(0, 3) : [] },
+          values: { core: a.valuesCore || '', culture: a.cultureFeeling || '', traits: Array.isArray(a.valuesCoreKeywords) ? a.valuesCoreKeywords.filter((t)=> typeof t === 'string' && t.trim()) : [] },
           goals: { shortTerm: (a.goalsShortTerm || '').split('\n').filter(Boolean), midTerm: (a.goalsMidTerm || '').split('\n').filter(Boolean), longTerm: (a.goalsLongTerm || '').split('\n').filter(Boolean) },
-          market: { customer: a.marketCustomer || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
+          market: { custType: a.custType || '', customer: a.marketCustomer || '', partnersYN: a.partnersYN || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
           products: Array.isArray(a.products) ? a.products : [],
           org: Array.isArray(a.orgPositions) ? a.orgPositions.map((p)=>({ id: p.id, name: p.name, position: p.position, department: p.department || null, parentId: p.parentId || null })) : [],
           financial: {
@@ -1935,10 +2081,11 @@ exports.exportPlanPdf = async (req, res, next) => {
             targetProfitMarginPct: a.finTargetProfitMarginPct || '',
             isNonprofit: a.finIsNonprofit || '',
           },
-          actionPlans: a.actionAssignments || {},
+          // Note: actionPlans and coreProjectDetails are populated below from new models
+          actionPlans: {},
           actionSections: Array.isArray(a.actionSections) ? a.actionSections.map((s)=>({ key: String(s && s.key || '').trim(), label: String(s && s.label || '').trim() })) : undefined,
-          coreProjects: Array.isArray(a.coreProjects) ? a.coreProjects : [],
-          coreProjectDetails: Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [],
+          coreProjects: [],
+          coreProjectDetails: [],
         };
 
         // Get prose data the same way getPlanProse does
@@ -1951,6 +2098,71 @@ exports.exportPlanPdf = async (req, res, next) => {
       }
     } catch (e) {
       console.error('PDF export: Error fetching onboarding data:', e);
+    }
+
+    // Fetch core projects from new CoreProject model
+    try {
+      const coreProjects = await CoreProject.find({
+        ...wsFilter,
+        isDeleted: false,
+      }).sort({ order: 1 }).lean();
+
+      compiledPlan.coreProjects = coreProjects.map(p => p.title);
+      compiledPlan.coreProjectDetails = coreProjects.map(p => ({
+        _id: p._id,
+        title: p.title,
+        description: p.description,
+        goal: p.goal,
+        cost: p.cost,
+        dueWhen: p.dueWhen,
+        priority: p.priority,
+        ownerId: p.ownerId,
+        ownerName: p.ownerName,
+        linkedGoals: p.linkedGoals,
+        departments: p.departments,
+        deliverables: (p.deliverables || []).map(d => ({
+          _id: d._id,
+          text: d.text,
+          done: d.done,
+          kpi: d.kpi,
+          dueWhen: d.dueWhen,
+        })),
+      }));
+    } catch (e) {
+      console.error('PDF export: Error fetching core projects:', e);
+    }
+
+    // Fetch department projects from new DepartmentProject model
+    try {
+      const deptProjects = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
+
+      // Convert to actionPlans format expected by templates
+      const actionPlans = {};
+      for (const [deptKey, projects] of Object.entries(deptProjects)) {
+        actionPlans[deptKey] = projects.map(p => ({
+          _id: p._id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          title: p.title,
+          goal: p.goal,
+          milestone: p.milestone,
+          resources: p.resources,
+          dueWhen: p.dueWhen,
+          cost: p.cost,
+          linkedCoreProject: p.linkedCoreProject,
+          linkedGoal: p.linkedGoal,
+          deliverables: (p.deliverables || []).map(d => ({
+            _id: d._id,
+            text: d.text,
+            done: d.done,
+            kpi: d.kpi,
+            dueWhen: d.dueWhen,
+          })),
+        }));
+      }
+      compiledPlan.actionPlans = actionPlans;
+    } catch (e) {
+      console.error('PDF export: Error fetching department projects:', e);
     }
 
     try {
@@ -2520,7 +2732,7 @@ exports.exportPlanDocx = async (req, res, next) => {
       businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '' },
       vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', bhag: a.visionBhag || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
       values: { core: a.valuesCore || '', culture: a.cultureFeeling || '' },
-      market: { customer: a.marketCustomer || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
+      market: { custType: a.custType || '', customer: a.marketCustomer || '', partnersYN: a.partnersYN || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
       products: Array.isArray(a.products) ? a.products : [],
       org: Array.isArray(a.orgPositions) ? a.orgPositions.map((p)=>({ id: p.id, name: p.name, position: p.position, department: p.department || null, parentId: p.parentId || null })) : [],
       financialSnapshot: snapshot ? {
@@ -2529,10 +2741,76 @@ exports.exportPlanDocx = async (req, res, next) => {
         cash: snapshot.cash || {},
         metrics: snapshot.metrics || {},
       } : null,
-      actionPlans: a.actionAssignments || {},
-      coreProjects: Array.isArray(a.coreProjects) ? a.coreProjects : [],
-      coreProjectDetails: Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [],
+      // Note: actionPlans and coreProjectDetails are populated below from new models
+      actionPlans: {},
+      coreProjects: [],
+      coreProjectDetails: [],
     };
+
+    // Fetch core projects from new CoreProject model
+    try {
+      const coreProjects = await CoreProject.find({
+        ...wsFilter,
+        isDeleted: false,
+      }).sort({ order: 1 }).lean();
+
+      plan.coreProjects = coreProjects.map(p => p.title);
+      plan.coreProjectDetails = coreProjects.map(p => ({
+        _id: p._id,
+        title: p.title,
+        description: p.description,
+        goal: p.goal,
+        cost: p.cost,
+        dueWhen: p.dueWhen,
+        priority: p.priority,
+        ownerId: p.ownerId,
+        ownerName: p.ownerName,
+        linkedGoals: p.linkedGoals,
+        departments: p.departments,
+        deliverables: (p.deliverables || []).map(d => ({
+          _id: d._id,
+          text: d.text,
+          done: d.done,
+          kpi: d.kpi,
+          dueWhen: d.dueWhen,
+        })),
+      }));
+    } catch (e) {
+      console.error('DOCX export: Error fetching core projects:', e);
+    }
+
+    // Fetch department projects from new DepartmentProject model
+    try {
+      const deptProjects = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
+
+      // Convert to actionPlans format expected by templates
+      const actionPlans = {};
+      for (const [deptKey, projects] of Object.entries(deptProjects)) {
+        actionPlans[deptKey] = projects.map(p => ({
+          _id: p._id,
+          firstName: p.firstName,
+          lastName: p.lastName,
+          title: p.title,
+          goal: p.goal,
+          milestone: p.milestone,
+          resources: p.resources,
+          dueWhen: p.dueWhen,
+          cost: p.cost,
+          linkedCoreProject: p.linkedCoreProject,
+          linkedGoal: p.linkedGoal,
+          deliverables: (p.deliverables || []).map(d => ({
+            _id: d._id,
+            text: d.text,
+            done: d.done,
+            kpi: d.kpi,
+            dueWhen: d.dueWhen,
+          })),
+        }));
+      }
+      plan.actionPlans = actionPlans;
+    } catch (e) {
+      console.error('DOCX export: Error fetching department projects:', e);
+    }
 
     // Load generated prose sections (Market Study and Financials) for richer content parity with UI/PDF
     const prose = (a && a.planProse) || {};
@@ -3317,6 +3595,20 @@ exports.saveProducts = async (req, res, next) => {
     const ob = await Onboarding.findOne(wsFilter);
     if (!ob) return res.status(400).json({ message: 'Onboarding not initialized' });
     ob.answers = ob.answers || {};
+    // PROTECTION: Don't overwrite existing products with empty array unless explicitly confirmed
+    const existingProducts = Array.isArray(ob.answers.products) ? ob.answers.products : [];
+    if (items.length === 0 && existingProducts.length > 0) {
+      // Check for explicit clear flag
+      if (!req.body?.confirmClear) {
+        console.warn(`[saveProducts] BLOCKED: Attempt to clear ${existingProducts.length} products with empty array. Send confirmClear:true to force.`);
+        return res.status(400).json({
+          message: 'Cannot replace existing products with empty array without confirmation',
+          existingCount: existingProducts.length,
+          hint: 'Send confirmClear:true in request body to force clear'
+        });
+      }
+      console.log(`[saveProducts] Clearing ${existingProducts.length} products (confirmClear=true)`);
+    }
     ob.answers.products = items;
     // answers is a Mixed type; mark it modified so Mongoose persists nested changes
     try { ob.markModified && ob.markModified('answers'); } catch {}

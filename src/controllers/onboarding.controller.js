@@ -2,6 +2,7 @@ const { validationResult } = require('express-validator');
 const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
 const Workspace = require('../models/Workspace');
+const SwotEntry = require('../models/SwotEntry');
 const crypto = require('crypto');
 const { getWorkspaceFilter, getWorkspaceId, addWorkspaceToDoc } = require('../utils/workspaceQuery');
 const { touchWorkspace } = require('../services/workspaceActivityService');
@@ -448,8 +449,71 @@ exports.getAllAnswers = async (req, res) => {
   const wsFilter = getWorkspaceFilter(req);
   const ob = await Onboarding.findOne(wsFilter);
 
+  // Start with base answers from Onboarding model
+  const answers = { ...(ob?.answers || {}) };
+
+  // Map 'bhag' field to 'visionBhag' for frontend compatibility
+  if (answers.bhag && !answers.visionBhag) {
+    answers.visionBhag = answers.bhag;
+  }
+
+  // Map market fields to frontend-expected names
+  if (answers.targetMarket && !answers.custType) {
+    answers.custType = answers.targetMarket;
+  }
+  if (answers.targetCustomer && !answers.marketCustomer) {
+    answers.marketCustomer = answers.targetCustomer;
+  }
+  if (answers.partners && !answers.partnersDesc) {
+    answers.partnersDesc = answers.partners;
+  }
+  if (answers.competitorsNotes && !answers.compNotes) {
+    answers.compNotes = answers.competitorsNotes;
+  }
+
+  // Enrich with SWOT data from SwotEntry collection
+  try {
+    const swotEntries = await SwotEntry.find({ ...wsFilter, isDeleted: false }).sort({ order: 1 }).lean();
+    const swotByType = { strength: [], weakness: [], opportunity: [], threat: [] };
+    swotEntries.forEach((e) => {
+      if (swotByType[e.entryType]) {
+        swotByType[e.entryType].push(e.text);
+      }
+    });
+    if (swotByType.strength.length && !answers.swotStrengths) {
+      answers.swotStrengths = swotByType.strength.join('\n');
+    }
+    if (swotByType.weakness.length && !answers.swotWeaknesses) {
+      answers.swotWeaknesses = swotByType.weakness.join('\n');
+    }
+    if (swotByType.opportunity.length && !answers.swotOpportunities) {
+      answers.swotOpportunities = swotByType.opportunity.join('\n');
+    }
+    if (swotByType.threat.length && !answers.swotThreats) {
+      answers.swotThreats = swotByType.threat.join('\n');
+    }
+  } catch (e) {
+    console.error('[getAllAnswers] Failed to fetch SwotEntry:', e.message);
+  }
+
+  // Enrich with OrgPosition data from OrgPosition collection
+  try {
+    const OrgPosition = require('../models/OrgPosition');
+    const orgPositions = await OrgPosition.find({ ...wsFilter, isDeleted: false }).sort({ order: 1 }).lean();
+    if (orgPositions.length > 0 && (!answers.orgPositions || answers.orgPositions.length === 0)) {
+      answers.orgPositions = orgPositions.map(p => ({
+        id: p._id,
+        position: p.position,
+        name: p.name,
+        department: p.department,
+        parentPosition: p.parentId,
+      }));
+    }
+  } catch (e) {
+    console.error('[getAllAnswers] Failed to fetch OrgPosition:', e.message);
+  }
+
   // [DATA TRACKING] Log data fetch with summary
-  const answers = ob?.answers || null;
   const answerKeys = answers ? Object.keys(answers) : [];
   const hasProducts = answers?.products?.length > 0;
   const hasCoreProjects = answers?.coreProjectDetails?.length > 0;

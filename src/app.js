@@ -82,6 +82,17 @@ app.use('/api/misc', require('./routes/misc.routes'));
 app.use('/api/dashboard', require('./routes/dashboard.routes'));
 app.use('/api/dashboard/revenue-streams', require('./routes/revenueStream.routes'));
 app.use('/api/dashboard/financial-baseline', require('./routes/financialBaseline.routes'));
+// Core & Department Projects (individual document collections)
+app.use('/api/core-projects', require('./routes/coreProject.routes'));
+app.use('/api/department-projects', require('./routes/departmentProject.routes'));
+// Individual entity collections (replacing array-based storage)
+app.use('/api/products', require('./routes/product.routes'));
+app.use('/api/org-positions', require('./routes/orgPosition.routes'));
+app.use('/api/vision-goals', require('./routes/visionGoal.routes'));
+app.use('/api/competitors', require('./routes/competitor.routes'));
+app.use('/api/swot', require('./routes/swotEntry.routes'));
+// Individual field updates (replacing full answers object replacement)
+app.use('/api/workspace-fields', require('./routes/workspaceField.routes'));
 app.use('/api/user', require('./routes/user.routes'));
 app.use('/api/collab', require('./routes/collab.routes'));
 // Subscriptions

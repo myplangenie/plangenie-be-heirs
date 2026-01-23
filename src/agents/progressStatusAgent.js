@@ -52,7 +52,7 @@ const PLAN_SECTIONS = {
   swot: {
     name: 'SWOT Analysis',
     weight: 10,
-    fields: ['swotStrengths', 'swotWeaknesses', 'swotOpportunities', 'swotThreats'],
+    checkSwot: true, // Uses new SwotEntry CRUD model via context.swot
     description: 'Strengths, weaknesses, opportunities, threats',
   },
   products: {
@@ -90,7 +90,20 @@ function calculateSectionCompletion(context) {
     let status = 'empty';
     const missingFields = [];
 
-    if (config.fields) {
+    if (config.checkSwot) {
+      // Check SWOT from new SwotEntry CRUD model (via context.swot)
+      const swot = context.swot || {};
+      const swotFields = ['strengths', 'weaknesses', 'opportunities', 'threats'];
+      total = swotFields.length;
+      for (const field of swotFields) {
+        const value = swot[field];
+        if (value && String(value).trim().length > 0) {
+          filled++;
+        } else {
+          missingFields.push(`swot${field.charAt(0).toUpperCase() + field.slice(1)}`);
+        }
+      }
+    } else if (config.fields) {
       // Regular field checks
       total = config.fields.length;
       for (const field of config.fields) {

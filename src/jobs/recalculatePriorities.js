@@ -15,15 +15,12 @@ let isRunning = false;
 
 /**
  * Recalculate priorities for a specific user and workspace
+ * Uses new CRUD models (CoreProject, DepartmentProject) instead of Onboarding.answers
  */
 async function recalculateForUserWorkspace(userId, workspaceId) {
   try {
-    // Get onboarding data for this specific workspace
-    const ob = await Onboarding.findOne({ user: userId, workspace: workspaceId }).lean();
-    const answers = ob?.answers || {};
-
-    // Extract and score all items
-    const items = scoringService.extractItems(answers);
+    // Extract items from new CRUD models (CoreProject, DepartmentProject)
+    const items = await scoringService.extractItemsFromModels(userId, workspaceId);
     const context = { allItems: items };
 
     const scoredItems = items.map((item) => {
@@ -36,8 +33,8 @@ async function recalculateForUserWorkspace(userId, workspaceId) {
     const upcomingItems = scoringService.getUpcomingItems(scoredItems);
     const monthlyThrust = scoringService.getMonthlyThrust(scoredItems);
 
-    // Detect risks
-    const { risks, clusters } = riskService.analyzeRisks(answers, scoredItems);
+    // Detect risks (pass scoredItems only, no longer uses answers)
+    const { risks, clusters } = riskService.analyzeRisks({}, scoredItems);
 
     // Update or create cache
     await PriorityCache.findOneAndUpdate(
