@@ -188,12 +188,12 @@ exports.register = async (req, res) => {
         workspace: newWorkspace._id,
         nid: `welcome_${user._id}`,
         title: 'Welcome to Plan Genie!',
-        description: 'We\'re excited to have you on board. Start by completing your business plan to unlock the full potential of Plan Genie.',
-        type: 'ai',
+        description: 'We\'re excited to have you on board. Explore your dashboard to track progress, manage projects, and access AI-powered insights for your business.',
+        type: 'info',
         severity: 'success',
         time: 'Just now',
         actions: [
-          { label: 'Get Started', kind: 'primary' },
+          { label: 'View Dashboard', kind: 'primary' },
         ],
       });
     } catch (notifErr) {

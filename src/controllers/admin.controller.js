@@ -16,6 +16,7 @@ const SwotEntry = require('../models/SwotEntry');
 const OrgPosition = require('../models/OrgPosition');
 const CoreProject = require('../models/CoreProject');
 const DepartmentProject = require('../models/DepartmentProject');
+const { getWorkspaceFields } = require('../services/workspaceFieldService');
 
 function toName(u) {
   const name = (u.fullName && String(u.fullName).trim()) || [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
@@ -174,10 +175,18 @@ exports.getUserFullData = async (req, res) => {
   // Build workspace map for onboarding data
   const workspaceMap = new Map(workspaces.map(w => [String(w._id), w]));
 
+  // Fetch workspace fields for each workspace (for admin view)
+  const workspaceFieldsMap = new Map();
+  for (const ws of workspaces) {
+    const fields = await getWorkspaceFields(ws._id);
+    workspaceFieldsMap.set(String(ws._id), fields);
+  }
+
   // Enrich onboarding data with workspace names and workspace fields
   const enrichedOnboardings = onboardings.map(ob => {
     const ws = ob.workspace ? workspaceMap.get(String(ob.workspace)) : null;
-    const answers = ob.answers || {};
+    // Read from Workspace.fields instead of Onboarding.answers
+    const answers = ob.workspace ? workspaceFieldsMap.get(String(ob.workspace)) || {} : {};
     return {
       _id: String(ob._id),
       workspaceName: ws?.name || 'Unknown Workspace',
@@ -487,6 +496,95 @@ exports.deleteUser = async (req, res) => {
   } finally {
     session.endSession();
   }
+};
+
+exports.bulkDeleteUsers = async (req, res) => {
+  const { ids } = req.body;
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ message: 'ids array is required' });
+  }
+
+  // Validate all IDs
+  const mongoose = require('mongoose');
+  const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
+  if (invalidIds.length > 0) {
+    return res.status(400).json({ message: `Invalid IDs: ${invalidIds.join(', ')}` });
+  }
+
+  const results = { deleted: [], failed: [] };
+
+  // Models to clean for each user
+  const modelsToClean = [
+    'Onboarding',
+    'Notification',
+    'NotificationSettings',
+    'Subscription',
+    'SubscriptionHistory',
+    'RefreshToken',
+    'Workspace',
+    'Journey',
+    'Dashboard',
+    'Financials',
+    'FinancialSnapshot',
+    'TeamMember',
+    'Department',
+    'AgentCache',
+    'PriorityCache',
+    'ReviewSession',
+    'Decision',
+    'Assumption',
+    'Scenario',
+    'Plan',
+    'PlanSection',
+    'Product',
+    'VisionGoal',
+    'Competitor',
+    'SwotEntry',
+    'OrgPosition',
+    'CoreProject',
+    'DepartmentProject',
+    'RevenueStream',
+    'FinancialBaseline',
+  ];
+
+  for (const id of ids) {
+    try {
+      const user = await User.findById(id);
+      if (!user) {
+        results.failed.push({ id, reason: 'Not found' });
+        continue;
+      }
+
+      // Delete collaborations
+      try {
+        await Collaboration.deleteMany({ $or: [{ owner: id }, { viewer: id }, { collaborator: id }] });
+      } catch {}
+
+      // Delete all related data
+      for (const modelName of modelsToClean) {
+        try {
+          const Model = require(`../models/${modelName}`);
+          await Model.deleteMany({ user: id });
+        } catch {}
+      }
+
+      // Delete the user
+      await User.deleteOne({ _id: id });
+      await log('User deleted (bulk)', 'warning', user.email, { userId: String(user._id) });
+      results.deleted.push({ id, email: user.email });
+    } catch (e) {
+      results.failed.push({ id, reason: e?.message || 'Unknown error' });
+    }
+  }
+
+  return res.json({
+    ok: true,
+    deletedCount: results.deleted.length,
+    failedCount: results.failed.length,
+    deleted: results.deleted,
+    failed: results.failed,
+  });
 };
 
 exports.subscriptions = async (_req, res) => {

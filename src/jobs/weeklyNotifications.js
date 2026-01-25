@@ -123,12 +123,8 @@ async function sendDigestToUser(user, resend, fromAddress, dashboardUrl) {
       return { sent: false, reason: 'disabled' };
     }
 
-    // Get user's onboarding data for their default workspace
-    const ob = await Onboarding.findOne({ user: user._id, workspace: workspace._id }).lean();
-    const answers = ob?.answers || {};
-
-    // Extract and score items
-    const items = scoringService.extractItems(answers);
+    // Extract and score items from new CRUD models (CoreProject, DepartmentProject)
+    const items = await scoringService.extractItemsFromModels(user._id, workspace._id);
     const context = { allItems: items };
 
     const scoredItems = items.map((item) => {

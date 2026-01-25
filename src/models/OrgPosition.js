@@ -38,6 +38,13 @@ const OrgPositionSchema = new mongoose.Schema({
     trim: true,
     default: '',
   },
+  // Person's email address
+  email: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    default: '',
+  },
   // Department this position belongs to
   department: {
     type: String,

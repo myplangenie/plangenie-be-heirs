@@ -87,6 +87,13 @@ const WorkspaceSchema = new mongoose.Schema(
       onboardingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Onboarding', default: null },
       planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan', default: null },
     },
+    // Workspace-level fields for vision, values, market, financial data
+    // Replaces storing these in Onboarding.answers
+    fields: {
+      type: Map,
+      of: mongoose.Schema.Types.Mixed,
+      default: () => new Map(),
+    },
   },
   { timestamps: true }
 );

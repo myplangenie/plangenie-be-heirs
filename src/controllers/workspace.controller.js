@@ -11,6 +11,8 @@ const Assumption = require('../models/Assumption');
 const Scenario = require('../models/Scenario');
 const Decision = require('../models/Decision');
 const ReviewSession = require('../models/ReviewSession');
+const CoreProject = require('../models/CoreProject');
+const DepartmentProject = require('../models/DepartmentProject');
 const scoringService = require('../services/scoringService');
 const riskService = require('../services/riskService');
 const { recalculateForUserWorkspace } = require('../jobs/recalculatePriorities');
@@ -284,8 +286,9 @@ exports.thisWeek = async (req, res, next) => {
     today.setHours(0, 0, 0, 0);
     const in14 = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
 
-    const assignments = a.actionAssignments || {};
-    const activeItems = Object.keys(assignments).flatMap((key) => (assignments[key] || []).map((u, idx) => ({ ...u, _key: key, _index: idx })));
+    // Fetch from DepartmentProject model only - no legacy fallback
+    const deptProjects = await DepartmentProject.find({ workspace: ws._id, isDeleted: false }).lean();
+    const activeItems = deptProjects.map((u, idx) => ({ ...u, _key: u.department, _index: idx }));
 
     const allDeliverables = activeItems.map((u) => {
       const due = parseDue(u?.dueWhen);
@@ -430,8 +433,11 @@ exports.getRoadmap = async (req, res, next) => {
     const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
     if (!ws) return res.status(404).json({ message: 'Workspace not found' });
 
-    const ob = await Onboarding.findOne({ user: userId, workspace: ws._id }).lean().exec();
-    const a = ob?.answers || {};
+    // Fetch from new collections only - no legacy fallback
+    const [coreProjects, deptProjects] = await Promise.all([
+      CoreProject.findActiveByWorkspace(ws._id).lean(),
+      DepartmentProject.findActiveByWorkspace(ws._id).lean(),
+    ]);
 
     // Calculate time range: 1 year past, 2 years future (to allow full roadmap navigation)
     const now = new Date();
@@ -451,85 +457,81 @@ exports.getRoadmap = async (req, res, next) => {
       return d >= rangeStart && d <= rangeEnd;
     };
 
-    // Extract milestones from core projects (vision items excluded - they're aspirational, not actionable)
+    // Extract milestones from core projects
     const milestones = [];
 
     // Extract deliverables from projects
     const deliverables = [];
-    const projects = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
 
-    projects.forEach((p, pIndex) => {
+    // Process CoreProject collection
+    coreProjects.forEach((p) => {
       const projectTitle = String(p?.title || '').trim();
-      const projectDue = parseDate(p?.dueWhen);
+      const projectId = p._id.toString();
 
       // Add project as a milestone if it has a due date
-      if (projectDue && isInRange(p.dueWhen)) {
+      if (isInRange(p.dueWhen)) {
         milestones.push({
           title: projectTitle,
           date: p.dueWhen,
           type: 'project',
-          projectIndex: pIndex,
-          completed: !!p.completed,
+          projectId,
+          completed: false,
         });
       }
 
       // Add deliverables
       const pDeliverables = Array.isArray(p?.deliverables) ? p.deliverables : [];
-      pDeliverables.forEach((d, dIndex) => {
+      pDeliverables.forEach((d) => {
         if (!isInRange(d?.dueWhen)) return;
         const text = String(d?.text || '').trim();
+        if (!text) return;
         deliverables.push({
           title: text,
           date: d.dueWhen,
           projectTitle,
-          completed: !!d.completed,
+          completed: !!d.done,
           type: 'deliverable',
-          source: { projectIndex: pIndex, deliverableIndex: dIndex },
+          source: { coreProjectId: projectId, deliverableId: d._id?.toString() },
         });
       });
     });
 
-    // Add departmental projects and their deliverables
-    const assignments = a.actionAssignments || {};
-    Object.entries(assignments).forEach(([dept, arr]) => {
-      if (!Array.isArray(arr)) return;
-      arr.forEach((assignment, aIndex) => {
-        const projectTitle = String(assignment?.title || '').trim();
-        const projectOwner = [assignment?.firstName, assignment?.lastName].filter(Boolean).join(' ').trim();
-        const projectStatus = String(assignment?.status || '').toLowerCase();
-        const projectCompleted = projectStatus === 'completed';
+    // Process DepartmentProject collection
+    deptProjects.forEach((assignment) => {
+      const dept = assignment.departmentKey;
+      const projectTitle = String(assignment?.title || assignment?.goal || '').trim();
+      const projectId = assignment._id.toString();
+      const projectOwner = [assignment?.firstName, assignment?.lastName].filter(Boolean).join(' ').trim();
 
-        // Add the departmental project itself if it has a due date in range
-        if (isInRange(assignment?.dueWhen)) {
-          deliverables.push({
-            title: projectTitle,
-            date: assignment.dueWhen,
-            owner: projectOwner,
-            department: dept,
-            completed: projectCompleted,
-            type: 'goal',
-            source: { department: dept, goalIndex: aIndex },
-          });
-        }
+      // Add the departmental project itself if it has a due date in range
+      if (isInRange(assignment?.dueWhen)) {
+        deliverables.push({
+          title: projectTitle,
+          date: assignment.dueWhen,
+          owner: projectOwner,
+          department: dept,
+          completed: false,
+          type: 'goal',
+          source: { deptProjectId: projectId },
+        });
+      }
 
-        // Add deliverables from this departmental project
-        const deptDeliverables = Array.isArray(assignment?.deliverables) ? assignment.deliverables : [];
-        deptDeliverables.forEach((d, dIndex) => {
-          if (!isInRange(d?.dueWhen)) return;
-          // Use the deliverable text, not the KPI
-          const deliverableText = String(d?.text || '').trim();
-          if (!deliverableText) return;
+      // Add deliverables from this departmental project
+      const deptDeliverables = Array.isArray(assignment?.deliverables) ? assignment.deliverables : [];
+      deptDeliverables.forEach((d) => {
+        if (!isInRange(d?.dueWhen)) return;
+        const deliverableText = String(d?.text || '').trim();
+        if (!deliverableText) return;
 
-          deliverables.push({
-            title: deliverableText,
-            date: d.dueWhen,
-            projectTitle,
-            owner: projectOwner,
-            department: dept,
-            completed: !!d.done,
-            type: 'deliverable',
-            source: { department: dept, goalIndex: aIndex, deliverableIndex: dIndex },
-          });
+        deliverables.push({
+          title: deliverableText,
+          date: d.dueWhen,
+          projectTitle,
+          owner: d.ownerName || projectOwner,
+          department: dept,
+          completed: !!d.done,
+          type: 'deliverable',
+          source: { deptProjectId: projectId, deliverableId: d._id?.toString() },
         });
       });
     });
@@ -555,100 +557,13 @@ exports.getRoadmap = async (req, res, next) => {
 };
 
 // POST /api/workspaces/:wid/reschedule
+// DEPRECATED: Use CoreProject or DepartmentProject CRUD API instead
 exports.acceptReschedule = async (req, res, next) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const wid = String(req.params?.wid || '').trim();
-    const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
-    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
-
-    const { source, newDueDate } = req.body || {};
-    if (!source || !newDueDate) {
-      return res.status(400).json({ message: 'source and newDueDate are required' });
-    }
-
-    const ob = await Onboarding.findOne({ user: userId, workspace: ws._id });
-    if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
-
-    const a = ob.answers || {};
-
-    // Update the item based on source type
-    let updated = false;
-
-    if (source.type === 'project' && typeof source.projectIndex === 'number') {
-      // Core project itself
-      const projects = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
-      if (projects[source.projectIndex]) {
-        projects[source.projectIndex].dueWhen = newDueDate;
-        ob.answers = { ...a, coreProjectDetails: projects };
-        ob.markModified('answers');
-        await ob.save();
-        updated = true;
-      }
-    } else if (source.type === 'deliverable' && typeof source.projectIndex === 'number' && typeof source.deliverableIndex === 'number') {
-      // Core project deliverable
-      const projects = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
-      if (projects[source.projectIndex]?.deliverables?.[source.deliverableIndex]) {
-        projects[source.projectIndex].deliverables[source.deliverableIndex].dueWhen = newDueDate;
-        ob.answers = { ...a, coreProjectDetails: projects };
-        ob.markModified('answers');
-        await ob.save();
-        updated = true;
-      }
-    } else if (source.type === 'dept_deliverable' && source.department && typeof source.goalIndex === 'number' && typeof source.deliverableIndex === 'number') {
-      // Departmental project deliverable
-      const assignments = a.actionAssignments || {};
-      if (assignments[source.department]?.[source.goalIndex]?.deliverables?.[source.deliverableIndex]) {
-        assignments[source.department][source.goalIndex].deliverables[source.deliverableIndex].dueWhen = newDueDate;
-        ob.answers = { ...a, actionAssignments: assignments };
-        ob.markModified('answers');
-        await ob.save();
-        updated = true;
-      }
-    } else if (source.type === 'goal' && source.department && typeof source.goalIndex === 'number') {
-      // Departmental project itself
-      const assignments = a.actionAssignments || {};
-      if (assignments[source.department]?.[source.goalIndex]) {
-        assignments[source.department][source.goalIndex].dueWhen = newDueDate;
-        ob.answers = { ...a, actionAssignments: assignments };
-        ob.markModified('answers');
-        await ob.save();
-        updated = true;
-      }
-    }
-
-    if (!updated) {
-      return res.status(400).json({ message: 'Invalid source or item not found' });
-    }
-
-    // Track this action to avoid suggesting the same thing again
-    try {
-      await PriorityCache.findOneAndUpdate(
-        { user: userId, workspace: ws._id },
-        {
-          $push: {
-            'recentActions': {
-              action: 'reschedule',
-              source,
-              newDate: newDueDate,
-              timestamp: new Date().toISOString(),
-            },
-          },
-        },
-        { upsert: true }
-      );
-    } catch (trackErr) {
-      console.error('[acceptReschedule] Failed to track action:', trackErr?.message);
-    }
-
-    // Recalculate priorities
-    await recalculateForUserWorkspace(userId, ws._id);
-
-    return res.json({ success: true, message: 'Item rescheduled' });
-  } catch (err) {
-    next(err);
-  }
+  console.warn('[acceptReschedule] DEPRECATED endpoint called - use CoreProject/DepartmentProject CRUD API');
+  return res.status(410).json({
+    message: 'This endpoint is deprecated. Use PATCH /api/core-projects/:id or PATCH /api/department-projects/:id instead.',
+    code: 'ENDPOINT_DEPRECATED'
+  });
 };
 
 // POST /api/workspaces/:wid/dismiss-suggestion
@@ -677,113 +592,13 @@ exports.dismissSuggestion = async (req, res, next) => {
 };
 
 // Mark item as complete
+// DEPRECATED: Use CoreProject or DepartmentProject CRUD API instead
 exports.markComplete = async (req, res, next) => {
-  try {
-    const userId = req.user?.id;
-    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const wid = String(req.params?.wid || '').trim();
-    const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
-    if (!ws) return res.status(404).json({ message: 'Workspace not found' });
-
-    const { source, itemTitle, markAsDone = true } = req.body || {};
-    if (!source) {
-      return res.status(400).json({ message: 'source is required' });
-    }
-
-    const ob = await Onboarding.findOne({ user: userId, workspace: ws._id });
-    if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
-
-    const a = ob.answers || {};
-    let updated = false;
-    const completionValue = markAsDone ? true : false;
-    const completedAt = markAsDone ? new Date().toISOString() : null;
-
-    // Update the item based on source type
-    if (source.type === 'deliverable' && typeof source.projectIndex === 'number' && typeof source.deliverableIndex === 'number') {
-      // Core project deliverable
-      const projects = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
-      if (projects[source.projectIndex]?.deliverables?.[source.deliverableIndex]) {
-        projects[source.projectIndex].deliverables[source.deliverableIndex].done = completionValue;
-        projects[source.projectIndex].deliverables[source.deliverableIndex].completed = completionValue;
-        projects[source.projectIndex].deliverables[source.deliverableIndex].completedAt = completedAt;
-        ob.answers = { ...a, coreProjectDetails: projects };
-        ob.markModified('answers');
-        await ob.save();
-        updated = true;
-      }
-    } else if (source.type === 'dept_deliverable' && source.department && typeof source.goalIndex === 'number' && typeof source.deliverableIndex === 'number') {
-      // Departmental project deliverable
-      const assignments = a.actionAssignments || {};
-      if (assignments[source.department]?.[source.goalIndex]?.deliverables?.[source.deliverableIndex]) {
-        assignments[source.department][source.goalIndex].deliverables[source.deliverableIndex].done = completionValue;
-        assignments[source.department][source.goalIndex].deliverables[source.deliverableIndex].completedAt = completedAt;
-        ob.answers = { ...a, actionAssignments: assignments };
-        ob.markModified('answers');
-        await ob.save();
-        updated = true;
-      }
-    } else if (source.type === 'goal' && source.department && typeof source.goalIndex === 'number') {
-      // Departmental project itself
-      const assignments = a.actionAssignments || {};
-      if (assignments[source.department]?.[source.goalIndex]) {
-        assignments[source.department][source.goalIndex].completed = completionValue;
-        assignments[source.department][source.goalIndex].status = markAsDone ? 'completed' : 'active';
-        assignments[source.department][source.goalIndex].completedAt = completedAt;
-        ob.answers = { ...a, actionAssignments: assignments };
-        ob.markModified('answers');
-        await ob.save();
-        updated = true;
-      }
-    } else if (source.type === 'project' && typeof source.projectIndex === 'number') {
-      // Core project itself
-      const projects = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
-      if (projects[source.projectIndex]) {
-        projects[source.projectIndex].completed = completionValue;
-        projects[source.projectIndex].completedAt = completedAt;
-        ob.answers = { ...a, coreProjectDetails: projects };
-        ob.markModified('answers');
-        await ob.save();
-        updated = true;
-      }
-    }
-
-    if (!updated) {
-      return res.status(400).json({ message: 'Could not find item to mark complete' });
-    }
-
-    // Track this action to avoid suggesting the same thing again
-    if (markAsDone) {
-      try {
-        await PriorityCache.findOneAndUpdate(
-          { user: userId, workspace: ws._id },
-          {
-            $push: {
-              'recentActions': {
-                action: 'complete',
-                source,
-                timestamp: new Date().toISOString(),
-              },
-            },
-          },
-          { upsert: true }
-        );
-      } catch (trackErr) {
-        console.error('[markComplete] Failed to track action:', trackErr?.message);
-      }
-    }
-
-    // Trigger priority recalculation
-    try {
-      await recalculateForUserWorkspace(userId, ws._id);
-    } catch (recalcErr) {
-      console.error('[markComplete] Recalculation error:', recalcErr?.message || recalcErr);
-    }
-
-    const statusMsg = markAsDone ? 'complete' : 'incomplete';
-    return res.json({ success: true, message: `Item marked as ${statusMsg}` });
-  } catch (err) {
-    next(err);
-  }
+  console.warn('[markComplete] DEPRECATED endpoint called - use CoreProject/DepartmentProject CRUD API');
+  return res.status(410).json({
+    message: 'This endpoint is deprecated. Use PATCH /api/core-projects/:id or PATCH /api/department-projects/:id instead.',
+    code: 'ENDPOINT_DEPRECATED'
+  });
 };
 
 // Snooze a suggestion for X days

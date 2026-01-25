@@ -1,6 +1,5 @@
-const Onboarding = require('../models/Onboarding');
 const Workspace = require('../models/Workspace');
-const { getWorkspaceFilter, getWorkspaceId } = require('../utils/workspaceQuery');
+const { getWorkspaceId } = require('../utils/workspaceQuery');
 const { touchWorkspace } = require('../services/workspaceActivityService');
 const crypto = require('crypto');
 
@@ -52,31 +51,58 @@ const ALLOWED_FIELDS = [
   'finFundingYear',
   // Forecast
   'financialForecast',
+  // Department Configuration
+  'editableDepts',
+  'deptsConfirmed',
+  // Actual financial data (monthly arrays)
+  'finActualRevenue',
+  'finActualCogs',
+  'finActualMarketing',
+  'finActualPayroll',
+  'finActualFixed',
+  'finActualFunding',
+  'finActualNewCustomers',
+  // Org structure
+  'orgPositions',
+  // Products
+  'products',
+  'competitorNames',
+  // Action sections
+  'actionSections',
+  // Plan prose
+  'planProse',
+  // SWOT (legacy text format - SwotEntry model is primary)
+  'swotStrengths',
+  'swotWeaknesses',
+  'swotOpportunities',
+  'swotThreats',
+  // Goals
+  'goalsShortTerm',
+  'goalsMidTerm',
+  'goalsLongTerm',
+  // Misc
+  'companyLogoUrl',
 ];
 
-// Workspace-aware getOrCreate for onboarding
-async function getOrCreate(userId, workspaceId = null) {
-  let wsId = workspaceId;
-  if (!wsId) {
-    let defaultWs = await Workspace.findOne({ user: userId, defaultWorkspace: true });
-    if (!defaultWs) {
-      const wid = `ws_${crypto.randomBytes(6).toString('hex')}`;
-      defaultWs = await Workspace.create({
-        user: userId,
-        wid,
-        name: 'My Business',
-        defaultWorkspace: true,
-      });
-    }
-    wsId = defaultWs._id;
+// Get or create workspace for the user
+async function getOrCreateWorkspace(userId, workspaceId = null) {
+  if (workspaceId) {
+    const ws = await Workspace.findById(workspaceId);
+    if (ws) return ws;
   }
 
-  const filter = { user: userId, workspace: wsId };
-  let ob = await Onboarding.findOne(filter);
-  if (!ob) {
-    ob = await Onboarding.create({ user: userId, workspace: wsId });
+  // Find or create default workspace
+  let defaultWs = await Workspace.findOne({ user: userId, defaultWorkspace: true });
+  if (!defaultWs) {
+    const wid = `ws_${crypto.randomBytes(6).toString('hex')}`;
+    defaultWs = await Workspace.create({
+      user: userId,
+      wid,
+      name: 'My Business',
+      defaultWorkspace: true,
+    });
   }
-  return ob;
+  return defaultWs;
 }
 
 /**
@@ -96,13 +122,14 @@ exports.getField = async (req, res, next) => {
       return res.json({ field: fieldName, value: null });
     }
 
-    const wsFilter = getWorkspaceFilter(req);
-    const ob = await Onboarding.findOne(wsFilter).lean();
+    const workspaceId = getWorkspaceId(req);
+    const ws = await getOrCreateWorkspace(userId, workspaceId);
 
-    let value = ob?.answers?.[fieldName] ?? null;
+    // Read from Workspace.fields Map
+    let value = ws.fields?.get(fieldName) ?? null;
     // Handle legacy field name: 'bhag' might be stored as 'visionBhag' in older data
     if (fieldName === 'bhag' && value === null) {
-      value = ob?.answers?.visionBhag ?? null;
+      value = ws.fields?.get('visionBhag') ?? null;
     }
     return res.json({ field: fieldName, value });
   } catch (err) {
@@ -130,29 +157,29 @@ exports.updateField = async (req, res, next) => {
     }
 
     const workspaceId = getWorkspaceId(req);
-    const ob = await getOrCreate(userId, workspaceId);
+    const ws = await getOrCreateWorkspace(userId, workspaceId);
 
-    // Initialize answers if needed
-    if (!ob.answers) {
-      ob.answers = {};
+    // Initialize fields Map if needed
+    if (!ws.fields) {
+      ws.fields = new Map();
     }
 
     // Update the specific field
-    const oldValue = ob.answers[fieldName];
-    ob.answers[fieldName] = value;
+    const oldValue = ws.fields.get(fieldName);
+    ws.fields.set(fieldName, value);
 
-    // Mark answers as modified for Mongoose
-    ob.markModified('answers');
-    await ob.save();
+    // Mark fields as modified for Mongoose
+    ws.markModified('fields');
+    await ws.save();
 
     // Update workspace lastActivityAt
-    if (ob.workspace) touchWorkspace(ob.workspace);
+    touchWorkspace(ws._id);
 
     console.log(`[updateField] user=${userId} workspace=${workspaceId} field=${fieldName} oldLen=${JSON.stringify(oldValue || '').length} newLen=${JSON.stringify(value || '').length}`);
 
     return res.json({
       field: fieldName,
-      value: ob.answers[fieldName],
+      value: ws.fields.get(fieldName),
       message: `Field '${fieldName}' updated`,
     });
   } catch (err) {
@@ -177,20 +204,20 @@ exports.deleteField = async (req, res, next) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const wsFilter = getWorkspaceFilter(req);
-    const ob = await Onboarding.findOne(wsFilter);
+    const workspaceId = getWorkspaceId(req);
+    const ws = await getOrCreateWorkspace(userId, workspaceId);
 
-    if (!ob) {
-      return res.status(404).json({ message: 'Workspace data not found' });
+    if (!ws) {
+      return res.status(404).json({ message: 'Workspace not found' });
     }
 
-    if (ob.answers && Object.prototype.hasOwnProperty.call(ob.answers, fieldName)) {
-      delete ob.answers[fieldName];
-      ob.markModified('answers');
-      await ob.save();
+    if (ws.fields && ws.fields.has(fieldName)) {
+      ws.fields.delete(fieldName);
+      ws.markModified('fields');
+      await ws.save();
 
       // Update workspace lastActivityAt
-      if (ob.workspace) touchWorkspace(ob.workspace);
+      touchWorkspace(ws._id);
     }
 
     console.log(`[deleteField] user=${userId} field=${fieldName}`);
@@ -227,15 +254,15 @@ exports.getFields = async (req, res, next) => {
       return res.json({ values: result });
     }
 
-    const wsFilter = getWorkspaceFilter(req);
-    const ob = await Onboarding.findOne(wsFilter).lean();
+    const workspaceId = getWorkspaceId(req);
+    const ws = await getOrCreateWorkspace(userId, workspaceId);
 
     const result = {};
     fields.forEach(f => {
-      let value = ob?.answers?.[f] ?? null;
+      let value = ws.fields?.get(f) ?? null;
       // Handle legacy field name: 'bhag' might be stored as 'visionBhag' in older data
       if (f === 'bhag' && value === null) {
-        value = ob?.answers?.visionBhag ?? null;
+        value = ws.fields?.get('visionBhag') ?? null;
       }
       result[f] = value;
     });
@@ -273,33 +300,33 @@ exports.updateFields = async (req, res, next) => {
     }
 
     const workspaceId = getWorkspaceId(req);
-    const ob = await getOrCreate(userId, workspaceId);
+    const ws = await getOrCreateWorkspace(userId, workspaceId);
 
-    // Initialize answers if needed
-    if (!ob.answers) {
-      ob.answers = {};
+    // Initialize fields Map if needed
+    if (!ws.fields) {
+      ws.fields = new Map();
     }
 
     // Update all specified fields
     const updated = [];
     for (const [fieldName, value] of Object.entries(fields)) {
-      ob.answers[fieldName] = value;
+      ws.fields.set(fieldName, value);
       updated.push(fieldName);
     }
 
-    // Mark answers as modified for Mongoose
-    ob.markModified('answers');
-    await ob.save();
+    // Mark fields as modified for Mongoose
+    ws.markModified('fields');
+    await ws.save();
 
     // Update workspace lastActivityAt
-    if (ob.workspace) touchWorkspace(ob.workspace);
+    touchWorkspace(ws._id);
 
     console.log(`[updateFields] user=${userId} workspace=${workspaceId} fields=${updated.join(',')}`);
 
     // Return the updated values
     const result = {};
     fieldNames.forEach(f => {
-      result[f] = ob.answers[f];
+      result[f] = ws.fields.get(f);
     });
 
     return res.json({

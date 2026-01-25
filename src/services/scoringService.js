@@ -158,91 +158,6 @@ function calculateScore(item, context) {
 }
 
 /**
- * Extract all scoreable items from onboarding data
- */
-function extractItems(answers) {
-  const items = [];
-  const a = answers || {};
-
-  // Extract from coreProjectDetails
-  const projects = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
-  projects.forEach((p, pIndex) => {
-    const projectTitle = String(p?.title || '').trim();
-    if (!projectTitle) return;
-
-    // Add the project itself
-    items.push({
-      title: projectTitle,
-      dueWhen: p?.dueWhen || null,
-      goal: p?.goal || null,
-      kpi: p?.kpi || null,
-      source: { type: 'project', projectIndex: pIndex },
-      deliverableCount: Array.isArray(p?.deliverables) ? p.deliverables.length : 0,
-    });
-
-    // Add deliverables
-    const deliverables = Array.isArray(p?.deliverables) ? p.deliverables : [];
-    deliverables.forEach((d, dIndex) => {
-      const text = String(d?.text || '').trim();
-      if (!text || d?.completed) return; // Skip completed deliverables
-
-      items.push({
-        title: text,
-        dueWhen: d?.dueWhen || null,
-        goal: p?.goal || null, // Inherit goal from project
-        kpi: null,
-        source: { type: 'deliverable', projectIndex: pIndex, deliverableIndex: dIndex },
-        projectTitle,
-      });
-    });
-  });
-
-  // Extract from actionAssignments (departmental projects)
-  const assignments = a.actionAssignments || {};
-  Object.entries(assignments).forEach(([dept, arr]) => {
-    if (!Array.isArray(arr)) return;
-    arr.forEach((assignment, aIndex) => {
-      const projectTitle = String(assignment?.title || '').trim();
-      if (!projectTitle) return;
-
-      // Skip completed items
-      const status = String(assignment?.status || '').toLowerCase();
-      if (status === 'completed') return;
-
-      // Add the departmental project itself
-      items.push({
-        title: projectTitle,
-        dueWhen: assignment?.dueWhen || null,
-        goal: assignment?.goal || null,
-        kpi: assignment?.kpi || null,
-        source: { type: 'goal', department: dept, goalIndex: aIndex },
-        owner: [assignment?.firstName, assignment?.lastName].filter(Boolean).join(' ').trim(),
-        deliverableCount: Array.isArray(assignment?.deliverables) ? assignment.deliverables.length : 0,
-      });
-
-      // Add deliverables from departmental projects
-      const deliverables = Array.isArray(assignment?.deliverables) ? assignment.deliverables : [];
-      deliverables.forEach((d, dIndex) => {
-        const text = String(d?.text || '').trim();
-        if (!text || d?.done) return; // Skip completed deliverables
-
-        items.push({
-          title: text,
-          dueWhen: d?.dueWhen || null,
-          goal: assignment?.goal || null,
-          kpi: d?.kpi || null,
-          source: { type: 'dept_deliverable', department: dept, goalIndex: aIndex, deliverableIndex: dIndex },
-          projectTitle,
-          owner: [assignment?.firstName, assignment?.lastName].filter(Boolean).join(' ').trim(),
-        });
-      });
-    });
-  });
-
-  return items;
-}
-
-/**
  * Get weekly priorities (items due within current calendar week Sunday-Saturday, plus overdue)
  */
 function getWeeklyTop3(scoredItems) {
@@ -476,7 +391,6 @@ async function getCachedPriorities(userId, workspaceId) {
 module.exports = {
   WEIGHTS,
   calculateScore,
-  extractItems,
   extractItemsFromModels,
   getWeeklyTop3,
   getUpcomingItems,

@@ -17,6 +17,7 @@ router.get('/users/:id', ctrl.getUser);
 router.get('/users/:id/full-data', ctrl.getUserFullData);
 router.patch('/users/:id/status', ctrl.updateUserStatus);
 router.delete('/users/:id', ctrl.deleteUser);
+router.post('/users/bulk-delete', ctrl.bulkDeleteUsers);
 
 router.get('/subscriptions', ctrl.subscriptions);
 

@@ -1,6 +1,8 @@
 const Workspace = require('../models/Workspace');
 const ReviewSession = require('../models/ReviewSession');
 const User = require('../models/User');
+const OrgPosition = require('../models/OrgPosition');
+const Collaboration = require('../models/Collaboration');
 
 function id(prefix='r_') { return `${prefix}${Math.random().toString(36).slice(2, 10)}`; }
 
@@ -127,12 +129,80 @@ exports.sendActions = async (req, res, next) => {
     const doc = await ReviewSession.findOne({ user: userId, workspace: ws._id, rid }).lean().exec();
     if (!doc) return res.status(404).json({ message: 'Review not found' });
 
-    const attendees = doc.attendees || [];
-    const actionItems = doc.actionItems || [];
+    const rawAttendees = doc.attendees || [];
+    // Use selected action items from request body if provided, otherwise use all from doc
+    const selectedItems = req.body?.actionItems;
+    const actionItems = Array.isArray(selectedItems) && selectedItems.length > 0
+      ? selectedItems
+      : (doc.actionItems || []);
 
-    if (attendees.length === 0) {
+    if (rawAttendees.length === 0) {
       return res.status(400).json({ message: 'No attendees to send to' });
     }
+
+    // Look up current emails from OrgPosition and Collaboration
+    // The attendee id might be an ObjectId string from OrgPosition or a custom id
+    const orgPositions = await OrgPosition.find({
+      workspace: ws._id,
+      isDeleted: { $ne: true },
+    }).lean().exec();
+
+    const collaborations = await Collaboration.find({
+      owner: userId,
+      status: 'accepted',
+    }).lean().exec();
+
+    // Build lookup maps for quick access
+    const orgEmailById = new Map();
+    const orgEmailByName = new Map();
+    for (const pos of orgPositions) {
+      if (pos.email) {
+        orgEmailById.set(pos._id.toString(), pos.email);
+        if (pos.name) {
+          orgEmailByName.set(pos.name.toLowerCase().trim(), pos.email);
+        }
+      }
+    }
+
+    const collabEmailByName = new Map();
+    for (const collab of collaborations) {
+      if (collab.email) {
+        // Look up the collaborator's name from User model if we have the collaborator id
+        if (collab.collaborator) {
+          const collabUser = await User.findById(collab.collaborator).lean().exec();
+          if (collabUser) {
+            const name = (collabUser.firstName || collabUser.fullName || collabUser.email || '').toLowerCase().trim();
+            if (name) collabEmailByName.set(name, collab.email);
+          }
+        }
+      }
+    }
+
+    // Enrich attendees with current emails from OrgPosition/Collaboration
+    const attendees = rawAttendees.map(a => {
+      // First check if attendee already has email
+      if (a.email && a.email.trim()) {
+        return a;
+      }
+
+      // Try to find email by id (ObjectId from OrgPosition)
+      let currentEmail = orgEmailById.get(a.id);
+
+      // If not found, try by name from OrgPosition
+      if (!currentEmail && a.name) {
+        currentEmail = orgEmailByName.get(a.name.toLowerCase().trim());
+      }
+
+      // If still not found, try by name from Collaboration
+      if (!currentEmail && a.name) {
+        currentEmail = collabEmailByName.get(a.name.toLowerCase().trim());
+      }
+
+      return {
+        ...a,
+        email: currentEmail || a.email || '',
+      };
+    });
     if (actionItems.length === 0) {
       return res.status(400).json({ message: 'No action items to send' });
     }
@@ -147,18 +217,80 @@ exports.sendActions = async (req, res, next) => {
     const fromAddress = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
     const dashboardUrl = process.env.DASHBOARD_URL || 'https://www.plangenie.com/dashboard';
 
-    // Build action items list for email
-    const actionList = actionItems.map((ai, i) => {
-      let line = `${i + 1}. ${ai.text}`;
-      if (ai.owner) line += ` (Owner: ${ai.owner})`;
-      if (ai.dueWhen) line += ` - Due: ${ai.dueWhen}`;
-      return line;
-    }).join('\n');
+    // Group action items by owner
+    // Items with owner -> only send to that owner
+    // Items without owner -> send to all attendees
+    const itemsWithoutOwner = actionItems.filter(ai => !ai.owner || !ai.owner.trim());
+    const itemsWithOwner = actionItems.filter(ai => ai.owner && ai.owner.trim());
 
-    // Send email to each attendee
-    let sentCount = 0;
+    // First, determine which attendees need to receive action items
+    // Build a map of attendee name (lowercase) -> their action items
+    const attendeeActionItems = new Map();
+
+    // For items without owner, all attendees should receive them
     for (const attendee of attendees) {
-      if (!attendee.email) continue;
+      const name = (attendee.name || '').toLowerCase().trim();
+      if (itemsWithoutOwner.length > 0) {
+        attendeeActionItems.set(name, [...itemsWithoutOwner]);
+      }
+    }
+
+    // For items with owner, only the owner should receive them
+    for (const item of itemsWithOwner) {
+      const ownerName = item.owner.toLowerCase().trim();
+      // Find matching attendee
+      for (const attendee of attendees) {
+        const attendeeName = (attendee.name || '').toLowerCase().trim();
+        if (attendeeName === ownerName) {
+          const items = attendeeActionItems.get(attendeeName) || [];
+          items.push(item);
+          attendeeActionItems.set(attendeeName, items);
+        }
+      }
+    }
+
+    // Now filter to only attendees who actually need to receive something
+    const attendeesNeedingEmail = attendees.filter(a => {
+      const name = (a.name || '').toLowerCase().trim();
+      const items = attendeeActionItems.get(name) || [];
+      return items.length > 0;
+    });
+
+    if (attendeesNeedingEmail.length === 0) {
+      return res.status(400).json({
+        message: 'No attendees match the owners of the selected action items.'
+      });
+    }
+
+    // Check which of the needed attendees have emails
+    const attendeesWithEmail = attendeesNeedingEmail.filter(a => a.email && a.email.trim());
+    const attendeesWithoutEmail = attendeesNeedingEmail.filter(a => !a.email || !a.email.trim());
+
+    if (attendeesWithEmail.length === 0) {
+      const names = attendeesWithoutEmail.map(a => a.name || 'Unknown').join(', ');
+      return res.status(400).json({
+        message: `The following attendees need to receive action items but don't have email addresses: ${names}. Please add their email addresses.`
+      });
+    }
+
+    // Send email only to attendees who have action items assigned to them
+    let sentCount = 0;
+    const sentTo = [];
+    const failedTo = [];
+    const skippedNoEmail = attendeesWithoutEmail.map(a => ({ name: a.name || 'Unknown', reason: 'No email address' }));
+
+    for (const attendee of attendeesWithEmail) {
+      const attendeeName = (attendee.name || '').toLowerCase().trim();
+      const theirItems = attendeeActionItems.get(attendeeName) || [];
+
+      // Build action items list for this specific attendee
+      const actionList = theirItems.map((ai, i) => {
+        let line = `${i + 1}. ${ai.text}`;
+        if (ai.owner) line += ` (Owner: ${ai.owner})`;
+        if (ai.dueWhen) line += ` - Due: ${ai.dueWhen}`;
+        return line;
+      }).join('\n');
+
       try {
         await resend.emails.send({
           from: fromAddress,
@@ -167,11 +299,11 @@ exports.sendActions = async (req, res, next) => {
           html: `
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: linear-gradient(135deg, #1D4374 0%, #2563EB 100%); padding: 24px; border-radius: 12px 12px 0 0;">
-                <h1 style="margin: 0; color: white; font-size: 20px;">Review Action Items</h1>
+                <h1 style="margin: 0; color: white; font-size: 20px;">Your Action Items</h1>
               </div>
               <div style="padding: 24px; background: #fff; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
                 <p style="margin: 0 0 16px 0; color: #374151;">Hi ${attendee.name || 'there'},</p>
-                <p style="margin: 0 0 16px 0; color: #374151;">${senderName} has shared the following action items from a recent review session:</p>
+                <p style="margin: 0 0 16px 0; color: #374151;">${senderName} has assigned you the following action items from a recent review session:</p>
                 <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 16px;">
                   <pre style="margin: 0; font-family: inherit; white-space: pre-wrap; color: #1f2937;">${actionList}</pre>
                 </div>
@@ -180,15 +312,39 @@ exports.sendActions = async (req, res, next) => {
               </div>
             </div>
           `,
-          text: `Hi ${attendee.name || 'there'},\n\n${senderName} has shared the following action items from a recent review session:\n\n${actionList}\n\nView the review: ${dashboardUrl}/reviews/${rid}\n\n---\nSent via Plan Genie`,
+          text: `Hi ${attendee.name || 'there'},\n\n${senderName} has assigned you the following action items from a recent review session:\n\n${actionList}\n\nView the review: ${dashboardUrl}/reviews/${rid}\n\n---\nSent via Plan Genie`,
         });
         sentCount++;
+        sentTo.push({ name: attendee.name || attendee.email, itemCount: theirItems.length });
       } catch (emailErr) {
         console.error(`[review.sendActions] Failed to send to ${attendee.email}:`, emailErr?.message || emailErr);
+        failedTo.push({ name: attendee.name || attendee.email, reason: 'Email delivery failed' });
       }
     }
 
-    return res.json({ ok: true, sentCount });
+    // Build response with details about skipped attendees
+    const allSkipped = [...skippedNoEmail, ...failedTo];
+
+    // Build descriptive message
+    let message = '';
+    if (sentCount > 0) {
+      message = `Sent to ${sentCount} attendee${sentCount !== 1 ? 's' : ''}`;
+      if (allSkipped.length > 0) {
+        message += `. ${allSkipped.length} skipped (no email).`;
+      } else {
+        message += '.';
+      }
+    } else {
+      message = 'Failed to send to any attendees.';
+    }
+
+    return res.json({
+      ok: sentCount > 0,
+      sentCount,
+      sentTo,
+      skipped: allSkipped,
+      message
+    });
   } catch (err) { next(err); }
 };
 
@@ -229,27 +385,39 @@ exports.generateInsights = async (req, res, next) => {
       return ctx;
     }).join('\n');
 
-    const prompt = `You are an AI assistant helping analyze a business review session. Based on the following context, provide 3-5 strategic insights that would be helpful for the team.
+    const prompt = `You are an AI assistant analyzing a SPECIFIC business review session. Your task is to provide insights ONLY based on the data provided below - do NOT make up generic business advice or platform-wide recommendations.
+
+IMPORTANT:
+- Only analyze the specific notes, projects, and action items provided below
+- If a section says "No notes provided" or "No projects selected", acknowledge that limited data is available
+- Focus on concrete observations from the data, not general business platitudes
+- Insights must directly reference the projects, deliverables, or action items mentioned
+
+=== THIS REVIEW SESSION'S DATA ===
 
 Review Notes:
 ${notes || 'No notes provided'}
 
 Projects Being Reviewed:
-${projectsContext || 'No projects selected'}
+${projectsContext || 'No projects selected for this review'}
 
-Action Items:
-${actionsContext || 'No action items'}
+Action Items from This Review:
+${actionsContext || 'No action items in this review'}
+
+=== END OF REVIEW DATA ===
+
+Based ONLY on the data above, provide 3-5 specific insights. Each insight must be grounded in the actual content provided.
 
 Provide insights in the following JSON format (no other text):
 [
-  {"category": "progress|risk|recommendation|highlight", "title": "Short title", "description": "1-2 sentence description"}
+  {"category": "progress|risk|recommendation|highlight", "title": "Short title", "description": "1-2 sentence description referencing specific items from this review"}
 ]
 
 Categories:
-- progress: Positive momentum or achievements
-- risk: Potential issues or concerns to address
-- recommendation: Actionable suggestions for improvement
-- highlight: Notable accomplishments or key points`;
+- progress: Positive momentum or achievements observed in the data
+- risk: Potential issues or concerns visible in the review data
+- recommendation: Actionable suggestions based on the current state of projects/action items
+- highlight: Notable accomplishments or key points from this review session`;
 
     // Call AI service
     let insights = [];

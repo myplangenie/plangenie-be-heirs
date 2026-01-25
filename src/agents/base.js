@@ -16,10 +16,12 @@ const Department = require('../models/Department');
 const RevenueStream = require('../models/RevenueStream');
 const FinancialBaseline = require('../models/FinancialBaseline');
 const CoreProject = require('../models/CoreProject');
+const DepartmentProject = require('../models/DepartmentProject');
 const Competitor = require('../models/Competitor');
 const SwotEntry = require('../models/SwotEntry');
 const Product = require('../models/Product');
 const OrgPosition = require('../models/OrgPosition');
+const { getWorkspaceFields } = require('../services/workspaceFieldService');
 
 // Cache TTL configurations (in milliseconds)
 const CACHE_TTL = {
@@ -145,6 +147,7 @@ async function buildAgentContext(userId, workspaceId = null) {
     revenueStreams,
     financialBaseline,
     coreProjects,
+    departmentProjects,
     competitors,
     swotEntries,
     products,
@@ -158,6 +161,7 @@ async function buildAgentContext(userId, workspaceId = null) {
     FinancialBaseline.findOne(baselineFilter).lean(),
     // New individual CRUD models
     CoreProject.find(crudFilter).sort({ order: 1 }).lean(),
+    DepartmentProject.find(crudFilter).sort({ order: 1 }).lean(),
     Competitor.find(crudFilter).sort({ order: 1 }).lean(),
     SwotEntry.find(crudFilter).sort({ order: 1 }).lean(),
     Product.find(crudFilter).sort({ order: 1 }).lean(),
@@ -166,7 +170,8 @@ async function buildAgentContext(userId, workspaceId = null) {
 
   const bp = ob?.businessProfile || {};
   const up = ob?.userProfile || {};
-  const answers = ob?.answers || {};
+  // Read from Workspace.fields instead of Onboarding.answers
+  const answers = await getWorkspaceFields(workspaceId);
 
   // Calculate v2 aggregate for revenue streams
   let revenueAggregate = null;
@@ -208,6 +213,25 @@ async function buildAgentContext(userId, workspaceId = null) {
     departments: p.departments || [],
   }));
 
+  // Group department projects by department key for actionAssignments format
+  const actionAssignments = {};
+  (departmentProjects || []).forEach(p => {
+    const deptKey = p.departmentKey || p.department || 'other';
+    if (!actionAssignments[deptKey]) actionAssignments[deptKey] = [];
+    actionAssignments[deptKey].push({
+      firstName: p.firstName || '',
+      lastName: p.lastName || '',
+      goal: p.goal || p.title || '',
+      title: p.title || '',
+      milestone: p.milestone || '',
+      resources: p.resources || '',
+      kpi: p.kpi || '',
+      dueWhen: p.dueWhen || '',
+      status: p.status || 'not started',
+      deliverables: p.deliverables || [],
+    });
+  });
+
   return {
     // User profile
     fullName: up.fullName || user?.fullName || '',
@@ -221,7 +245,7 @@ async function buildAgentContext(userId, workspaceId = null) {
     businessStage: bp.businessStage || '',
     location: [bp.city, bp.country].filter(Boolean).join(', '),
 
-    // Vision & Strategy (from Onboarding.answers via WorkspaceField API)
+    // Vision & Strategy (from Workspace.fields)
     ubp: answers.ubp || '',
     purpose: answers.purpose || '',
     vision1y: answers.vision1y || '',
@@ -230,7 +254,7 @@ async function buildAgentContext(userId, workspaceId = null) {
     valuesCore: answers.valuesCore || '',
     cultureFeeling: answers.cultureFeeling || '',
 
-    // Market (from Onboarding.answers + new Competitor model)
+    // Market (from Workspace.fields + new Competitor model)
     marketCustomer: answers.marketCustomer || answers.targetCustomer || '',
     marketPartners: answers.marketPartners || answers.partners || '',
     marketCompetitors: marketCompetitors || answers.marketCompetitors || '',
@@ -245,10 +269,11 @@ async function buildAgentContext(userId, workspaceId = null) {
     // Financial data - v2 data (FinancialBaseline)
     financialBaseline: financialBaseline || null,
 
-    // Projects & Action Plans (from new CoreProject model)
+    // Projects & Action Plans (from new CoreProject and DepartmentProject models)
     coreProjectDetails,
     coreProjects: coreProjects || [],
-    actionAssignments: answers.actionAssignments || {},
+    departmentProjects: departmentProjects || [],
+    actionAssignments,
 
     // Team & Org (+ new OrgPosition model)
     departments,
@@ -256,12 +281,12 @@ async function buildAgentContext(userId, workspaceId = null) {
     teamMemberCount: teamMembers.length,
     orgPositions: orgPositions || [],
 
-    // SWOT (from new SwotEntry model)
+    // SWOT (from new SwotEntry model only - no legacy fallback)
     swot: {
-      strengths: swotStrengths || answers.swotStrengths || '',
-      weaknesses: swotWeaknesses || answers.swotWeaknesses || '',
-      opportunities: swotOpportunities || answers.swotOpportunities || '',
-      threats: swotThreats || answers.swotThreats || '',
+      strengths: swotStrengths || '',
+      weaknesses: swotWeaknesses || '',
+      opportunities: swotOpportunities || '',
+      threats: swotThreats || '',
     },
 
     // Raw data for advanced use

@@ -80,6 +80,7 @@ router.patch(
     body('position').optional().trim(),
     body('role').optional().trim(),
     body('name').optional().trim(),
+    body('email').optional().trim().isEmail().withMessage('Invalid email format'),
     body('department').optional().trim(),
     body('parentId').optional(),
     body('order').optional().isInt({ min: 0 }),

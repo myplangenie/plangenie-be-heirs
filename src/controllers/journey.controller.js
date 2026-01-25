@@ -1,5 +1,6 @@
 const Journey = require('../models/Journey');
 const Onboarding = require('../models/Onboarding');
+const DepartmentProject = require('../models/DepartmentProject');
 
 function ensureId(prefix = 'j_') {
   return `${prefix}${Math.random().toString(36).slice(2, 10)}`;
@@ -111,8 +112,9 @@ exports.thisWeek = async (req, res, next) => {
     today.setHours(0, 0, 0, 0);
     const in14 = new Date(today.getTime() + 14 * 24 * 60 * 60 * 1000);
 
-    const assignments = a.actionAssignments || {};
-    const activeItems = Object.keys(assignments).flatMap((key) => (assignments[key] || []).map((u, idx) => ({ ...u, _key: key, _index: idx })));
+    // Fetch from DepartmentProject model only - no legacy fallback
+    const deptProjects = await DepartmentProject.find({ user: userId, isDeleted: false }).lean();
+    const activeItems = deptProjects.map((u, idx) => ({ ...u, _key: u.department, _index: idx }));
 
     const allDeliverables = activeItems.map((u) => {
       const due = parseDue(u?.dueWhen);

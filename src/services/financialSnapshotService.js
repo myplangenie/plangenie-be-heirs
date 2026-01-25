@@ -1,6 +1,7 @@
 const FinancialSnapshot = require('../models/FinancialSnapshot');
 const Onboarding = require('../models/Onboarding');
 const Workspace = require('../models/Workspace');
+const { getWorkspaceFields } = require('./workspaceFieldService');
 
 // Conservative defaults for "Not sure" answers
 const CONSERVATIVE_DEFAULTS = {
@@ -287,7 +288,7 @@ exports.getDecisionSupport = async (userId, workspaceId = null) => {
 };
 
 /**
- * Sync financial data from existing onboarding answers
+ * Sync financial data from workspace fields (primary) or legacy onboarding answers (fallback)
  * If no workspaceId provided, looks up the user's default workspace
  */
 exports.syncFromOnboarding = async (userId, workspaceId = null) => {
@@ -301,13 +302,35 @@ exports.syncFromOnboarding = async (userId, workspaceId = null) => {
     }
   }
 
-  const filter = { user: userId };
-  if (wsId) filter.workspace = wsId;
-  else filter.workspace = null;
-  const ob = await Onboarding.findOne(filter).lean();
-  if (!ob?.answers?.financial) return null;
+  // Try workspace fields first (new storage)
+  const wsFields = await getWorkspaceFields(wsId);
 
-  const f = ob.answers.financial;
+  // Build financial object from workspace fields or fallback to legacy onboarding.answers.financial
+  let f = null;
+  if (wsFields.finSalesVolume || wsFields.finMonthlyRevenue || wsFields.finCurrentCash) {
+    // Use workspace fields
+    f = {
+      salesVolume: wsFields.finSalesVolume || wsFields.finMonthlyRevenue,
+      salesGrowthPct: wsFields.finSalesGrowthPct || wsFields.finRevenueGrowthPct,
+      fixedOperatingCosts: wsFields.finFixedOperatingCosts || wsFields.finFixedCosts,
+      startingCash: wsFields.finStartingCash || wsFields.finCurrentCash,
+      additionalFundingAmount: wsFields.finAdditionalFundingAmount || wsFields.finExpectedFunding,
+      additionalFundingMonth: wsFields.finAdditionalFundingMonth || wsFields.finFundingMonth,
+      avgUnitCost: wsFields.finAvgUnitCost,
+      payrollCost: wsFields.finPayrollCost,
+      marketingSalesSpend: wsFields.finMarketingSalesSpend,
+    };
+  } else {
+    // Fallback to legacy onboarding.answers.financial
+    const filter = { user: userId };
+    if (wsId) filter.workspace = wsId;
+    else filter.workspace = null;
+    const ob = await Onboarding.findOne(filter).lean();
+    if (!ob?.answers?.financial) return null;
+    f = ob.answers.financial;
+  }
+
+  if (!f) return null;
   const snapshot = await exports.getOrCreate(userId, wsId);
 
   // Map existing fields

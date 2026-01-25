@@ -117,6 +117,7 @@ exports.update = async (req, res, next) => {
       position,
       role,
       name,
+      email,
       department,
       parentId,
       order,
@@ -126,6 +127,7 @@ exports.update = async (req, res, next) => {
     if (position !== undefined) pos.position = position.trim();
     if (role !== undefined) pos.role = role?.trim() || undefined;
     if (name !== undefined) pos.name = name?.trim() || undefined;
+    if (email !== undefined) pos.email = email?.trim()?.toLowerCase() || '';
     if (department !== undefined) pos.department = department?.trim() || undefined;
     if (parentId !== undefined) pos.parentId = parentId || null;
     if (order !== undefined) pos.order = order;

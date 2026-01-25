@@ -1,4 +1,5 @@
 const Onboarding = require('../models/Onboarding');
+const Workspace = require('../models/Workspace');
 const User = require('../models/User');
 const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
@@ -7,7 +8,8 @@ const Competitor = require('../models/Competitor');
 const SwotEntry = require('../models/SwotEntry');
 const Product = require('../models/Product');
 const OrgPosition = require('../models/OrgPosition');
-const { getWorkspaceFilter } = require('../utils/workspaceQuery');
+const { getWorkspaceFilter, getWorkspaceId } = require('../utils/workspaceQuery');
+const { getWorkspaceFields } = require('../services/workspaceFieldService');
 let rag;
 try {
   rag = require('../rag/index.js');
@@ -49,7 +51,8 @@ function buildContextText(ob) {
 
 function buildAnswersContext(ob, options = {}) {
   try {
-    const a = (ob && ob.answers) || {};
+    // Use workspace fields (from options.wsFields) instead of ob.answers
+    const a = options.wsFields || (ob && ob.answers) || {};
     const bp = (ob && ob.businessProfile) || {};
     const up = (ob && ob.userProfile) || {};
     const { swotEntries = [], competitors = [] } = options;
@@ -76,10 +79,11 @@ function buildAnswersContext(ob, options = {}) {
     if (up.builtPlanBefore) lines.push(`Has Built Plan Before: ${up.builtPlanBefore}`);
     if (up.includePersonalPlanning) lines.push(`Include Personal Planning: Yes`);
 
-    // Vision & Values
+    // Vision & Values (from Workspace.fields)
     if (a.ubp) lines.push(`UBP: ${String(a.ubp).trim()}`);
     if (a.purpose) lines.push(`Purpose: ${String(a.purpose).trim()}`);
-    if (a.visionBhag) lines.push(`Long-Term Strategic Vision (BHAG): ${String(a.visionBhag).trim()}`);
+    const bhag = a.bhag || a.visionBhag;
+    if (bhag) lines.push(`Long-Term Strategic Vision (BHAG): ${String(bhag).trim()}`);
     if (a.vision1y) {
       const goals = String(a.vision1y).trim().split('\n').filter(Boolean);
       if (goals.length > 0) {
@@ -90,51 +94,30 @@ function buildAnswersContext(ob, options = {}) {
     if (a.vision3y) lines.push(`3-Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
     if (a.valuesCore) lines.push(`Core Values: ${String(a.valuesCore).trim()}`);
     if (a.cultureFeeling) lines.push(`Culture & Behaviors: ${String(a.cultureFeeling).trim()}`);
-    // SWOT - from new SwotEntry model with fallback to answers (field is entryType, not type)
+    // SWOT - from SwotEntry model only (no legacy fallback)
     const strengths = swotEntries.filter(s => s.entryType === 'strength').map(s => s.text).filter(Boolean);
     const weaknesses = swotEntries.filter(s => s.entryType === 'weakness').map(s => s.text).filter(Boolean);
     const opportunities = swotEntries.filter(s => s.entryType === 'opportunity').map(s => s.text).filter(Boolean);
     const threats = swotEntries.filter(s => s.entryType === 'threat').map(s => s.text).filter(Boolean);
     if (strengths.length) lines.push(`Strengths: ${strengths.join('; ')}`);
-    else if (a.swotStrengths) lines.push(`Strengths: ${String(a.swotStrengths).trim()}`);
     if (weaknesses.length) lines.push(`Weaknesses: ${weaknesses.join('; ')}`);
-    else if (a.swotWeaknesses) lines.push(`Weaknesses: ${String(a.swotWeaknesses).trim()}`);
     if (opportunities.length) lines.push(`Opportunities: ${opportunities.join('; ')}`);
-    else if (a.swotOpportunities) lines.push(`Opportunities: ${String(a.swotOpportunities).trim()}`);
     if (threats.length) lines.push(`Threats: ${threats.join('; ')}`);
-    else if (a.swotThreats) lines.push(`Threats: ${String(a.swotThreats).trim()}`);
-    // Market & Competition
-    if (a.marketCustomer || a.targetCustomer) lines.push(`Target Customer: ${String(a.marketCustomer || a.targetCustomer).trim()}`);
-    if (a.custType || a.targetMarket) lines.push(`Customer Type: ${String(a.custType || a.targetMarket).trim()}`);
-    if (a.partnersDesc || a.partners) lines.push(`Partners: ${String(a.partnersDesc || a.partners).trim()}`);
-    if (a.compNotes || a.competitorsNotes) lines.push(`Competitor Notes: ${String(a.compNotes || a.competitorsNotes).trim()}`);
-    // Use new Competitor model with fallback to answers
+    // Market & Competition (from Workspace.fields for text, Competitor model for entities)
+    if (a.targetCustomer) lines.push(`Target Customer: ${String(a.targetCustomer).trim()}`);
+    if (a.targetMarket) lines.push(`Customer Type: ${String(a.targetMarket).trim()}`);
+    if (a.partners) lines.push(`Partners: ${String(a.partners).trim()}`);
+    if (a.competitorsNotes) lines.push(`Competitor Notes: ${String(a.competitorsNotes).trim()}`);
+    // Use Competitor model only (no legacy fallback)
     const competitorNames = competitors.map(c => c.name).filter(Boolean);
     const competitorAdvantagesList = competitors.map(c => c.advantage).filter(Boolean);
     if (competitorNames.length) {
       lines.push(`Competitors: ${competitorNames.slice(0, 8).join(', ')}`);
-    } else if (Array.isArray(a.competitorNames) && a.competitorNames.length) {
-      lines.push(`Competitors: ${a.competitorNames.slice(0, 8).join(', ')}`);
     }
     if (competitorAdvantagesList.length) {
       lines.push(`Competitive Advantages: ${competitorAdvantagesList.slice(0, 8).join('; ')}`);
-    } else if (Array.isArray(a.competitorAdvantages) && a.competitorAdvantages.length) {
-      lines.push(`Competitive Advantages: ${a.competitorAdvantages.slice(0, 8).join(', ')}`);
     }
-    // Products with full details
-    if (Array.isArray(a.products) && a.products.length) {
-      const productLines = a.products.slice(0, 10).map((p) => {
-        const parts = [
-          p?.product && `Name: ${String(p.product).trim()}`,
-          p?.description && `Desc: ${String(p.description).trim()}`,
-          p?.price && `Price: $${p.price}`,
-          p?.unitCost && `Cost: $${p.unitCost}`,
-          p?.monthlyVolume && `Monthly Volume: ${p.monthlyVolume}`,
-        ].filter(Boolean);
-        return parts.length ? parts.join(' | ') : '';
-      }).filter(Boolean);
-      if (productLines.length) lines.push(`Products/Services: ${productLines.join('; ')}`);
-    }
+    // Products are now in Product model - pass via options.products if needed
     // Financial summary
     if (a.finStartingCash) lines.push(`Starting Cash: $${a.finStartingCash}`);
     if (a.finSalesVolume) lines.push(`Monthly Sales Volume: ${a.finSalesVolume} units`);
@@ -156,6 +139,7 @@ function buildAnswersContext(ob, options = {}) {
 // Includes: Onboarding profile, fallback to User.companyName, key onboarding answers,
 // existing core projects, departments summary, and active team members (limited).
 // Updated to fetch from new individual CRUD models (CoreProject, Competitor, SwotEntry, Product)
+// Now fetches workspace fields from Workspace.fields instead of Onboarding.answers
 async function buildCoreProjectContextForUser(userId, workspaceId = null) {
   try {
     const wsFilter = { user: userId };
@@ -165,7 +149,7 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     const crudFilter = { user: userId, isDeleted: { $ne: true } };
     if (workspaceId) crudFilter.workspace = workspaceId;
 
-    const [ob, user, departments, teamMembers, coreProjects, competitors, swotEntries, products, orgPositions] = await Promise.all([
+    const [ob, user, departments, teamMembers, coreProjects, competitors, swotEntries, products, orgPositions, wsFields] = await Promise.all([
       userId ? Onboarding.findOne(wsFilter) : null,
       userId ? User.findById(userId) : null,
       userId ? Department.find(wsFilter).select('name status owner dueDate').limit(50).lean().exec() : [],
@@ -176,6 +160,8 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
       userId ? SwotEntry.find(crudFilter).sort({ order: 1 }).lean() : [],
       userId ? Product.find(crudFilter).sort({ order: 1 }).lean() : [],
       userId ? OrgPosition.find(crudFilter).sort({ order: 1 }).lean() : [],
+      // Fetch workspace fields from Workspace.fields
+      workspaceId ? getWorkspaceFields(workspaceId) : {},
     ]);
 
     // Profile section (with fallback business name)
@@ -210,12 +196,13 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     ].filter(Boolean);
     const profileText = profileLines.length ? `Context about the business:\n- ${profileLines.join('\n- ')}` : '';
 
-    // Vision & Values snapshot
-    const answers = (ob && ob.answers) || {};
+    // Vision & Values snapshot - now from Workspace.fields (wsFields)
+    const answers = wsFields || {};
     const vvParts = [];
     if (answers.ubp) vvParts.push(`UBP: ${String(answers.ubp).trim()}`);
     if (answers.purpose) vvParts.push(`Purpose: ${String(answers.purpose).trim()}`);
-    if (answers.visionBhag) vvParts.push(`BHAG: ${String(answers.visionBhag).trim()}`);
+    const bhag = answers.bhag || answers.visionBhag;
+    if (bhag) vvParts.push(`BHAG: ${String(bhag).trim()}`);
     if (answers.vision1y) {
       // Provide numbered list of 1-year goals for proper index matching
       const goals = String(answers.vision1y).trim().split('\n').filter(Boolean);
@@ -229,68 +216,44 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     if (answers.cultureFeeling) vvParts.push(`Culture & Behaviors: ${String(answers.cultureFeeling).trim()}`);
     const vvText = vvParts.length ? `\n\nVision & Values:\n- ${vvParts.join('\n- ')}` : '';
 
-    // SWOT Analysis - from new SwotEntry model with fallback to answers (field is entryType, not type)
+    // SWOT Analysis - from new SwotEntry model (no legacy fallback needed)
     const swotLines = [];
     const strengths = swotEntries.filter(s => s.entryType === 'strength').map(s => s.text).filter(Boolean);
     const weaknesses = swotEntries.filter(s => s.entryType === 'weakness').map(s => s.text).filter(Boolean);
     const opportunities = swotEntries.filter(s => s.entryType === 'opportunity').map(s => s.text).filter(Boolean);
     const threats = swotEntries.filter(s => s.entryType === 'threat').map(s => s.text).filter(Boolean);
     if (strengths.length) swotLines.push(`Strengths: ${strengths.join('; ')}`);
-    else if (answers.swotStrengths) swotLines.push(`Strengths: ${String(answers.swotStrengths).trim()}`);
     if (weaknesses.length) swotLines.push(`Weaknesses: ${weaknesses.join('; ')}`);
-    else if (answers.swotWeaknesses) swotLines.push(`Weaknesses: ${String(answers.swotWeaknesses).trim()}`);
     if (opportunities.length) swotLines.push(`Opportunities: ${opportunities.join('; ')}`);
-    else if (answers.swotOpportunities) swotLines.push(`Opportunities: ${String(answers.swotOpportunities).trim()}`);
     if (threats.length) swotLines.push(`Threats: ${threats.join('; ')}`);
-    else if (answers.swotThreats) swotLines.push(`Threats: ${String(answers.swotThreats).trim()}`);
     const swotText = swotLines.length ? `\n\nSWOT Analysis:\n- ${swotLines.join('\n- ')}` : '';
 
-    // Market & Competition - from new Competitor model with fallback to answers
+    // Market & Competition - from new Competitor model with workspace fields for text data
     const marketLines = [];
-    if (answers.marketCustomer || answers.targetCustomer) marketLines.push(`Target Customer: ${String(answers.marketCustomer || answers.targetCustomer).trim()}`);
-    if (answers.custType || answers.targetMarket) marketLines.push(`Customer Type: ${String(answers.custType || answers.targetMarket).trim()}`);
-    if (answers.partnersDesc || answers.partners) marketLines.push(`Partners: ${String(answers.partnersDesc || answers.partners).trim()}`);
-    if (answers.compNotes || answers.competitorsNotes) marketLines.push(`Competitors Notes: ${String(answers.compNotes || answers.competitorsNotes).trim()}`);
-    // Use new Competitor model with fallback to answers
+    if (answers.targetCustomer) marketLines.push(`Target Customer: ${String(answers.targetCustomer).trim()}`);
+    if (answers.targetMarket) marketLines.push(`Customer Type: ${String(answers.targetMarket).trim()}`);
+    if (answers.partners) marketLines.push(`Partners: ${String(answers.partners).trim()}`);
+    if (answers.competitorsNotes) marketLines.push(`Competitors Notes: ${String(answers.competitorsNotes).trim()}`);
+    // Use new Competitor model (no legacy fallback needed)
     const competitorNames = competitors.map(c => c.name).filter(Boolean);
     const competitorAdvantagesList = competitors.map(c => c.advantage).filter(Boolean);
     if (competitorNames.length) {
       marketLines.push(`Competitor Names: ${competitorNames.slice(0, 8).join(', ')}`);
-    } else if (Array.isArray(answers.competitorNames) && answers.competitorNames.length) {
-      const names = answers.competitorNames.map(String).map((s) => s.trim()).filter(Boolean).slice(0, 8).join(', ');
-      if (names) marketLines.push(`Competitor Names: ${names}`);
     }
     if (competitorAdvantagesList.length) {
       marketLines.push(`Competitive Advantages: ${competitorAdvantagesList.slice(0, 8).join('; ')}`);
-    } else if (Array.isArray(answers.competitorAdvantages) && answers.competitorAdvantages.length) {
-      const advantages = answers.competitorAdvantages.map(String).map((s) => s.trim()).filter(Boolean).slice(0, 8).join(', ');
-      if (advantages) marketLines.push(`Competitive Advantages: ${advantages}`);
     }
     const marketText = marketLines.length ? `\n\nMarket & Competition:\n- ${marketLines.join('\n- ')}` : '';
 
-    // Products & Services - from new Product model with fallback to answers
+    // Products & Services - from new Product model (no legacy fallback needed)
     let productsText = '';
     try {
-      // Prefer new Product model
       if (products && products.length) {
         const productLines = products.slice(0, 10).map((p) => {
           const parts = [
             p?.name && `Name: ${String(p.name).trim()}`,
             p?.description && `Desc: ${String(p.description).trim()}`,
             (p?.price || p?.pricing) && `Price: $${p.price || p.pricing}`,
-            p?.unitCost && `Cost: $${p.unitCost}`,
-            p?.monthlyVolume && `Monthly Volume: ${p.monthlyVolume}`,
-          ].filter(Boolean);
-          return parts.length ? '- ' + parts.join(' | ') : '';
-        }).filter(Boolean);
-        if (productLines.length) productsText = `\n\nProducts & Services:\n${productLines.join('\n')}`;
-      } else if (Array.isArray(answers.products) && answers.products.length) {
-        // Fallback to answers.products
-        const productLines = answers.products.slice(0, 10).map((p) => {
-          const parts = [
-            p?.product && `Name: ${String(p.product).trim()}`,
-            p?.description && `Desc: ${String(p.description).trim()}`,
-            p?.price && `Price: $${p.price}`,
             p?.unitCost && `Cost: $${p.unitCost}`,
             p?.monthlyVolume && `Monthly Volume: ${p.monthlyVolume}`,
           ].filter(Boolean);
@@ -317,7 +280,7 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     // Existing Core Projects - from new CoreProject model with fallback to answers
     let coreProjectsText = '';
     try {
-      // Prefer new CoreProject model
+      // Use new CoreProject model only - no legacy fallback
       if (coreProjects && coreProjects.length) {
         const lines = coreProjects.slice(0, 5).map((p) => {
           const head = [String(p?.title || '').trim(), p?.ownerName && `Owner: ${String(p.ownerName).trim()}`].filter(Boolean).join(' — ');
@@ -331,22 +294,6 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
           return ['- ' + head, ...dlines].filter(Boolean).join('\n');
         }).filter(Boolean);
         if (lines.length) coreProjectsText = `\n\nExisting Core Projects:\n${lines.join('\n')}`;
-      } else if (Array.isArray(answers.coreProjectDetails) && answers.coreProjectDetails.length) {
-        // Fallback to answers.coreProjectDetails
-        const lines = answers.coreProjectDetails.slice(0, 5).map((p) => {
-          const head = [String(p?.title || '').trim(), p?.ownerName && `Owner: ${String(p.ownerName).trim()}`].filter(Boolean).join(' — ');
-          const dlines = (Array.isArray(p?.deliverables) ? p.deliverables : []).slice(0, 3).map((d) => {
-            const txt = String(d?.text || '').trim();
-            const kpi = String(d?.kpi || '').trim();
-            const due = String(d?.dueWhen || '').trim();
-            const bits = [txt && `• ${txt}`, kpi && `KPI: ${kpi}`, due && `Due: ${due}`].filter(Boolean);
-            return bits.length ? '  - ' + bits.join(' | ') : '';
-          }).filter(Boolean);
-          return ['- ' + head, ...dlines].filter(Boolean).join('\n');
-        }).filter(Boolean);
-        if (lines.length) coreProjectsText = `\n\nExisting Core Projects:\n${lines.join('\n')}`;
-      } else if (Array.isArray(answers.coreProjects) && answers.coreProjects.length) {
-        coreProjectsText = `\n\nExisting Core Projects:\n- ${answers.coreProjects.map((s)=>String(s||'').trim()).filter(Boolean).slice(0, 8).join('\n- ')}`;
       }
     } catch {}
 
@@ -657,11 +604,13 @@ exports.callOpenAIProse = callOpenAIProse;
 // Generate actionable next steps from a set of action plan assignments
 // assignments: { [dept: string]: Array<{ goal, milestone, resources, cost, kpi, dueWhen, firstName, lastName }> }
 // Returns up to n concise suggestions
-exports.generateActionInsightsForUser = async function generateActionInsightsForUser(userId, assignments = {}, n = 6) {
-  const wsFilter = getWorkspaceFilter(req);
-  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
+exports.generateActionInsightsForUser = async function generateActionInsightsForUser(userId, assignments = {}, n = 6, workspaceId = null) {
+  const filter = { user: userId };
+  if (workspaceId) filter.workspace = workspaceId;
+  const ob = userId ? await Onboarding.findOne(filter) : null;
+  const wsFields = await getWorkspaceFields(workspaceId);
   const baseCtx = buildContextText(ob);
-  const answersCtx = buildAnswersContext(ob);
+  const answersCtx = buildAnswersContext(ob, { wsFields });
   const lines = [];
   try {
     Object.entries(assignments || {}).forEach(([dept, arr]) => {
@@ -740,11 +689,13 @@ exports.generateActionInsightsForUser = async function generateActionInsightsFor
 };
 
 // Structured sections generator: returns [{ title, items: string[] }]
-exports.generateActionInsightSectionsForUser = async function generateActionInsightSectionsForUser(userId, assignments = {}, maxSections = 2) {
-  const wsFilter = getWorkspaceFilter(req);
-  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
+exports.generateActionInsightSectionsForUser = async function generateActionInsightSectionsForUser(userId, assignments = {}, maxSections = 2, workspaceId = null) {
+  const filter = { user: userId };
+  if (workspaceId) filter.workspace = workspaceId;
+  const ob = userId ? await Onboarding.findOne(filter) : null;
+  const wsFields = await getWorkspaceFields(workspaceId);
   const baseCtx = buildContextText(ob);
-  const answersCtx = buildAnswersContext(ob);
+  const answersCtx = buildAnswersContext(ob, { wsFields });
   const lines = [];
   try {
     Object.entries(assignments || {}).forEach(([dept, arr]) => {
@@ -899,11 +850,13 @@ exports.generateActionInsightSectionsForUser = async function generateActionInsi
 };
 
 // Generate or regenerate a single section by title
-exports.generateSingleInsightSectionForUser = async function generateSingleInsightSectionForUser(userId, assignments = {}, title = 'Recommendations') {
-  const wsFilter = getWorkspaceFilter(req);
-  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
+exports.generateSingleInsightSectionForUser = async function generateSingleInsightSectionForUser(userId, assignments = {}, title = 'Recommendations', workspaceId = null) {
+  const filter = { user: userId };
+  if (workspaceId) filter.workspace = workspaceId;
+  const ob = userId ? await Onboarding.findOne(filter) : null;
+  const wsFields = await getWorkspaceFields(workspaceId);
   const baseCtx = buildContextText(ob);
-  const answersCtx = buildAnswersContext(ob);
+  const answersCtx = buildAnswersContext(ob, { wsFields });
   const lines = [];
   try {
     Object.entries(assignments || {}).forEach(([dept, arr]) => {
@@ -1388,11 +1341,12 @@ exports.suggestMarketCompetitors = async (req, res) => {
     const { input, nonce, previousSuggestions, previousCompetitors } = req.body || {};
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
-  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
+    const ob = userId ? await Onboarding.findOne(wsFilter) : null;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    // Build competitor names list from stored answers or infer later
-    const ans = (ob && ob.answers) || {};
-    let compNames = Array.isArray(ans.competitorNames) ? ans.competitorNames.map((s)=>String(s||'').trim()).filter(Boolean).slice(0,3) : [];
+    // Get workspace fields for competitor names and market info
+    const wsFields = await getWorkspaceFields(req.workspace?._id);
+    // Build competitor names list from workspace fields
+    let compNames = Array.isArray(wsFields.competitorNames) ? wsFields.competitorNames.map((s)=>String(s||'').trim()).filter(Boolean).slice(0,3) : [];
     // Try to enrich with URLs
     const linkMap = {};
     try {
@@ -1402,9 +1356,8 @@ exports.suggestMarketCompetitors = async (req, res) => {
       }
     } catch (_) {}
     const bp = ob?.businessProfile || {};
-    const a = (ob && ob.answers) || {};
     const q1 = [bp.businessName || '', 'competitors', bp.industry || '', [bp.city, bp.country].filter(Boolean).join(', ')].filter(Boolean).join(' ');
-    const q2 = [bp.industry || '', a.marketCustomer || '', 'market competitors'].filter(Boolean).join(' ');
+    const q2 = [bp.industry || '', wsFields.marketCustomer || wsFields.targetCustomer || '', 'market competitors'].filter(Boolean).join(' ');
     const seen = new Map();
     const links = [];
     for (const q of [q1, q2]) {

@@ -15,6 +15,7 @@ const JourneySchema = new mongoose.Schema(
       quarterly: { type: Boolean, default: false },
       dayOfWeek: { type: Number, default: 1 }, // 0-6 (Mon default = 1)
       dayOfMonth: { type: Number, default: 1 }, // 1-28
+      quarterMonth: { type: Number, default: 1 }, // 1-3 (which month of quarter: 1=first, 2=second, 3=third)
     },
     links: {
       onboardingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Onboarding', default: null },

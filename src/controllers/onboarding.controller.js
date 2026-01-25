@@ -3,9 +3,26 @@ const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
 const Workspace = require('../models/Workspace');
 const SwotEntry = require('../models/SwotEntry');
+const CoreProject = require('../models/CoreProject');
 const crypto = require('crypto');
 const { getWorkspaceFilter, getWorkspaceId, addWorkspaceToDoc } = require('../utils/workspaceQuery');
 const { touchWorkspace } = require('../services/workspaceActivityService');
+const { getWorkspaceFields } = require('../services/workspaceFieldService');
+
+// Helper to save answers to Workspace.fields
+async function saveAnswersToWorkspace(workspaceId, updates) {
+  if (!workspaceId) return;
+  const ws = await Workspace.findById(workspaceId);
+  if (!ws) return;
+  if (!ws.fields) ws.fields = new Map();
+
+  for (const [key, value] of Object.entries(updates)) {
+    ws.fields.set(key, value);
+  }
+
+  ws.markModified('fields');
+  await ws.save();
+}
 
 function ynToBool(v) {
   if (typeof v === 'boolean') return v;
@@ -273,10 +290,10 @@ function joinGoals(arr) {
 exports.getVision1yGoals = async (req, res) => {
   const userId = req.user?.id;
   if (!userId) return res.json({ goals: [] });
-  const wsFilter = getWorkspaceFilter(req);
-  const ob = await Onboarding.findOne(wsFilter).lean().exec();
-  const a = ob?.answers || {};
-  const goals = parseGoals(a.vision1y);
+  const workspaceId = getWorkspaceId(req);
+  // Read from Workspace.fields
+  const wsFields = await getWorkspaceFields(workspaceId);
+  const goals = parseGoals(wsFields.vision1y);
   return res.json({ goals });
 };
 
@@ -292,16 +309,16 @@ exports.addVision1yGoal = async (req, res) => {
     return res.json({ goals: [text] });
   }
   const workspaceId = getWorkspaceId(req);
-  const ob = await getOrCreate(userId, workspaceId);
-  const a = ob.answers || {};
-  const goals = parseGoals(a.vision1y);
+  // Read from Workspace.fields
+  const wsFields = await getWorkspaceFields(workspaceId);
+  const goals = parseGoals(wsFields.vision1y);
   const idx = Number(indexRaw);
   if (Number.isFinite(idx) && idx >= 0 && idx <= goals.length) goals.splice(idx, 0, text);
   else goals.push(text);
-  a.vision1y = joinGoals(goals);
-  ob.answers = a;
-  try { ob.markModified('answers'); } catch {}
-  await ob.save();
+  const vision1y = joinGoals(goals);
+  // Save to Workspace.fields
+  await saveAnswersToWorkspace(workspaceId, { vision1y });
+  if (workspaceId) touchWorkspace(workspaceId);
   return res.status(201).json({ goals });
 };
 
@@ -314,17 +331,16 @@ exports.updateVision1yGoal = async (req, res) => {
   if (!Number.isFinite(index) || index < 0) return res.status(400).json({ message: 'Valid index is required' });
   if (!text) return res.status(400).json({ message: 'Goal text is required' });
   if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-  const wsFilter = getWorkspaceFilter(req);
-  const ob = await Onboarding.findOne(wsFilter);
-  if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
-  const a = ob.answers || {};
-  const goals = parseGoals(a.vision1y);
+  const workspaceId = getWorkspaceId(req);
+  // Read from Workspace.fields
+  const wsFields = await getWorkspaceFields(workspaceId);
+  const goals = parseGoals(wsFields.vision1y);
   if (index >= goals.length) return res.status(404).json({ message: 'Goal not found' });
   goals[index] = text;
-  a.vision1y = joinGoals(goals);
-  ob.answers = a;
-  try { ob.markModified('answers'); } catch {}
-  await ob.save();
+  const vision1y = joinGoals(goals);
+  // Save to Workspace.fields
+  await saveAnswersToWorkspace(workspaceId, { vision1y });
+  if (workspaceId) touchWorkspace(workspaceId);
   return res.json({ goals });
 };
 
@@ -334,17 +350,16 @@ exports.deleteVision1yGoal = async (req, res) => {
   const index = Number(req.params?.index);
   if (!Number.isFinite(index) || index < 0) return res.status(400).json({ message: 'Valid index is required' });
   if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-  const wsFilter = getWorkspaceFilter(req);
-  const ob = await Onboarding.findOne(wsFilter);
-  if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
-  const a = ob.answers || {};
-  const goals = parseGoals(a.vision1y);
+  const workspaceId = getWorkspaceId(req);
+  // Read from Workspace.fields
+  const wsFields = await getWorkspaceFields(workspaceId);
+  const goals = parseGoals(wsFields.vision1y);
   if (index >= goals.length) return res.status(404).json({ message: 'Goal not found' });
   const next = goals.filter((_, i) => i !== index);
-  a.vision1y = joinGoals(next);
-  ob.answers = a;
-  try { ob.markModified('answers'); } catch {}
-  await ob.save();
+  const vision1y = joinGoals(next);
+  // Save to Workspace.fields
+  await saveAnswersToWorkspace(workspaceId, { vision1y });
+  if (workspaceId) touchWorkspace(workspaceId);
   return res.json({ goals: next });
 };
 // Optional: save full onboarding answers snapshot
@@ -357,15 +372,13 @@ exports.saveAllAnswers = async (req, res) => {
     return res.json({ answers });
   }
   const workspaceId = getWorkspaceId(req);
-  const ob = await getOrCreate(userId, workspaceId);
 
   // [DATA TRACKING] Log incoming save request
   const incomingKeys = Object.keys(answers || {});
   console.log(`[saveAllAnswers] user=${userId} workspace=${workspaceId} incomingKeys=${incomingKeys.join(',')}`);
 
-  // Smart merge: only skip empty arrays/objects if existing is ALSO empty (no-op)
-  // This allows intentional clearing (user deleted all items) while preventing race condition overwrites
-  const existing = ob.answers || {};
+  // Read existing from Workspace.fields
+  const existing = await getWorkspaceFields(workspaceId);
   const incoming = answers || {};
   const merged = { ...existing };
   const changes = []; // Track what's changing
@@ -406,15 +419,13 @@ exports.saveAllAnswers = async (req, res) => {
     console.warn(`[saveAllAnswers] POTENTIAL DATA LOSS user=${userId} workspace=${workspaceId}`, JSON.stringify(potentialDataLoss));
   }
 
-  ob.answers = merged;
-  // Auto-populate forecasting fields in DB when products are present (Pro only)
+  // Auto-populate forecasting fields when products are present (Pro only)
   try {
     const ent = require('../config/entitlements');
     const user = await User.findById(userId).lean().exec();
     const allowAuto = ent.hasFeature(user, 'financialAutoLinkage');
     if (allowAuto) {
-      const a = ob.answers || {};
-      const list = Array.isArray(a.products) ? a.products : [];
+      const list = Array.isArray(merged.products) ? merged.products : [];
       if (list.length) {
         const nums = list.map((p) => {
           const v = parseFloat(String(p?.monthlyVolume || '').replace(/[^0-9.]/g, '')) || 0;
@@ -429,16 +440,18 @@ exports.saveAllAnswers = async (req, res) => {
         const avgCost = totalW ? (sumCost / totalW) : 0;
         const avgPrice = totalW ? (sumPrice / totalW) : 0;
         const marginPct = avgPrice > 0 ? Math.max(0, Math.round(((avgPrice - avgCost) / avgPrice) * 100)) : 0;
-        if (totalVol > 0) ob.answers.finSalesVolume = String(totalVol);
-        if (avgCost > 0) ob.answers.finAvgUnitCost = String(Math.round(avgCost));
-        if (marginPct > 0) ob.answers.finTargetProfitMarginPct = String(marginPct);
+        if (totalVol > 0) merged.finSalesVolume = String(totalVol);
+        if (avgCost > 0) merged.finAvgUnitCost = String(Math.round(avgCost));
+        if (marginPct > 0) merged.finTargetProfitMarginPct = String(marginPct);
       }
     }
   } catch {}
-  await ob.save();
+
+  // Save to Workspace.fields
+  await saveAnswersToWorkspace(workspaceId, merged);
   // Update workspace lastActivityAt
-  if (ob.workspace) touchWorkspace(ob.workspace);
-  return res.json({ ok: true, answers: ob.answers });
+  if (workspaceId) touchWorkspace(workspaceId);
+  return res.json({ ok: true, answers: merged });
 };
 
 // Optional: get full onboarding answers snapshot
@@ -447,10 +460,10 @@ exports.getAllAnswers = async (req, res) => {
   if (!userId) return res.json({ answers: null });
   const workspaceId = getWorkspaceId(req);
   const wsFilter = getWorkspaceFilter(req);
-  const ob = await Onboarding.findOne(wsFilter);
 
-  // Start with base answers from Onboarding model
-  const answers = { ...(ob?.answers || {}) };
+  // Read from Workspace.fields instead of Onboarding.answers
+  const wsFields = await getWorkspaceFields(workspaceId);
+  const answers = { ...wsFields };
 
   // Map 'bhag' field to 'visionBhag' for frontend compatibility
   if (answers.bhag && !answers.visionBhag) {
@@ -513,12 +526,20 @@ exports.getAllAnswers = async (req, res) => {
     console.error('[getAllAnswers] Failed to fetch OrgPosition:', e.message);
   }
 
+  // Check CoreProject count from new model
+  let coreProjectsCount = 0;
+  try {
+    coreProjectsCount = await CoreProject.countDocuments({ ...wsFilter, isDeleted: false });
+  } catch (e) {
+    console.error('[getAllAnswers] Failed to count CoreProject:', e.message);
+  }
+
   // [DATA TRACKING] Log data fetch with summary
   const answerKeys = answers ? Object.keys(answers) : [];
   const hasProducts = answers?.products?.length > 0;
-  const hasCoreProjects = answers?.coreProjectDetails?.length > 0;
+  const hasCoreProjects = coreProjectsCount > 0;
   const hasUbp = !!answers?.ubp;
-  console.log(`[getAllAnswers] user=${userId} workspace=${workspaceId} found=${!!ob} keys=${answerKeys.length} hasUbp=${hasUbp} hasProducts=${hasProducts} hasCoreProjects=${hasCoreProjects}`);
+  console.log(`[getAllAnswers] user=${userId} workspace=${workspaceId} found=${!!ob} keys=${answerKeys.length} hasUbp=${hasUbp} hasProducts=${hasProducts} hasCoreProjects=${hasCoreProjects} coreProjectsCount=${coreProjectsCount}`);
 
   return res.json({ answers });
 };

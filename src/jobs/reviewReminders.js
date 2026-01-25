@@ -12,6 +12,7 @@ const Onboarding = require('../models/Onboarding');
 const ReviewSession = require('../models/ReviewSession');
 const scoringService = require('../services/scoringService');
 const { generateReviewReminder } = require('../emails/reviewReminder');
+const { generateReviewAttendeeReminder } = require('../emails/reviewAttendeeReminder');
 
 let isRunning = false;
 
@@ -38,13 +39,22 @@ function getCurrentMonth() {
 
 /**
  * Check if today is a quarterly review day
- * Quarterly reviews happen on the specified dayOfMonth in months 1, 4, 7, 10
+ * Quarterly reviews happen on the specified dayOfMonth in the specified month of each quarter
+ * @param {number} dayOfMonth - Day of month (1-28)
+ * @param {number} quarterMonth - Which month of the quarter (1=first, 2=second, 3=third)
  */
-function isQuarterlyReviewDay(dayOfMonth) {
+function isQuarterlyReviewDay(dayOfMonth, quarterMonth = 1) {
   const currentMonth = getCurrentMonth();
   const currentDay = getCurrentDayOfMonth();
-  const quarterMonths = [1, 4, 7, 10]; // January, April, July, October
-  return quarterMonths.includes(currentMonth) && currentDay === dayOfMonth;
+
+  // Calculate which months based on quarterMonth setting
+  // quarterMonth=1: Jan(1), Apr(4), Jul(7), Oct(10)
+  // quarterMonth=2: Feb(2), May(5), Aug(8), Nov(11)
+  // quarterMonth=3: Mar(3), Jun(6), Sep(9), Dec(12)
+  const quarterStarts = [1, 4, 7, 10]; // First month of each quarter
+  const targetMonths = quarterStarts.map(q => q + (quarterMonth - 1));
+
+  return targetMonths.includes(currentMonth) && currentDay === dayOfMonth;
 }
 
 /**
@@ -80,7 +90,8 @@ function shouldRemindToday(cadence) {
   // Check quarterly
   if (cadence.quarterly) {
     const targetDayOfMonth = cadence.dayOfMonth ?? 1; // Default 1st
-    if (isQuarterlyReviewDay(targetDayOfMonth)) {
+    const targetQuarterMonth = cadence.quarterMonth ?? 1; // Default first month of quarter
+    if (isQuarterlyReviewDay(targetDayOfMonth, targetQuarterMonth)) {
       return 'quarterly';
     }
   }
@@ -148,12 +159,8 @@ async function sendReminderToUser(user, resend, fromAddress, dashboardUrl) {
       return { sent: false, reason: 'not_today' };
     }
 
-    // Get onboarding data for deliverables
-    const ob = await Onboarding.findOne({ user: user._id, workspace: workspace._id }).lean();
-    const answers = ob?.answers || {};
-
-    // Extract and score items
-    const items = scoringService.extractItems(answers);
+    // Extract and score items from new CRUD models (CoreProject, DepartmentProject)
+    const items = await scoringService.extractItemsFromModels(user._id, workspace._id);
     const context = { allItems: items };
 
     const scoredItems = items.map((item) => {
@@ -202,14 +209,133 @@ async function sendReminderToUser(user, resend, fromAddress, dashboardUrl) {
       'notifications.lastReviewReminderSent': new Date(),
     });
 
+    // Also send reminders to attendees of open reviews
+    const ownerName = user.firstName || user.fullName || user.email.split('@')[0];
+    const attendeeResults = await sendRemindersToAttendees(
+      workspace._id,
+      ownerName,
+      cadenceType,
+      resend,
+      fromAddress,
+      dashboardUrl
+    );
+
     return {
       sent: true,
       cadenceType,
       upcomingCount: upcomingDeliverables.length,
+      attendeesSent: attendeeResults.sent,
+      attendeesSkipped: attendeeResults.skipped,
+      attendeesErrors: attendeeResults.errors,
     };
   } catch (err) {
     console.error(`[reviewReminders] Error processing user ${user._id}:`, err?.message || err);
     return { sent: false, reason: 'error', error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Send reminder to a review attendee (team member or collaborator)
+ */
+async function sendReminderToAttendee(attendee, review, ownerName, resend, fromAddress, dashboardUrl) {
+  try {
+    if (!attendee.email) {
+      return { sent: false, reason: 'no_email' };
+    }
+
+    // Get action items assigned to this attendee
+    const attendeeActionItems = (review.actionItems || []).filter(
+      (item) => item.owner && item.owner.toLowerCase() === attendee.name?.toLowerCase()
+    );
+
+    const reviewUrl = `${dashboardUrl}/reviews/${review.rid}`;
+
+    const { html, text, subject } = generateReviewAttendeeReminder({
+      attendeeName: attendee.name,
+      ownerName,
+      cadenceType: review.cadence,
+      reviewUrl,
+      reviewStartedAt: review.startedAt,
+      actionItems: attendeeActionItems,
+    });
+
+    const result = await resend.emails.send({
+      from: fromAddress,
+      to: attendee.email,
+      subject,
+      html,
+      text,
+    });
+
+    if (result?.error) {
+      console.error(`[reviewReminders] Attendee email error for ${attendee.email}:`, result.error?.message || result.error);
+      return { sent: false, reason: 'send_error', error: result.error?.message };
+    }
+
+    return { sent: true, attendeeName: attendee.name };
+  } catch (err) {
+    console.error(`[reviewReminders] Error sending to attendee ${attendee.email}:`, err?.message || err);
+    return { sent: false, reason: 'error', error: err?.message || String(err) };
+  }
+}
+
+/**
+ * Send reminders to all attendees of open reviews for a workspace
+ */
+async function sendRemindersToAttendees(workspaceId, ownerName, cadenceType, resend, fromAddress, dashboardUrl) {
+  try {
+    // Find all open reviews for this workspace
+    const openReviews = await ReviewSession.find({
+      workspace: workspaceId,
+      status: 'open',
+    }).lean();
+
+    if (openReviews.length === 0) {
+      return { sent: 0, skipped: 0, errors: 0 };
+    }
+
+    let sent = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    // Track emails we've already sent to (avoid duplicates across reviews)
+    const sentEmails = new Set();
+
+    for (const review of openReviews) {
+      const attendees = review.attendees || [];
+
+      for (const attendee of attendees) {
+        // Skip if no email or already sent
+        if (!attendee.email || sentEmails.has(attendee.email.toLowerCase())) {
+          skipped++;
+          continue;
+        }
+
+        const result = await sendReminderToAttendee(
+          attendee,
+          review,
+          ownerName,
+          resend,
+          fromAddress,
+          dashboardUrl
+        );
+
+        if (result.sent) {
+          sent++;
+          sentEmails.add(attendee.email.toLowerCase());
+          console.log(`[reviewReminders] Sent attendee reminder to ${attendee.email} for review ${review.rid}`);
+        } else if (result.reason === 'no_email') {
+          skipped++;
+        } else {
+          errors++;
+        }
+      }
+    }
+
+    return { sent, skipped, errors };
+  } catch (err) {
+    console.error(`[reviewReminders] Error processing attendees for workspace ${workspaceId}:`, err?.message || err);
+    return { sent: 0, skipped: 0, errors: 1 };
   }
 }
 
@@ -224,13 +350,18 @@ async function processBatch(users, resend, fromAddress, dashboardUrl) {
   let sent = 0;
   let skipped = 0;
   let errors = 0;
+  let attendeesSent = 0;
+  let attendeesErrors = 0;
 
   results.forEach((result, index) => {
     if (result.status === 'fulfilled') {
       const r = result.value;
       if (r.sent) {
         sent++;
-        console.log(`[reviewReminders] Sent ${r.cadenceType} reminder to ${users[index].email}`);
+        attendeesSent += r.attendeesSent || 0;
+        attendeesErrors += r.attendeesErrors || 0;
+        console.log(`[reviewReminders] Sent ${r.cadenceType} reminder to ${users[index].email}` +
+          (r.attendeesSent > 0 ? ` (+ ${r.attendeesSent} attendees)` : ''));
       } else if (['not_today', 'no_workspace', 'disabled'].includes(r.reason)) {
         skipped++;
       } else {
@@ -242,7 +373,7 @@ async function processBatch(users, resend, fromAddress, dashboardUrl) {
     }
   });
 
-  return { sent, skipped, errors };
+  return { sent, skipped, errors, attendeesSent, attendeesErrors };
 }
 
 /**
@@ -287,6 +418,8 @@ async function runJob() {
     let sentCount = 0;
     let skipCount = 0;
     let errorCount = 0;
+    let attendeesSentCount = 0;
+    let attendeesErrorCount = 0;
 
     // Process in batches
     for (let i = 0; i < users.length; i += BATCH_SIZE) {
@@ -296,10 +429,12 @@ async function runJob() {
 
       console.log(`[reviewReminders] Processing batch ${batchNum}/${totalBatches}...`);
 
-      const { sent, skipped, errors } = await processBatch(batch, resend, fromAddress, dashboardUrl);
+      const { sent, skipped, errors, attendeesSent, attendeesErrors } = await processBatch(batch, resend, fromAddress, dashboardUrl);
       sentCount += sent;
       skipCount += skipped;
       errorCount += errors;
+      attendeesSentCount += attendeesSent || 0;
+      attendeesErrorCount += attendeesErrors || 0;
 
       // Delay between batches
       if (i + BATCH_SIZE < users.length) {
@@ -309,7 +444,7 @@ async function runJob() {
 
     const duration = Date.now() - startTime;
     console.log(
-      `[reviewReminders] Job completed in ${duration}ms. Sent: ${sentCount}, Skipped: ${skipCount}, Errors: ${errorCount}`
+      `[reviewReminders] Job completed in ${duration}ms. Owners: ${sentCount}, Attendees: ${attendeesSentCount}, Skipped: ${skipCount}, Errors: ${errorCount + attendeesErrorCount}`
     );
   } catch (err) {
     console.error('[reviewReminders] Job failed:', err?.message || err);
@@ -338,5 +473,7 @@ module.exports = {
   init,
   runJob,
   sendReminderToUser,
+  sendReminderToAttendee,
+  sendRemindersToAttendees,
   shouldRemindToday,
 };

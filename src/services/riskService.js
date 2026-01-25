@@ -3,7 +3,7 @@
  * Detects risks like overdue items, due date clustering, and KPI off-track items.
  */
 
-const { parseDate, daysUntil, extractItems } = require('./scoringService');
+const { parseDate, daysUntil } = require('./scoringService');
 
 /**
  * Group items by week

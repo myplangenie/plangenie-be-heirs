@@ -1,10 +1,12 @@
 const Dashboard = require('../models/Dashboard');
 const Onboarding = require('../models/Onboarding');
+const Workspace = require('../models/Workspace');
 const User = require('../models/User');
 const DailyWish = require('../models/DailyWish');
 const { hasDepartmentRestriction, filterCompiledPlan, filterActionAssignments } = require('../utils/filterByDepartment');
 const { getWorkspaceFilter, getWorkspaceId, addWorkspaceToDoc } = require('../utils/workspaceQuery');
 const { touchWorkspace } = require('../services/workspaceActivityService');
+const { getWorkspaceFields } = require('../services/workspaceFieldService');
 const Notification = require('../models/Notification');
 const NotificationSettings = require('../models/NotificationSettings');
 const Department = require('../models/Department');
@@ -18,6 +20,127 @@ const CoreProject = require('../models/CoreProject');
 const DepartmentProject = require('../models/DepartmentProject');
 const financialSnapshotService = require('../services/financialSnapshotService');
 const nodeCrypto = require('crypto');
+
+// Helper to get workspace fields as an "answers-like" object
+async function getAnswersFromWorkspace(workspaceId) {
+  if (!workspaceId) return {};
+  const fields = await getWorkspaceFields(workspaceId);
+  // Map to legacy field names for compatibility
+  return {
+    ubp: fields.ubp || '',
+    purpose: fields.purpose || '',
+    visionBhag: fields.bhag || fields.visionBhag || '',
+    vision1y: fields.vision1y || '',
+    vision3y: fields.vision3y || '',
+    valuesCore: fields.valuesCore || '',
+    valuesCoreKeywords: fields.valuesCoreKeywords || [],
+    cultureFeeling: fields.cultureFeeling || '',
+    targetMarket: fields.targetMarket || '',
+    custType: fields.targetMarket || '',
+    marketCustomer: fields.targetCustomer || '',
+    targetCustomer: fields.targetCustomer || '',
+    partnersYN: fields.partnersYN || '',
+    partnersDesc: fields.partners || '',
+    partners: fields.partners || '',
+    compNotes: fields.competitorsNotes || '',
+    competitorsNotes: fields.competitorsNotes || '',
+    finSalesVolume: fields.finSalesVolume || '',
+    finSalesGrowthPct: fields.finSalesGrowthPct || '',
+    finAvgUnitCost: fields.finAvgUnitCost || '',
+    finFixedOperatingCosts: fields.finFixedOperatingCosts || '',
+    finMarketingSalesSpend: fields.finMarketingSalesSpend || '',
+    finPayrollCost: fields.finPayrollCost || '',
+    finStartingCash: fields.finStartingCash || '',
+    finAdditionalFundingAmount: fields.finAdditionalFundingAmount || '',
+    finAdditionalFundingMonth: fields.finAdditionalFundingMonth || '',
+    finPaymentCollectionDays: fields.finPaymentCollectionDays || '',
+    finTargetProfitMarginPct: fields.finTargetProfitMarginPct || '',
+    finIsNonprofit: fields.finIsNonprofit || '',
+    finActualRevenue: fields.finActualRevenue || null,
+    finActualCogs: fields.finActualCogs || null,
+    finActualMarketing: fields.finActualMarketing || null,
+    finActualPayroll: fields.finActualPayroll || null,
+    finActualFixed: fields.finActualFixed || null,
+    // Complex objects
+    planProse: fields.planProse || {},
+    orgPositions: fields.orgPositions || [],
+    products: fields.products || [],
+    competitorNames: fields.competitorNames || [],
+    actionSections: fields.actionSections || [],
+    // SWOT legacy text
+    swotStrengths: fields.swotStrengths || '',
+    swotWeaknesses: fields.swotWeaknesses || '',
+    swotOpportunities: fields.swotOpportunities || '',
+    swotThreats: fields.swotThreats || '',
+    identitySummary: fields.identitySummary || '',
+  };
+}
+
+// Helper to save answers to Workspace.fields
+async function saveAnswersToWorkspace(workspaceId, updates) {
+  if (!workspaceId) return;
+  const ws = await Workspace.findById(workspaceId);
+  if (!ws) return;
+  if (!ws.fields) ws.fields = new Map();
+
+  // Map legacy field names to new field names
+  const fieldMapping = {
+    ubp: 'ubp',
+    purpose: 'purpose',
+    visionBhag: 'bhag',
+    vision1y: 'vision1y',
+    vision3y: 'vision3y',
+    valuesCore: 'valuesCore',
+    valuesCoreKeywords: 'valuesCoreKeywords',
+    cultureFeeling: 'cultureFeeling',
+    custType: 'targetMarket',
+    targetMarket: 'targetMarket',
+    marketCustomer: 'targetCustomer',
+    targetCustomer: 'targetCustomer',
+    partnersYN: 'partnersYN',
+    partnersDesc: 'partners',
+    partners: 'partners',
+    compNotes: 'competitorsNotes',
+    competitorsNotes: 'competitorsNotes',
+    finSalesVolume: 'finSalesVolume',
+    finSalesGrowthPct: 'finSalesGrowthPct',
+    finAvgUnitCost: 'finAvgUnitCost',
+    finFixedOperatingCosts: 'finFixedOperatingCosts',
+    finMarketingSalesSpend: 'finMarketingSalesSpend',
+    finPayrollCost: 'finPayrollCost',
+    finStartingCash: 'finStartingCash',
+    finAdditionalFundingAmount: 'finAdditionalFundingAmount',
+    finAdditionalFundingMonth: 'finAdditionalFundingMonth',
+    finPaymentCollectionDays: 'finPaymentCollectionDays',
+    finTargetProfitMarginPct: 'finTargetProfitMarginPct',
+    finIsNonprofit: 'finIsNonprofit',
+    finActualRevenue: 'finActualRevenue',
+    finActualCogs: 'finActualCogs',
+    finActualMarketing: 'finActualMarketing',
+    finActualPayroll: 'finActualPayroll',
+    finActualFixed: 'finActualFixed',
+    // Complex objects
+    planProse: 'planProse',
+    orgPositions: 'orgPositions',
+    products: 'products',
+    competitorNames: 'competitorNames',
+    actionSections: 'actionSections',
+    // SWOT legacy text
+    swotStrengths: 'swotStrengths',
+    swotWeaknesses: 'swotWeaknesses',
+    swotOpportunities: 'swotOpportunities',
+    swotThreats: 'swotThreats',
+    identitySummary: 'identitySummary',
+  };
+
+  for (const [key, value] of Object.entries(updates)) {
+    const wsKey = fieldMapping[key] || key;
+    ws.fields.set(wsKey, value);
+  }
+
+  ws.markModified('fields');
+  await ws.save();
+}
 const { PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getR2Client } = require('../config/r2');
 const ejs = require('ejs');
@@ -80,8 +203,9 @@ exports.getSummary = async (req, res, next) => {
       const oneJoined = (oneYear || []).join('\n').trim();
       bhag = threeJoined || oneJoined || vision;
     }
-    const assignments = a.actionAssignments || {};
-    const activePlans = Object.values(assignments || {})
+    // Fetch from new DepartmentProject model only - no legacy fallback
+    const deptProjects = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
+    const activePlans = Object.values(deptProjects || {})
       .flat()
       .map((u) => {
         const prog = Number(u?.progress);
@@ -132,8 +256,8 @@ exports.getSummary = async (req, res, next) => {
       const profit = revenue - cost;
       return { name: months[i], Revenue: Math.round(revenue/1000), Cost: Math.round(cost/1000), Profit: Math.round(Math.max(profit,0)/1000) };
     });
-    // Departmental progress from assignments
-    const departmentProgress = Object.entries(assignments || {}).map(([key, arr]) => {
+    // Departmental progress from DepartmentProject model
+    const departmentProgress = Object.entries(deptProjects || {}).map(([key, arr]) => {
       const filled = (arr||[]).filter((u) => (u && (u.goal||'').trim())).length;
       const progress = Math.min(100, Math.round(((filled || 0)/Math.max(1,(arr||[]).length))*100));
       return { name: key, percent: progress };
@@ -169,10 +293,9 @@ exports.getSummary = async (req, res, next) => {
       snapshot: { vision, ubp, purpose, bhag },
       team: teamList,
     };
-    // Compute readiness: Core Projects presence
-    const coreProjectDetails = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
-    const coreProjectsFlat = Array.isArray(a.coreProjects) ? a.coreProjects.filter((s)=> String(s||'').trim()) : [];
-    const coreProjectsCount = coreProjectDetails.length || coreProjectsFlat.length || 0;
+    // Compute readiness: Core Projects presence from CoreProject model only - no legacy fallback
+    const coreProjectsList = await CoreProject.find({ ...wsFilter, isDeleted: false }).lean();
+    const coreProjectsCount = coreProjectsList.length;
     const coreProjectsExist = coreProjectsCount > 0;
     return res.json({ summary, coreProjects: { exists: coreProjectsExist, count: coreProjectsCount } });
   } catch (err) {
@@ -310,8 +433,8 @@ exports.generateInsights = async (req, res, next) => {
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const sectionTitle = String(req.body?.sectionTitle || '').trim();
-    const ob = await Onboarding.findOne(wsFilter).lean().exec();
-    const assignments = (ob && ob.answers && ob.answers.actionAssignments) ? ob.answers.actionAssignments : {};
+    // Fetch from DepartmentProject model only - no legacy fallback
+    const assignments = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
 
     const ai = require('./ai.controller');
     const doc = await getOrCreate(userId);
@@ -363,15 +486,14 @@ exports.generateInsights = async (req, res, next) => {
 exports.createMember = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { name, email, position, department, status, parentId } = req.body || {};
     const nm = String(name || '').trim();
     if (!nm) return res.status(400).json({ message: 'Name is required' });
-    const ob = await Onboarding.findOne(wsFilter);
-    if (!ob) return res.status(400).json({ message: 'Onboarding not initialized' });
-    const a = ob.answers || {};
-    const list = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+    // Read orgPositions from Workspace.fields
+    const wsFields = await getWorkspaceFields(workspaceId);
+    const list = Array.isArray(wsFields.orgPositions) ? wsFields.orgPositions : [];
     const id = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`);
     const entry = {
       id,
@@ -384,9 +506,8 @@ exports.createMember = async (req, res, next) => {
       role: '',
     };
     list.push(entry);
-    ob.answers = { ...a, orgPositions: list };
-    try { ob.markModified('answers'); } catch {}
-    await ob.save();
+    // Save to Workspace.fields
+    await saveAnswersToWorkspace(workspaceId, { orgPositions: list });
     const member = {
       mid: id,
       name: entry.name,
@@ -405,11 +526,11 @@ exports.createMember = async (req, res, next) => {
 exports.getStrategyCanvas = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne(wsFilter).lean().exec();
-    const a = ob?.answers || {};
-    const ubp = (a.ubp || ob?.vision?.ubp || '').trim();
+    // Read from Workspace.fields instead of Onboarding.answers
+    const a = await getAnswersFromWorkspace(workspaceId);
+    const ubp = (a.ubp || '').trim();
     const oneYear = (a.vision1y || '').split('\n').map((s)=>s.trim()).filter(Boolean);
     const threeYear = (a.vision3y || '').split('\n').map((s)=>s.trim()).filter(Boolean);
     const purpose = String(a.purpose || '').trim();
@@ -421,7 +542,9 @@ exports.getStrategyCanvas = async (req, res, next) => {
       opportunities: String(a.swotOpportunities || '').split('\n').map((s)=>s.trim()).filter(Boolean),
       threats: String(a.swotThreats || '').split('\n').map((s)=>s.trim()).filter(Boolean),
     };
-    const goals = Object.values(a.actionAssignments || {})
+    // Fetch goals from DepartmentProject model only - no legacy fallback
+    const deptProjects = await DepartmentProject.findGroupedByDepartment(workspaceId);
+    const goals = Object.values(deptProjects || {})
       .flat()
       .map((u)=> String(u?.goal||'').trim())
       .filter(Boolean);
@@ -437,47 +560,46 @@ exports.updateStrategyCanvas = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const patch = req.body || {};
-    const ent = require('../config/entitlements');
-    const User = require('../models/User');
-    const user = await User.findById(userId).lean().exec();
-    const ob = (await Onboarding.findOne(wsFilter)) || (await Onboarding.create(addWorkspaceToDoc({ user: userId }, req)));
-    const a = ob.answers || {};
+    // Read from Workspace.fields
+    const a = await getAnswersFromWorkspace(workspaceId);
+    const updates = {};
     // Update UBPs and horizons
     if (typeof patch.ubp !== 'undefined') {
       const v = String(patch.ubp || '');
-      a.ubp = v;
-      ob.vision = { ...(ob.vision || {}), ubp: v };
+      updates.ubp = v;
+      // Also update Onboarding.vision.ubp for legacy compatibility
+      const ob = await Onboarding.findOne(wsFilter);
+      if (ob) {
+        ob.vision = { ...(ob.vision || {}), ubp: v };
+        await ob.save();
+      }
     }
     if (typeof patch.purpose !== 'undefined') {
-      a.purpose = String(patch.purpose || '');
+      updates.purpose = String(patch.purpose || '');
     }
     if (typeof patch.oneYear !== 'undefined') {
-      a.vision1y = Array.isArray(patch.oneYear) ? patch.oneYear.map(String).join('\n') : String(patch.oneYear || '');
+      updates.vision1y = Array.isArray(patch.oneYear) ? patch.oneYear.map(String).join('\n') : String(patch.oneYear || '');
     }
     if (typeof patch.threeYear !== 'undefined') {
-      a.vision3y = Array.isArray(patch.threeYear) ? patch.threeYear.map(String).join('\n') : String(patch.threeYear || '');
+      updates.vision3y = Array.isArray(patch.threeYear) ? patch.threeYear.map(String).join('\n') : String(patch.threeYear || '');
     }
     if (typeof patch.summary !== 'undefined') {
-      a.identitySummary = String(patch.summary || '');
+      updates.identitySummary = String(patch.summary || '');
     }
-    // Optionally accept explicit goals list (flat) to update action assignments
+    // Goals are now managed through DepartmentProject API - legacy actionAssignments removed
     if (Array.isArray(patch.goals)) {
-      const limit = ent.getLimit(user, 'maxGoals');
-      if (limit && patch.goals.length > limit) {
-        return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 goals', plan: ent.effectivePlan(user), limit, limitKey: 'maxGoals', upgradeTo: 'pro' });
-      }
-      const gg = patch.goals.map((g) => ({ goal: String(g || '') })).filter((g) => g.goal);
-      // Persist under a neutral bucket to avoid losing department context; keep existing if empty
-      const curr = a.actionAssignments || {};
-      curr._canvas = gg; // special bucket; UI may treat separately
-      a.actionAssignments = curr;
+      // This endpoint no longer writes goals - use DepartmentProject CRUD API instead
+      console.warn('[updateStrategyCanvas] patch.goals received but ignored - use DepartmentProject API');
     }
-    ob.answers = a;
-    await ob.save();
+    // Save to Workspace.fields
+    if (Object.keys(updates).length > 0) {
+      await saveAnswersToWorkspace(workspaceId, updates);
+    }
     // Update workspace lastActivityAt
-    if (ob.workspace) touchWorkspace(ob.workspace);
+    if (workspaceId) touchWorkspace(workspaceId);
     return res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -489,6 +611,7 @@ exports.saveCompiledPlan = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const cp = req.body || {};
     const ent = require('../config/entitlements');
@@ -509,7 +632,8 @@ exports.saveCompiledPlan = async (req, res, next) => {
     if (cp.vision) {
       ob.vision = { ...(ob.vision || {}), ubp: cp.vision.ubp || (ob.vision && ob.vision.ubp) || '' };
     }
-    const a = ob.answers || {};
+    // Read from Workspace.fields instead of ob.answers
+    const a = await getAnswersFromWorkspace(workspaceId);
     // Vision & values
     if (cp.vision) {
       if (typeof cp.vision.oneYear !== 'undefined') a.vision1y = Array.isArray(cp.vision.oneYear) ? cp.vision.oneYear.join('\n') : String(cp.vision.oneYear || '');
@@ -586,63 +710,12 @@ exports.saveCompiledPlan = async (req, res, next) => {
       a.finTargetProfitMarginPct = String(f.targetProfitMarginPct || a.finTargetProfitMarginPct || '');
       a.finIsNonprofit = String(f.isNonprofit || a.finIsNonprofit || '');
     }
-    // Core Projects
-    // PROTECTION: Don't reduce count significantly without explicit confirmation
-    if (Array.isArray(cp.coreProjects)) {
-      const v = cp.coreProjects.map((s) => String(s || '')).filter((s) => s && s.trim());
-      const limit = ent.getLimit(user, 'maxCoreProjects');
-      if (limit && v.length > limit) {
-        return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 core projects', plan, limit, limitKey: 'maxCoreProjects', upgradeTo: 'pro' });
-      }
-      const existing = Array.isArray(a.coreProjects) ? a.coreProjects : [];
-      const isExplicitClear = v.length === 0 && (!Array.isArray(cp.coreProjectDetails) || cp.coreProjectDetails.length === 0);
-      // Block if incoming would reduce count (potential partial data loss)
-      if (v.length > 0 && existing.length > 0 && v.length < existing.length && !cp._confirmReduction) {
-        console.log(`[saveCompiledPlan] BLOCKED: coreProjects reduction (incoming=${v.length}, existing=${existing.length}). Send _confirmReduction:true to force.`);
-      } else if (v.length > 0 || isExplicitClear) {
-        a.coreProjects = v;
-      }
+    // Core Projects - legacy writes removed, use CoreProject CRUD API instead
+    if (Array.isArray(cp.coreProjects) && cp.coreProjects.length > 0) {
+      console.warn('[saveCompiledPlan] cp.coreProjects received but ignored - use CoreProject CRUD API');
     }
-    // Core Projects (detailed: deliverables with completion)
-    if (Array.isArray(cp.coreProjectDetails)) {
-      try {
-        const all = (cp.coreProjectDetails || []).map((p) => ({
-  title: String((p && p.title) || '').trim(),
-  goal: typeof p?.goal !== 'undefined' ? String(p.goal || '').trim() : undefined,
-  kpi: typeof p?.kpi !== 'undefined' ? String(p.kpi || '').trim() : undefined,
-  cost: typeof p?.cost !== 'undefined' ? String(p.cost || '').trim() : undefined,
-  dueWhen: typeof p?.dueWhen !== 'undefined' ? String(p.dueWhen || '').trim() : undefined,
-  priority: p?.priority ? String(p.priority) : undefined,
-  ownerId: p?.ownerId ? String(p.ownerId) : undefined,
-  ownerName: p?.ownerName ? String(p.ownerName) : undefined,
-  linkedGoals: Array.isArray(p?.linkedGoals) ? p.linkedGoals.filter(g => typeof g === 'number') : undefined,
-  departments: Array.isArray(p?.departments) ? p.departments.filter(d => typeof d === 'string') : undefined,
-  relatedProjects: Array.isArray(p?.relatedProjects) ? p.relatedProjects.filter(r => typeof r === 'number') : undefined,
-  deliverables: Array.isArray(p && p.deliverables)
-    ? (p.deliverables || []).map((d) => ({
-        text: String((d && d.text) || '').trim(),
-        done: Boolean(d && d.done),
-        kpi: typeof d?.kpi !== 'undefined' ? String(d.kpi || '').trim() : undefined,
-        dueWhen: typeof d?.dueWhen !== 'undefined' ? String(d.dueWhen || '').trim() : undefined,
-      }))
-    : [],
-})).filter((p) => p.title || (p.deliverables && p.deliverables.length));
-        const limit = ent.getLimit(user, 'maxCoreProjects');
-        if (limit && all.length > limit) {
-          return res.status(402).json({ code: 'LIMIT_EXCEEDED', message: 'Lite plan allows up to 3 core projects', plan, limit, limitKey: 'maxCoreProjects', upgradeTo: 'pro' });
-        }
-        // PROTECTION: Don't reduce count significantly without explicit confirmation
-        const existing = Array.isArray(a.coreProjectDetails) ? a.coreProjectDetails : [];
-        const isExplicitClear = all.length === 0 && (!Array.isArray(cp.coreProjects) || cp.coreProjects.length === 0);
-        // Block if incoming would reduce count (potential partial data loss)
-        if (all.length > 0 && existing.length > 0 && all.length < existing.length && !cp._confirmReduction) {
-          console.log(`[saveCompiledPlan] BLOCKED: coreProjectDetails reduction (incoming=${all.length}, existing=${existing.length}). Send _confirmReduction:true to force.`);
-        } else if (all.length > 0 || isExplicitClear) {
-          a.coreProjectDetails = all;
-        }
-      } catch (_) {
-        // ignore malformed payloads
-      }
+    if (Array.isArray(cp.coreProjectDetails) && cp.coreProjectDetails.length > 0) {
+      console.warn('[saveCompiledPlan] cp.coreProjectDetails received but ignored - use CoreProject CRUD API');
     }
     // Persist customizable action plan sections (user-defined department list with labels)
     // PROTECTION: Only update if incoming has data or existing is empty
@@ -660,46 +733,16 @@ exports.saveCompiledPlan = async (req, res, next) => {
         }
       } catch {}
     }
-    // Action plans (departmental) - MERGE instead of replace to prevent data loss
-    if (cp.actionPlans && typeof cp.actionPlans === 'object') {
-      if (!require('../config/entitlements').hasFeature(user, 'departmentPlans')) {
-        return res.status(402).json({ code: 'UPGRADE_REQUIRED', message: 'This feature requires Plan Genie Pro', feature: 'departmentPlans', plan, upgradeTo: 'pro' });
-      }
-      const deriveStatus = (prog) => {
-        const n = Number(prog);
-        if (isFinite(n)) {
-          if (n >= 100) return 'Completed';
-          if (n > 0) return 'In progress';
-          return 'Not started';
-        }
-        return 'Not started';
-      };
-      // Start with existing assignments to preserve departments not in incoming data
-      const existing = a.actionAssignments || {};
-      const merged = { ...existing };
-      // Track what's being changed for logging
-      const incomingKeys = Object.keys(cp.actionPlans);
-      const existingKeys = Object.keys(existing);
-      // Log potential issues
-      if (incomingKeys.length < existingKeys.length) {
-        console.log(`[saveCompiledPlan] actionPlans MERGE: incoming=${incomingKeys.length} keys, existing=${existingKeys.length} keys - preserving non-overlapping departments`);
-      }
-      // Merge incoming data - only update departments that are explicitly sent
-      Object.keys(cp.actionPlans).forEach((k) => {
-        const arr = Array.isArray(cp.actionPlans[k]) ? cp.actionPlans[k] : [];
-        merged[k] = arr.map((u) => ({
-          ...u,
-          status: u && u.status ? u.status : deriveStatus(u && (u.progress)),
-          progress: (u && typeof u.progress === 'number') ? Math.max(0, Math.min(100, Math.round(u.progress))) : 0,
-        }));
-      });
-      a.actionAssignments = merged;
+    // Action plans (departmental) - legacy writes removed, use DepartmentProject CRUD API instead
+    if (cp.actionPlans && typeof cp.actionPlans === 'object' && Object.keys(cp.actionPlans).length > 0) {
+      console.warn('[saveCompiledPlan] cp.actionPlans received but ignored - use DepartmentProject CRUD API');
     }
-    ob.answers = a;
-    try { ob.markModified && ob.markModified('answers'); } catch {}
+    // Save text fields to Workspace.fields (not Onboarding.answers)
+    await saveAnswersToWorkspace(workspaceId, a);
+    // Save non-answers fields (userProfile, businessProfile, vision) to Onboarding
     await ob.save();
     // Update workspace lastActivityAt
-    if (ob.workspace) touchWorkspace(ob.workspace);
+    if (workspaceId) touchWorkspace(workspaceId);
     // Optionally sync user full name
     if (cp.userProfile && cp.userProfile.fullName) {
       try { await User.findByIdAndUpdate(userId, { fullName: cp.userProfile.fullName }); } catch {}
@@ -715,6 +758,7 @@ exports.getCompiledPlan = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     let ob = await Onboarding.findOne(wsFilter).lean().exec();
     if (!ob) {
@@ -722,7 +766,8 @@ exports.getCompiledPlan = async (req, res, next) => {
       const created = await Onboarding.create(addWorkspaceToDoc({ user: userId, answers: {} }, req));
       ob = created.toObject();
     }
-    const a = ob.answers || {};
+    // Get answers from Workspace.fields instead of Onboarding.answers
+    const a = await getAnswersFromWorkspace(workspaceId);
     const plan = {
       userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
       businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '', ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '' },
@@ -991,7 +1036,8 @@ exports.getDepartments = async (req, res, next) => {
       User.findById(userId).lean().exec(),
     ]);
     const a = ob?.answers || {};
-    const assignments = a.actionAssignments || {};
+    // Fetch from DepartmentProject model only - no legacy fallback
+    const assignments = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
     const label = (k) => ({
       marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability'
     }[k] || k);
@@ -1168,9 +1214,8 @@ exports.updateDepartment = async (req, res, next) => {
     };
     const fallbackOwner = (user?.fullName || '').trim() || '-';
     const ownerName = (doc.owner && String(doc.owner).trim()) ? doc.owner : (headFor(name) || fallbackOwner);
-    // Derive progress from action assignments for this department
-    const ab = ob?.answers || {};
-    const assignments = ab.actionAssignments || {};
+    // Derive progress from DepartmentProject model only - no legacy fallback
+    const assignments = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
     const deptKey = Object.keys(assignments || {}).find((k) => canon(({ marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability' }[k] || k)) === canon(name));
     let progress = 0;
     if (deptKey && Array.isArray(assignments[deptKey])) {
@@ -1218,205 +1263,23 @@ exports.updateDepartment = async (req, res, next) => {
 };
 
 // PATCH /api/dashboard/action-assignments/status
-// Body: { department?: string, key?: string, index: number, status: string }
-// Accepts either a human department label (department) or canonical key (key)
+// DEPRECATED: Use DepartmentProject CRUD API instead
 exports.updateActionAssignmentStatus = async (req, res, next) => {
-  try {
-    const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
-    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const deptLabel = String(req.body?.department || '').trim();
-    const deptKeyIn = String(req.body?.key || '').trim();
-    const index = Number(req.body?.index);
-    const status = String(req.body?.status || '').trim();
-    if (!isFinite(index) || index < 0) return res.status(400).json({ message: 'Valid index is required' });
-    if (!status) return res.status(400).json({ message: 'Status is required' });
-    const ob = await Onboarding.findOne(wsFilter);
-    if (!ob) return res.status(404).json({ message: 'Onboarding not found' });
-    ob.answers = ob.answers || {};
-    const assignments = ob.answers.actionAssignments = ob.answers.actionAssignments || {};
-    const canon = (s) => String(s || '').trim().toLowerCase();
-    const labelFromKey = (k) => ({
-      marketing: 'Marketing',
-      sales: 'Sales',
-      operations: 'Operations and Service Delivery',
-      financeAdmin: 'Finance and Admin',
-      peopleHR: 'People and Human Resources',
-      partnerships: 'Partnerships and Alliances',
-      technology: 'Technology and Infrastructure',
-      communityImpact: 'ESG and Sustainability',
-    }[k] || k);
-    const keyFromLabel = (lab) => ({
-      Marketing: 'marketing',
-      Sales: 'sales',
-      'Operations and Service Delivery': 'operations',
-      'Finance and Admin': 'financeAdmin',
-      'People and Human Resources': 'peopleHR',
-      'Partnerships and Alliances': 'partnerships',
-      'Technology and Infrastructure': 'technology',
-      'ESG and Sustainability': 'communityImpact',
-    }[lab] || null);
-    // Resolve the correct key robustly (accept canonical key, label-as-key, or department label)
-    const resolveDeptKey = () => {
-      // 1) Exact key match
-      if (deptKeyIn && assignments[deptKeyIn]) return deptKeyIn;
-      // 2) If key is actually a label, map it
-      if (deptKeyIn) {
-        const k2 = keyFromLabel(deptKeyIn);
-        if (k2 && assignments[k2]) return k2;
-        // Case-insensitive key match
-        const k3 = Object.keys(assignments).find((k) => canon(k) === canon(deptKeyIn));
-        if (k3 && assignments[k3]) return k3;
-      }
-      // 3) Department label provided
-      if (deptLabel) {
-        if (assignments[deptLabel]) return deptLabel; // stored under label
-        const k4 = keyFromLabel(deptLabel);
-        if (k4 && assignments[k4]) return k4;
-        // 4) Match by label-from-key comparison
-        const found = Object.keys(assignments).find((k) => canon(labelFromKey(k)) === canon(deptLabel));
-        if (found && assignments[found]) return found;
-      }
-      return null;
-    };
-    const deptKey = resolveDeptKey();
-    if (!deptKey) return res.status(400).json({ message: 'Department not found in assignments' });
-    const arr = Array.isArray(assignments[deptKey]) ? assignments[deptKey] : [];
-    if (index >= arr.length) return res.status(400).json({ message: 'Index out of range' });
-    const item = arr[index] || {};
-    item.status = status;
-    // Optionally sync numeric progress from status for consistency
-    const s = String(status || '').toLowerCase();
-    if (/done|complete|completed/.test(s)) item.progress = 100;
-    else if (/in[ _-]*progress/.test(s)) item.progress = 50;
-    else if (/not[ _-]*started/.test(s)) item.progress = 0;
-    arr[index] = item;
-    assignments[deptKey] = arr;
-    try { ob.markModified && ob.markModified('answers'); } catch {}
-    await ob.save();
-    // Update workspace lastActivityAt
-    if (ob.workspace) touchWorkspace(ob.workspace);
-    return res.json({ ok: true, item: { ...item, status } });
-  } catch (err) {
-    next(err);
-  }
+  console.warn('[updateActionAssignmentStatus] DEPRECATED endpoint called - use DepartmentProject CRUD API');
+  return res.status(410).json({
+    message: 'This endpoint is deprecated. Use PATCH /api/department-projects/:id instead.',
+    code: 'ENDPOINT_DEPRECATED'
+  });
 };
 
 // PATCH /api/dashboard/action-assignments/item
-// Body: { key?: string; department?: string; index: number; patch: { firstName?, lastName?, title?, goal?, milestone?, resources?, cost?, kpi?, dueWhen?, progress? } }
+// DEPRECATED: Use DepartmentProject CRUD API instead
 exports.updateActionAssignmentItem = async (req, res, next) => {
-  try {
-    const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
-    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const { key, department, index, patch } = req.body || {};
-    const idx = Number(index);
-    if (!isFinite(idx) || idx < 0) {
-      return res.status(400).json({ message: 'Invalid index' });
-    }
-    // Resolve to the actual key present in assignments
-    const keyFromLabel = {
-      Marketing: 'marketing',
-      Sales: 'sales',
-      'Operations and Service Delivery': 'operations',
-      'Finance and Admin': 'financeAdmin',
-      'People and Human Resources': 'peopleHR',
-      'Partnerships and Alliances': 'partnerships',
-      'Technology and Infrastructure': 'technology',
-      'ESG and Sustainability': 'communityImpact',
-    };
-
-    const ob = await Onboarding.findOne(wsFilter);
-    if (!ob) return res.status(404).json({ message: 'Not found' });
-    const a = ob.answers || {};
-    const curr = a.actionAssignments || {};
-    const canon = (s) => String(s || '').trim().toLowerCase();
-    const labelFromKey = (k) => ({
-      marketing: 'Marketing',
-      sales: 'Sales',
-      operations: 'Operations and Service Delivery',
-      financeAdmin: 'Finance and Admin',
-      peopleHR: 'People and Human Resources',
-      partnerships: 'Partnerships and Alliances',
-      technology: 'Technology and Infrastructure',
-      communityImpact: 'ESG and Sustainability',
-    }[k] || k);
-    const resolveKey = () => {
-      // 1) Direct key match
-      if (key && curr[key]) return key;
-      // 2) If key is a label
-      if (key && keyFromLabel[key]) {
-        const k2 = keyFromLabel[key];
-        if (curr[k2]) return k2;
-      }
-      // Case-insensitive direct match
-      if (key) {
-        const k3 = Object.keys(curr).find((kk) => canon(kk) === canon(key));
-        if (k3 && curr[k3]) return k3;
-      }
-      // 3) Department label field provided
-      if (department) {
-        if (curr[department]) return department; // stored under label
-        const k4 = keyFromLabel[department];
-        if (k4 && curr[k4]) return k4;
-        const found = Object.keys(curr).find((kk) => canon(labelFromKey(kk)) === canon(department));
-        if (found && curr[found]) return found;
-      }
-      return null;
-    };
-    const k = resolveKey();
-    if (!k) return res.status(400).json({ message: 'Missing or unknown key/department' });
-    const list = Array.isArray(curr[k]) ? curr[k] : [];
-    if (!list[idx]) return res.status(404).json({ message: 'Item not found' });
-    const item = list[idx];
-    const p = patch || {};
-    const clampPct = (x) => {
-      const n = Number(x);
-      if (!isFinite(n)) return undefined;
-      return Math.max(0, Math.min(100, Math.round(n)));
-    };
-    const nextItem = {
-      ...item,
-      ...(p.firstName !== undefined ? { firstName: String(p.firstName || '') } : {}),
-      ...(p.lastName !== undefined ? { lastName: String(p.lastName || '') } : {}),
-      ...(p.title !== undefined ? { title: String(p.title || '') } : {}),
-      ...(p.goal !== undefined ? { goal: String(p.goal || '') } : {}),
-      ...(p.milestone !== undefined ? { milestone: String(p.milestone || '') } : {}),
-      ...(p.resources !== undefined ? { resources: String(p.resources || '') } : {}),
-      ...(p.cost !== undefined ? { cost: String(p.cost || '') } : {}),
-      ...(p.kpi !== undefined ? { kpi: String(p.kpi || '') } : {}),
-      ...(p.dueWhen !== undefined ? { dueWhen: String(p.dueWhen || '') } : {}),
-      ...(p.progress !== undefined ? (()=>{ const v = clampPct(p.progress); return v === undefined ? {} : { progress: v }; })() : {}),
-      ...(p.linkedCoreProject !== undefined ? { linkedCoreProject: typeof p.linkedCoreProject === 'number' ? p.linkedCoreProject : undefined } : {}),
-      ...(p.linkedGoal !== undefined ? { linkedGoal: typeof p.linkedGoal === 'number' ? p.linkedGoal : undefined } : {}),
-      ...(p.deliverables !== undefined ? { deliverables: Array.isArray(p.deliverables) ? p.deliverables.map((d) => ({
-        text: String(d?.text || ''),
-        kpi: String(d?.kpi || ''),
-        dueWhen: String(d?.dueWhen || ''),
-        done: Boolean(d?.done),
-      })) : [] } : {}),
-    };
-    // Derive status from progress if provided
-    if (Object.prototype.hasOwnProperty.call(p, 'progress')) {
-      const v = clampPct(p.progress);
-      if (v !== undefined) {
-        if (v >= 100) nextItem.status = 'Completed';
-        else if (v > 0) nextItem.status = 'In progress';
-        else nextItem.status = 'Not started';
-      }
-    }
-    list[idx] = nextItem;
-    curr[k] = list;
-    a.actionAssignments = curr;
-    ob.answers = a;
-    try { ob.markModified && ob.markModified('answers'); } catch {}
-    await ob.save();
-    // Update workspace lastActivityAt
-    if (ob.workspace) touchWorkspace(ob.workspace);
-    return res.json({ ok: true, item: nextItem, key: k, index: idx });
-  } catch (err) {
-    next(err);
-  }
+  console.warn('[updateActionAssignmentItem] DEPRECATED endpoint called - use DepartmentProject CRUD API');
+  return res.status(410).json({
+    message: 'This endpoint is deprecated. Use PATCH /api/department-projects/:id instead.',
+    code: 'ENDPOINT_DEPRECATED'
+  });
 };
 
 // GET /api/dashboard/financials
@@ -1616,10 +1479,11 @@ exports.saveFinancialAssumptions = async (req, res, next) => {
 exports.getPlanProse = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne(wsFilter).lean().exec();
-    const prose = (ob && ob.answers && ob.answers.planProse) || {};
+    // Read from Workspace.fields
+    const a = await getAnswersFromWorkspace(workspaceId);
+    const prose = a.planProse || {};
     return res.json({ prose: { executiveSummary: prose.executiveSummary || '', marketStatement: prose.marketStatement || '', financialStatement: prose.financialStatement || '', generatedAt: prose.generatedAt || null } });
   } catch (err) {
     next(err);
@@ -1631,14 +1495,15 @@ exports.getPlanProse = async (req, res, next) => {
 exports.savePlanProse = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     const { executiveSummary, marketStatement, financialStatement } = req.body || {};
-    const ob = await Onboarding.findOne(wsFilter) || await Onboarding.create(addWorkspaceToDoc({ user: userId }, req));
+    // Read current prose from Workspace.fields
+    const a = await getAnswersFromWorkspace(workspaceId);
+    const currentProse = a.planProse || {};
 
     // Update only the fields that were provided
-    const currentProse = (ob.answers && ob.answers.planProse) || {};
     const updatedProse = {
       ...currentProse,
       ...(typeof executiveSummary === 'string' ? { executiveSummary } : {}),
@@ -1646,8 +1511,8 @@ exports.savePlanProse = async (req, res, next) => {
       ...(typeof financialStatement === 'string' ? { financialStatement } : {}),
     };
 
-    ob.answers = { ...(ob.answers || {}), planProse: updatedProse };
-    await ob.save();
+    // Save to Workspace.fields
+    await saveAnswersToWorkspace(workspaceId, { planProse: updatedProse });
 
     return res.json({
       prose: {
@@ -1668,9 +1533,12 @@ exports.generatePlanProse = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne(wsFilter) || await Onboarding.create(addWorkspaceToDoc({ user: userId }, req));
-    const a = ob.answers || {};
+    // Read from Workspace.fields instead of Onboarding.answers
+    const a = await getAnswersFromWorkspace(workspaceId);
+    // Still need Onboarding for businessProfile
+    const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const { sections } = req.body || {};
     const wantExecutive = !Array.isArray(sections) || sections.includes('executive');
     const wantMarket = !Array.isArray(sections) || sections.includes('market');
@@ -1678,7 +1546,7 @@ exports.generatePlanProse = async (req, res, next) => {
 
     const ai = require('./ai.controller');
     const contextBase = (() => {
-      const bp = ob.businessProfile || {};
+      const bp = (ob && ob.businessProfile) || {};
       const parts = [
         bp.businessName && `Business Name: ${bp.businessName}`,
         bp.industry && `Industry: ${bp.industry}`,
@@ -1693,7 +1561,7 @@ exports.generatePlanProse = async (req, res, next) => {
     // Executive Summary (Problem, Solution, Market, Opportunity)
     let executiveSummary = undefined;
     if (wantExecutive) {
-      const bp = ob.businessProfile || {};
+      const bp = (ob && ob.businessProfile) || {};
       const products = Array.isArray(a.products) ? a.products : [];
       const productLines = products
         .filter((p)=> String(p?.product||'').trim())
@@ -1745,7 +1613,7 @@ exports.generatePlanProse = async (req, res, next) => {
     // Market and Opportunity Study generation from onboarding Market & Opportunity answers
     let marketStatement = undefined;
     if (wantMarket) {
-      const bp = ob.businessProfile || {};
+      const bp = (ob && ob.businessProfile) || {};
       const products = Array.isArray(a.products) ? a.products : [];
       const prodLines = products
         .filter((p)=> String(p?.product||'').trim())
@@ -1926,17 +1794,16 @@ exports.generatePlanProse = async (req, res, next) => {
       });
     }
 
-    ob.answers = a;
-    ob.answers.planProse = {
+    // Build updated planProse and save to Workspace.fields
+    const updatedPlanProse = {
       ...(a.planProse || {}),
       ...(typeof executiveSummary === 'string' ? { executiveSummary } : {}),
       ...(typeof marketStatement === 'string' ? { marketStatement } : {}),
       ...(typeof financialStatement === 'string' ? { financialStatement } : {}),
       generatedAt: new Date().toISOString(),
     };
-    try { ob.markModified && ob.markModified('answers'); } catch {}
-    await ob.save();
-    return res.json({ prose: ob.answers.planProse });
+    await saveAnswersToWorkspace(workspaceId, { planProse: updatedPlanProse });
+    return res.json({ prose: updatedPlanProse });
   } catch (err) {
     next(err);
   }
@@ -2053,49 +1920,50 @@ exports.exportPlanPdf = async (req, res, next) => {
     } catch {}
 
     try {
+      const workspaceId = getWorkspaceId(req);
+      // Read from Workspace.fields instead of Onboarding.answers
+      const a = await getAnswersFromWorkspace(workspaceId);
+      // Still need Onboarding for userProfile, businessProfile
       const ob = await Onboarding.findOne(wsFilter).lean().exec();
-      if (ob) {
-        const a = ob.answers || {};
-        // Build plan data exactly like getCompiledPlan does
-        compiledPlan = {
-          companyLogoUrl: logoUrl || a.companyLogoUrl || ob.companyLogoUrl || '',
-          userProfile: { fullName: (ob.userProfile && ob.userProfile.fullName) || '' },
-          businessProfile: { businessName: (ob.businessProfile && ob.businessProfile.businessName) || '', ventureType: (ob.businessProfile && ob.businessProfile.ventureType) || '' },
-          vision: { ubp: a.ubp || (ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', bhag: a.visionBhag || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
-          values: { core: a.valuesCore || '', culture: a.cultureFeeling || '', traits: Array.isArray(a.valuesCoreKeywords) ? a.valuesCoreKeywords.filter((t)=> typeof t === 'string' && t.trim()) : [] },
-          goals: { shortTerm: (a.goalsShortTerm || '').split('\n').filter(Boolean), midTerm: (a.goalsMidTerm || '').split('\n').filter(Boolean), longTerm: (a.goalsLongTerm || '').split('\n').filter(Boolean) },
-          market: { custType: a.custType || '', customer: a.marketCustomer || '', partnersYN: a.partnersYN || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
-          products: Array.isArray(a.products) ? a.products : [],
-          org: Array.isArray(a.orgPositions) ? a.orgPositions.map((p)=>({ id: p.id, name: p.name, position: p.position, department: p.department || null, parentId: p.parentId || null })) : [],
-          financial: {
-            salesVolume: a.finSalesVolume || '',
-            salesGrowthPct: a.finSalesGrowthPct || '',
-            avgUnitCost: a.finAvgUnitCost || '',
-            fixedOperatingCosts: a.finFixedOperatingCosts || '',
-            marketingSalesSpend: a.finMarketingSalesSpend || '',
-            payrollCost: a.finPayrollCost || '',
-            startingCash: a.finStartingCash || '',
-            additionalFundingAmount: a.finAdditionalFundingAmount || '',
-            additionalFundingMonth: a.finAdditionalFundingMonth || '',
-            paymentCollectionDays: a.finPaymentCollectionDays || '',
-            targetProfitMarginPct: a.finTargetProfitMarginPct || '',
-            isNonprofit: a.finIsNonprofit || '',
-          },
-          // Note: actionPlans and coreProjectDetails are populated below from new models
-          actionPlans: {},
-          actionSections: Array.isArray(a.actionSections) ? a.actionSections.map((s)=>({ key: String(s && s.key || '').trim(), label: String(s && s.label || '').trim() })) : undefined,
-          coreProjects: [],
-          coreProjectDetails: [],
-        };
+      // Build plan data exactly like getCompiledPlan does
+      compiledPlan = {
+        companyLogoUrl: logoUrl || a.companyLogoUrl || (ob && ob.companyLogoUrl) || '',
+        userProfile: { fullName: (ob && ob.userProfile && ob.userProfile.fullName) || '' },
+        businessProfile: { businessName: (ob && ob.businessProfile && ob.businessProfile.businessName) || '', ventureType: (ob && ob.businessProfile && ob.businessProfile.ventureType) || '' },
+        vision: { ubp: a.ubp || (ob && ob.vision && ob.vision.ubp) || '', purpose: a.purpose || '', bhag: a.visionBhag || '', oneYear: (a.vision1y || '').split('\n').filter(Boolean), threeYear: (a.vision3y || '').split('\n').filter(Boolean) },
+        values: { core: a.valuesCore || '', culture: a.cultureFeeling || '', traits: Array.isArray(a.valuesCoreKeywords) ? a.valuesCoreKeywords.filter((t)=> typeof t === 'string' && t.trim()) : [] },
+        goals: { shortTerm: (a.goalsShortTerm || '').split('\n').filter(Boolean), midTerm: (a.goalsMidTerm || '').split('\n').filter(Boolean), longTerm: (a.goalsLongTerm || '').split('\n').filter(Boolean) },
+        market: { custType: a.custType || '', customer: a.marketCustomer || '', partnersYN: a.partnersYN || '', partners: a.partnersDesc || '', competitors: a.compNotes || '', competitorNames: a.competitorNames || [] },
+        products: Array.isArray(a.products) ? a.products : [],
+        org: Array.isArray(a.orgPositions) ? a.orgPositions.map((p)=>({ id: p.id, name: p.name, position: p.position, department: p.department || null, parentId: p.parentId || null })) : [],
+        financial: {
+          salesVolume: a.finSalesVolume || '',
+          salesGrowthPct: a.finSalesGrowthPct || '',
+          avgUnitCost: a.finAvgUnitCost || '',
+          fixedOperatingCosts: a.finFixedOperatingCosts || '',
+          marketingSalesSpend: a.finMarketingSalesSpend || '',
+          payrollCost: a.finPayrollCost || '',
+          startingCash: a.finStartingCash || '',
+          additionalFundingAmount: a.finAdditionalFundingAmount || '',
+          additionalFundingMonth: a.finAdditionalFundingMonth || '',
+          paymentCollectionDays: a.finPaymentCollectionDays || '',
+          targetProfitMarginPct: a.finTargetProfitMarginPct || '',
+          isNonprofit: a.finIsNonprofit || '',
+        },
+        // Note: actionPlans and coreProjectDetails are populated below from new models
+        actionPlans: {},
+        actionSections: Array.isArray(a.actionSections) ? a.actionSections.map((s)=>({ key: String(s && s.key || '').trim(), label: String(s && s.label || '').trim() })) : undefined,
+        coreProjects: [],
+        coreProjectDetails: [],
+      };
 
-        // Get prose data the same way getPlanProse does
-        const prose = a.planProse || {};
-        proseData = {
-          executiveSummary: prose.executiveSummary || '',
-          marketStatement: prose.marketStatement || '',
-          financialStatement: prose.financialStatement || '',
-        };
-      }
+      // Get prose data the same way getPlanProse does
+      const prose = a.planProse || {};
+      proseData = {
+        executiveSummary: prose.executiveSummary || '',
+        marketStatement: prose.marketStatement || '',
+        financialStatement: prose.financialStatement || '',
+      };
     } catch (e) {
       console.error('PDF export: Error fetching onboarding data:', e);
     }
@@ -2415,6 +2283,8 @@ exports.exportStrategyCanvasPdf = async (req, res, next) => {
     // Fetch strategy canvas data server-side (same logic as getStrategyCanvas)
     const ob = await Onboarding.findOne(wsFilter).lean().exec();
     const a = ob?.answers || {};
+    // Fetch goals from DepartmentProject model only - no legacy fallback
+    const deptProjects = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
     const canvasData = {
       ubp: (a.ubp || ob?.vision?.ubp || '').trim(),
       purpose: String(a.purpose || '').trim(),
@@ -2428,7 +2298,7 @@ exports.exportStrategyCanvasPdf = async (req, res, next) => {
         opportunities: String(a.swotOpportunities || '').split('\n').map((s)=>s.trim()).filter(Boolean),
         threats: String(a.swotThreats || '').split('\n').map((s)=>s.trim()).filter(Boolean),
       },
-      goals: Object.values(a.actionAssignments || {}).flat().map((u)=> String(u?.goal||'').trim()).filter(Boolean),
+      goals: Object.values(deptProjects || {}).flat().map((u)=> String(u?.goal||'').trim()).filter(Boolean),
     };
     const businessName = String(ob?.businessProfile?.businessName || '');
 
@@ -2495,9 +2365,8 @@ exports.exportDepartmentsDocx = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne(wsFilter).lean().exec();
-    const a = ob?.answers || {};
-    const assignments = a.actionAssignments || {};
+    // Fetch from DepartmentProject model only - no legacy fallback
+    const assignments = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
     const label = (k) => ({ marketing:'Marketing',sales:'Sales',operations:'Operations and Service Delivery',financeAdmin:'Finance and Admin',peopleHR:'People and Human Resources',partnerships:'Partnerships and Alliances',technology:'Technology and Infrastructure',communityImpact:'ESG and Sustainability' }[k] || k);
     const parseDate = (s) => { const m=String(s||'').match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:''; };
     const pctForItem = (it) => { const v = Number(it?.progress); if (isFinite(v)) return Math.max(0, Math.min(100, Math.round(v))); const st = String(it?.status || '').toLowerCase(); if (/done|complete|completed/.test(st)) return 100; if (/in[ _-]*progress/.test(st)) return 50; if (/not[ _-]*started/.test(st)) return 0; return 0; };
@@ -2559,7 +2428,8 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
       User.findById(userId).lean().exec(),
     ]);
     const a = ob?.answers || {};
-    const assignments = a.actionAssignments || {};
+    // Fetch from DepartmentProject model only - no legacy fallback
+    const assignments = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
     const label = (k) => ({
       marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability'
     }[k] || k);
@@ -2721,11 +2591,11 @@ exports.exportPlanDocx = async (req, res, next) => {
     } catch {}
 
     // Build plan data (same structure as getCompiledPlan)
-    const ob = (await Onboarding.findOne(wsFilter).lean().exec()) || {};
-    const a = ob.answers || {};
-
-    // Load FinancialSnapshot for new financial data
     const workspaceId = getWorkspaceId(req);
+    // Read from Workspace.fields instead of Onboarding.answers
+    const a = await getAnswersFromWorkspace(workspaceId);
+    // Still need Onboarding for businessProfile
+    const ob = (await Onboarding.findOne(wsFilter).lean().exec()) || {};
     const snapshot = await financialSnapshotService.getOrCreate(userId, workspaceId);
 
     const plan = {
@@ -3567,10 +3437,11 @@ exports.exportPlanDocx = async (req, res, next) => {
 exports.getProducts = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const ob = await Onboarding.findOne(wsFilter).lean().exec();
-    const items = Array.isArray(ob?.answers?.products) ? ob.answers.products : [];
+    // Read from Workspace.fields
+    const a = await getAnswersFromWorkspace(workspaceId);
+    const items = Array.isArray(a.products) ? a.products : [];
     return res.json({ items });
   } catch (err) {
     next(err);
@@ -3581,7 +3452,7 @@ exports.getProducts = async (req, res, next) => {
 exports.saveProducts = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const inItems = Array.isArray(req.body?.items) ? req.body.items : [];
     const items = inItems.map((p) => ({
@@ -3592,11 +3463,10 @@ exports.saveProducts = async (req, res, next) => {
       price: typeof p?.price !== 'undefined' ? String(p?.price || '') : undefined,
       monthlyVolume: typeof p?.monthlyVolume !== 'undefined' ? String(p?.monthlyVolume || '') : undefined,
     }));
-    const ob = await Onboarding.findOne(wsFilter);
-    if (!ob) return res.status(400).json({ message: 'Onboarding not initialized' });
-    ob.answers = ob.answers || {};
+    // Read existing data from Workspace.fields
+    const a = await getAnswersFromWorkspace(workspaceId);
     // PROTECTION: Don't overwrite existing products with empty array unless explicitly confirmed
-    const existingProducts = Array.isArray(ob.answers.products) ? ob.answers.products : [];
+    const existingProducts = Array.isArray(a.products) ? a.products : [];
     if (items.length === 0 && existingProducts.length > 0) {
       // Check for explicit clear flag
       if (!req.body?.confirmClear) {
@@ -3609,9 +3479,6 @@ exports.saveProducts = async (req, res, next) => {
       }
       console.log(`[saveProducts] Clearing ${existingProducts.length} products (confirmClear=true)`);
     }
-    ob.answers.products = items;
-    // answers is a Mixed type; mark it modified so Mongoose persists nested changes
-    try { ob.markModified && ob.markModified('answers'); } catch {}
     // Auto-populate financial inputs
     function num(s) { if (s == null) return 0; const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? n : 0; }
     const nums = items.map((p)=>({ v: num(p.monthlyVolume), price: num(p.price ?? p.pricing), cost: num(p.unitCost) }));
@@ -3622,12 +3489,14 @@ exports.saveProducts = async (req, res, next) => {
     const avgCost = totalW ? (sumCost/totalW) : 0;
     const avgPrice = totalW ? (sumPrice/totalW) : 0;
     const marginPct = (avgPrice > 0) ? Math.max(0, Math.round(((avgPrice - avgCost)/avgPrice)*100)) : 0;
-    if (totalVol > 0) ob.answers.finSalesVolume = String(totalVol);
-    if (avgCost > 0) ob.answers.finAvgUnitCost = String(Math.round(avgCost));
-    if (marginPct > 0) ob.answers.finTargetProfitMarginPct = String(marginPct);
-    await ob.save();
+    // Build updates for Workspace.fields
+    const updates = { products: items };
+    if (totalVol > 0) updates.finSalesVolume = String(totalVol);
+    if (avgCost > 0) updates.finAvgUnitCost = String(Math.round(avgCost));
+    if (marginPct > 0) updates.finTargetProfitMarginPct = String(marginPct);
+    await saveAnswersToWorkspace(workspaceId, updates);
     // Update workspace lastActivityAt
-    if (ob.workspace) touchWorkspace(ob.workspace);
+    if (workspaceId) touchWorkspace(workspaceId);
     return res.json({ ok: true, items });
   } catch (err) {
     next(err);
@@ -3653,11 +3522,11 @@ exports.recalculateFinancials = async (req, res, next) => {
 exports.saveFinancialActuals = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { revenue, cogs, marketing, payroll, fixed, month } = req.body || {};
-    const ob = await Onboarding.findOne(wsFilter) || await Onboarding.create(addWorkspaceToDoc({ user: userId }, req));
-    ob.answers = ob.answers || {};
+    // Read existing data from Workspace.fields
+    const a = await getAnswersFromWorkspace(workspaceId);
     function normArr(arr) {
       if (!Array.isArray(arr)) return undefined;
       return arr.map((v)=>{
@@ -3665,11 +3534,22 @@ exports.saveFinancialActuals = async (req, res, next) => {
         return isFinite(n) ? n : 0;
       }).slice(0, 12);
     }
+    const updates = {};
     // If a single month patch is provided, update only that index
     const mIdx = (typeof month === 'number' && isFinite(month)) ? (month >= 1 && month <= 12 ? month - 1 : month) : null;
     if (mIdx !== null && mIdx >= 0 && mIdx <= 11) {
-      const ensure = (key) => { ob.answers[key] = Array.isArray(ob.answers[key]) ? ob.answers[key] : Array.from({length:12}, ()=>undefined); return ob.answers[key]; };
-      const setIf = (key, val) => { if (val !== undefined && val !== null && val !== '') { const arr = ensure(key); const n = Number(val); arr[mIdx] = isFinite(n) ? n : 0; } };
+      const ensure = (key) => {
+        const existing = a[key];
+        return Array.isArray(existing) ? [...existing] : Array.from({length:12}, ()=>undefined);
+      };
+      const setIf = (key, val) => {
+        if (val !== undefined && val !== null && val !== '') {
+          const arr = ensure(key);
+          const n = Number(val);
+          arr[mIdx] = isFinite(n) ? n : 0;
+          updates[key] = arr;
+        }
+      };
       setIf('finActualRevenue', revenue);
       setIf('finActualCogs', cogs);
       setIf('finActualMarketing', marketing);
@@ -3682,15 +3562,17 @@ exports.saveFinancialActuals = async (req, res, next) => {
       const mktArr = normArr(marketing);
       const payArr = normArr(payroll);
       const fixArr = normArr(fixed);
-      if (revArr) ob.answers.finActualRevenue = revArr;
-      if (cogsArr) ob.answers.finActualCogs = cogsArr;
-      if (mktArr) ob.answers.finActualMarketing = mktArr;
-      if (payArr) ob.answers.finActualPayroll = payArr;
-      if (fixArr) ob.answers.finActualFixed = fixArr;
+      if (revArr) updates.finActualRevenue = revArr;
+      if (cogsArr) updates.finActualCogs = cogsArr;
+      if (mktArr) updates.finActualMarketing = mktArr;
+      if (payArr) updates.finActualPayroll = payArr;
+      if (fixArr) updates.finActualFixed = fixArr;
     }
-    await ob.save();
+    if (Object.keys(updates).length > 0) {
+      await saveAnswersToWorkspace(workspaceId, updates);
+    }
     // Update workspace lastActivityAt
-    if (ob.workspace) touchWorkspace(ob.workspace);
+    if (workspaceId) touchWorkspace(workspaceId);
     return res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -3754,9 +3636,10 @@ exports.importFinancialsCSV = async (req, res, next) => {
       if (idxNewCust >= 0) newCust[midx] = num(cols[idxNewCust]);
       updates++;
     }
-    const ob = await Onboarding.findOne(wsFilter) || await Onboarding.create(addWorkspaceToDoc({ user: userId }, req));
-    ob.answers = ob.answers || {};
-    const setIfAny = (key, arr) => { if (arr.some((v)=> typeof v === 'number')) ob.answers[key] = arr; };
+    // Save to Workspace.fields
+    const workspaceId = getWorkspaceId(req);
+    const fieldUpdates = {};
+    const setIfAny = (key, arr) => { if (arr.some((v)=> typeof v === 'number')) fieldUpdates[key] = arr; };
     setIfAny('finActualRevenue', actualRevenue);
     setIfAny('finActualCogs', actualCogs);
     setIfAny('finActualMarketing', actualMkt);
@@ -3765,9 +3648,11 @@ exports.importFinancialsCSV = async (req, res, next) => {
     // Store for future if needed
     setIfAny('finActualFunding', funding);
     setIfAny('finActualNewCustomers', newCust);
-    await ob.save();
+    if (Object.keys(fieldUpdates).length > 0) {
+      await saveAnswersToWorkspace(workspaceId, fieldUpdates);
+    }
     // Update workspace lastActivityAt
-    if (ob.workspace) touchWorkspace(ob.workspace);
+    if (workspaceId) touchWorkspace(workspaceId);
     return res.json({ ok: true, rows: updates });
   } catch (err) {
     next(err);
@@ -3809,10 +3694,11 @@ exports.getSettings = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const [user, ob] = await Promise.all([
       User.findById(userId).lean().exec(),
-      Onboarding.findOne(wsFilter).exec(),
+      Onboarding.findOne(wsFilter).lean().exec(),
     ]);
     const profile = {
       fullName: user?.fullName || '',
@@ -3820,16 +3706,19 @@ exports.getSettings = async (req, res, next) => {
       jobTitle: (user?.jobTitle && user.jobTitle.trim()) || (ob?.userProfile?.role || ''),
       phone: user?.phone || '',
     };
-    const a = ob?.answers || {};
+    // Read from Workspace.fields
+    const a = await getAnswersFromWorkspace(workspaceId);
     let members = [];
     try {
-      const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+      const org = Array.isArray(a.orgPositions) ? [...a.orgPositions] : [];
       // Normalize: ensure each org position has a stable id
       let changed = false;
       for (const p of org) {
         if (!p.id) { p.id = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`); changed = true; }
       }
-      if (changed) { ob.answers = { ...a, orgPositions: org }; try { ob.markModified('answers'); } catch {} await ob.save().catch(()=>{}); }
+      if (changed) {
+        await saveAnswersToWorkspace(workspaceId, { orgPositions: org }).catch(()=>{});
+      }
       members = org.map((p) => ({
         mid: String(p.id || `${(p.position||'').slice(0,8)}-${(p.name||'').slice(0,8)}`),
         name: p.name || '',
@@ -3894,19 +3783,18 @@ exports.updateProfile = async (req, res, next) => {
 };
 
 // PATCH /api/dashboard/settings/members/:mid
-// Update fields for a team member sourced from the Org Chart (Onboarding answers)
+// Update fields for a team member sourced from the Org Chart (Workspace.fields)
 exports.updateMember = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { mid } = req.params;
     const patch = req.body || {};
 
-    const ob = await Onboarding.findOne(wsFilter);
-    if (!ob) return res.json({ member: null });
-    const a = ob.answers || {};
-    let list = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+    // Read from Workspace.fields
+    const a = await getAnswersFromWorkspace(workspaceId);
+    let list = Array.isArray(a.orgPositions) ? [...a.orgPositions] : [];
     const idx = list.findIndex((p) => {
       const id = String(p.id || '');
       if (id && id === String(mid)) return true;
@@ -3936,9 +3824,8 @@ exports.updateMember = async (req, res, next) => {
     if (typeof patch.status === 'string') next.status = patch.status;
     if (!next.id) { next.id = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`); }
     list[idx] = next;
-    ob.answers = { ...a, orgPositions: list };
-    try { ob.markModified('answers'); } catch {}
-    await ob.save();
+    // Save to Workspace.fields
+    await saveAnswersToWorkspace(workspaceId, { orgPositions: list });
     const member = {
       mid: String(next.id || mid),
       name: next.name || '',
@@ -3954,26 +3841,27 @@ exports.updateMember = async (req, res, next) => {
 };
 
 // DELETE /api/dashboard/settings/members/:mid
-// Remove member from Org Chart answers; if not found, remove from seeded TeamMember
+// Remove member from Org Chart (Workspace.fields); if not found, remove from seeded TeamMember
 exports.deleteMember = async (req, res, next) => {
   try {
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { mid } = req.params;
-    const ob = await Onboarding.findOne(wsFilter);
-    if (ob && ob.answers && Array.isArray(ob.answers.orgPositions)) {
-      const before = ob.answers.orgPositions.length;
-      ob.answers.orgPositions = ob.answers.orgPositions.filter((p) => {
+    // Read from Workspace.fields
+    const a = await getAnswersFromWorkspace(workspaceId);
+    if (Array.isArray(a.orgPositions) && a.orgPositions.length > 0) {
+      const before = a.orgPositions.length;
+      const filtered = a.orgPositions.filter((p) => {
         const id = String(p.id || '');
         if (id && id === String(mid)) return false;
         const fallback = `${String(p.position || '').slice(0, 8)}-${String(p.name || '').slice(0, 8)}`;
         if (String(fallback) === String(mid)) return false;
         return true;
       });
-      try { ob.markModified('answers'); } catch {}
-      await ob.save();
-      return res.json({ ok: true, removed: before !== ob.answers.orgPositions.length });
+      // Save to Workspace.fields
+      await saveAnswersToWorkspace(workspaceId, { orgPositions: filtered });
+      return res.json({ ok: true, removed: before !== filtered.length });
     }
     const result = await TeamMember.deleteOne({ user: userId, mid }).exec();
     return res.json({ ok: true, removed: result.deletedCount > 0 });
