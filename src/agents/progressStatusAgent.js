@@ -105,20 +105,25 @@ function calculateSectionCompletion(context) {
       }
     } else if (config.checkMarket) {
       // Check Market from answers + new Competitor CRUD model
-      const marketFields = ['marketCustomer', 'marketPartners'];
       total = 3; // marketCustomer, marketPartners, competitors
 
-      // Check marketCustomer and marketPartners from answers/context
-      for (const field of marketFields) {
-        const value = answers[field] || context[field];
-        if (value && String(value).trim().length > 0) {
-          filled++;
-        } else {
-          missingFields.push(field);
-        }
+      // Check marketCustomer (also check targetCustomer as alternate field name)
+      const customerValue = answers.marketCustomer || answers.targetCustomer || context.marketCustomer || '';
+      if (customerValue.trim().length > 0) {
+        filled++;
+      } else {
+        missingFields.push('marketCustomer');
       }
 
-      // Check competitors from new Competitor CRUD model (via context._competitors)
+      // Check marketPartners (also check partners as alternate field name)
+      const partnersValue = answers.marketPartners || answers.partners || context.marketPartners || '';
+      if (partnersValue.trim().length > 0) {
+        filled++;
+      } else {
+        missingFields.push('marketPartners');
+      }
+
+      // Check competitors from Competitor CRUD model only
       const competitors = context._competitors || [];
       if (competitors.length > 0) {
         filled++;

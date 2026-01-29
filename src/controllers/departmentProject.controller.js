@@ -1,8 +1,9 @@
 const DepartmentProject = require('../models/DepartmentProject');
 const CoreProject = require('../models/CoreProject');
 const User = require('../models/User');
-const { getWorkspaceFilter, addWorkspaceToDoc } = require('../utils/workspaceQuery');
+const { getWorkspaceFilter, addWorkspaceToDoc, getWorkspaceId } = require('../utils/workspaceQuery');
 const { hasFeature } = require('../config/entitlements');
+const cache = require('../services/cache');
 
 // Helper to load full user for entitlement checks
 async function loadUser(userId) {
@@ -36,13 +37,21 @@ exports.list = async (req, res, next) => {
       });
     }
 
-    // Return grouped by department
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+
+    // Return grouped by department (with caching)
     if (grouped === 'true') {
-      const projects = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
+      const cacheKey = cache.CACHE_KEYS.userDeptProjects(userId, workspaceId);
+      const projects = await cache.getOrSet(
+        cacheKey,
+        async () => DepartmentProject.findGroupedByDepartment(wsFilter.workspace),
+        cache.TTL.MEDIUM
+      );
       return res.json({ projects });
     }
 
-    // Build query
+    // Build query (not cached - less frequent use case)
     const query = { ...wsFilter, isDeleted: false };
     if (department) {
       query.departmentKey = department;
@@ -166,6 +175,10 @@ exports.create = async (req, res, next) => {
 
     const project = await DepartmentProject.create(projectData);
 
+    // Invalidate cache
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateDeptProjects(userId, workspaceId);
+
     return res.status(201).json({ project, message: 'Project created' });
   } catch (err) {
     next(err);
@@ -239,6 +252,11 @@ exports.update = async (req, res, next) => {
 
     await project.save();
 
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateDeptProjects(userId, workspaceId);
+
     return res.json({ project, message: 'Project updated' });
   } catch (err) {
     next(err);
@@ -265,6 +283,11 @@ exports.delete = async (req, res, next) => {
 
     await project.softDelete();
 
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateDeptProjects(userId, workspaceId);
+
     return res.json({ message: 'Project deleted', id });
   } catch (err) {
     next(err);
@@ -290,6 +313,11 @@ exports.restore = async (req, res, next) => {
     }
 
     await project.restore();
+
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateDeptProjects(userId, workspaceId);
 
     return res.json({ project, message: 'Project restored' });
   } catch (err) {
@@ -333,6 +361,11 @@ exports.addDeliverable = async (req, res, next) => {
     await project.save();
 
     const newDeliverable = project.deliverables[project.deliverables.length - 1];
+
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateDeptProjects(userId, workspaceId);
 
     return res.status(201).json({
       deliverable: newDeliverable,
@@ -378,6 +411,11 @@ exports.updateDeliverable = async (req, res, next) => {
 
     await project.save();
 
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateDeptProjects(userId, workspaceId);
+
     return res.json({ deliverable, project, message: 'Deliverable updated' });
   } catch (err) {
     next(err);
@@ -410,6 +448,11 @@ exports.deleteDeliverable = async (req, res, next) => {
     deliverable.deleteOne();
     await project.save();
 
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateDeptProjects(userId, workspaceId);
+
     return res.json({ message: 'Deliverable deleted', project });
   } catch (err) {
     next(err);
@@ -441,6 +484,11 @@ exports.reorder = async (req, res, next) => {
     );
 
     await Promise.all(updates);
+
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateDeptProjects(userId, workspaceId);
 
     return res.json({ message: 'Projects reordered' });
   } catch (err) {
@@ -510,6 +558,10 @@ exports.bulkCreate = async (req, res, next) => {
     );
 
     const created = await DepartmentProject.insertMany(projectDocs);
+
+    // Invalidate cache
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateDeptProjects(userId, workspaceId);
 
     return res.status(201).json({
       projects: created,

@@ -346,22 +346,34 @@ exports.getDecisionStrip = async (req, res, next) => {
     const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
     if (!ws) return res.status(404).json({ message: 'Workspace not found' });
 
-    // Get cache and onboarding to check if recalculation is needed
+    // Get cache and check various data sources to see if recalculation is needed
     let cache = await PriorityCache.findOne({ user: userId, workspace: ws._id }).lean();
-    const ob = await Onboarding.findOne({ user: userId, workspace: ws._id }).select('updatedAt').lean();
+
+    // Check timestamps from all data sources that affect priorities
+    const [ob, latestCoreProject, latestDeptProject] = await Promise.all([
+      Onboarding.findOne({ user: userId, workspace: ws._id }).select('updatedAt').lean(),
+      CoreProject.findOne({ workspace: ws._id, isDeleted: false }).sort({ updatedAt: -1 }).select('updatedAt').lean(),
+      DepartmentProject.findOne({ workspace: ws._id, isDeleted: false }).sort({ updatedAt: -1 }).select('updatedAt').lean(),
+    ]);
 
     // Recalculate if:
     // 1. Cache doesn't exist
     // 2. Onboarding was updated after cache was calculated (data changed)
-    // 3. Cache is older than 1 hour (force refresh)
+    // 3. CoreProject was updated after cache was calculated
+    // 4. DepartmentProject was updated after cache was calculated
+    // 5. Cache is older than 1 hour (force refresh)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const cacheTime = cache?.calculatedAt ? new Date(cache.calculatedAt) : null;
     const obUpdatedTime = ob?.updatedAt ? new Date(ob.updatedAt) : null;
+    const coreProjectUpdatedTime = latestCoreProject?.updatedAt ? new Date(latestCoreProject.updatedAt) : null;
+    const deptProjectUpdatedTime = latestDeptProject?.updatedAt ? new Date(latestDeptProject.updatedAt) : null;
 
     const needsRecalc = !cache ||
       !cacheTime ||
       cacheTime < oneHourAgo ||
-      (obUpdatedTime && obUpdatedTime > cacheTime);
+      (obUpdatedTime && obUpdatedTime > cacheTime) ||
+      (coreProjectUpdatedTime && coreProjectUpdatedTime > cacheTime) ||
+      (deptProjectUpdatedTime && deptProjectUpdatedTime > cacheTime);
 
     if (needsRecalc) {
       await recalculateForUserWorkspace(userId, ws._id);
@@ -556,16 +568,6 @@ exports.getRoadmap = async (req, res, next) => {
   }
 };
 
-// POST /api/workspaces/:wid/reschedule
-// DEPRECATED: Use CoreProject or DepartmentProject CRUD API instead
-exports.acceptReschedule = async (req, res, next) => {
-  console.warn('[acceptReschedule] DEPRECATED endpoint called - use CoreProject/DepartmentProject CRUD API');
-  return res.status(410).json({
-    message: 'This endpoint is deprecated. Use PATCH /api/core-projects/:id or PATCH /api/department-projects/:id instead.',
-    code: 'ENDPOINT_DEPRECATED'
-  });
-};
-
 // POST /api/workspaces/:wid/dismiss-suggestion
 exports.dismissSuggestion = async (req, res, next) => {
   try {
@@ -589,16 +591,6 @@ exports.dismissSuggestion = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-};
-
-// Mark item as complete
-// DEPRECATED: Use CoreProject or DepartmentProject CRUD API instead
-exports.markComplete = async (req, res, next) => {
-  console.warn('[markComplete] DEPRECATED endpoint called - use CoreProject/DepartmentProject CRUD API');
-  return res.status(410).json({
-    message: 'This endpoint is deprecated. Use PATCH /api/core-projects/:id or PATCH /api/department-projects/:id instead.',
-    code: 'ENDPOINT_DEPRECATED'
-  });
 };
 
 // Snooze a suggestion for X days

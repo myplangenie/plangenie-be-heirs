@@ -136,8 +136,8 @@ async function buildAgentContext(userId, workspaceId = null) {
   if (workspaceId) baselineFilter.workspace = workspaceId;
 
   // Filter for new individual models (workspace-aware, not deleted)
-  const crudFilter = { user: userId, isDeleted: { $ne: true } };
-  if (workspaceId) crudFilter.workspace = workspaceId;
+  // Always include workspace in filter to match how data is stored (workspace is required)
+  const crudFilter = { user: userId, isDeleted: { $ne: true }, workspace: workspaceId || null };
 
   const [
     ob,

@@ -25,9 +25,7 @@ router.get('/:wid/this-week', requireViewer, ctrl.thisWeek);
 // Decision Strip & Priorities
 router.get('/:wid/decision-strip', requireViewer, ctrl.getDecisionStrip);
 router.get('/:wid/roadmap', requireViewer, ctrl.getRoadmap);
-router.post('/:wid/reschedule', requireContributor, ctrl.acceptReschedule);
 router.post('/:wid/dismiss-suggestion', requireContributor, ctrl.dismissSuggestion);
-router.post('/:wid/mark-complete', requireContributor, ctrl.markComplete);
 router.post('/:wid/snooze-suggestion', requireContributor, ctrl.snoozeSuggestion);
 router.post('/:wid/ai-suggestions', requireContributor, ctrl.getAISuggestions);
 

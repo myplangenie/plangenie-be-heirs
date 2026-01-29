@@ -144,14 +144,16 @@ router.post('/actions/assign-new-project-due-dates', requireContributor, ai.assi
 router.post('/actions/spread-project-deliverables-incremental', requireContributor, ai.spreadProjectDeliverablesIncremental);
 router.post('/financial/forecast/rewrite', requireContributor, requireAI('financial'), requireFeature('financials'), ai.rewriteFinancialForecast);
 
-// 1-Year Goals CRUD
-router.get('/vision/destination/1y/goals', requireViewer, ctrl.getVision1yGoals);
-router.post('/vision/destination/1y/goals', requireContributor, ctrl.addVision1yGoal);
-router.patch('/vision/destination/1y/goals/:index', requireContributor, ctrl.updateVision1yGoal);
-router.delete('/vision/destination/1y/goals/:index', requireAdmin, ctrl.deleteVision1yGoal);
+// REMOVED: Legacy 1-Year Goals CRUD that used Workspace.fields
+// Use /api/vision-goals instead (VisionGoal model)
 
-// Save/load all onboarding answers (optional server persistence)
-router.get('/all', requireViewer, ctrl.getAllAnswers);
-router.post('/all', requireContributor, ctrl.saveAllAnswers);
+// REMOVED: Legacy /all endpoints that read/write Workspace.fields
+// Use individual CRUD APIs instead:
+// - /api/workspace-fields (for simple text fields like ubp, purpose, values)
+// - /api/competitors (Competitor model)
+// - /api/swot (SwotEntry model)
+// - /api/vision-goals (VisionGoal model)
+// - /api/products (Product model)
+// - /api/org-positions (OrgPosition model)
 
 module.exports = router;

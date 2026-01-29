@@ -267,33 +267,39 @@ async function extractItemsFromModels(userId, workspaceId) {
     const projectTitle = String(p?.title || '').trim();
     if (!projectTitle) return;
 
-    // Add the project itself
-    items.push({
-      title: projectTitle,
-      dueWhen: p?.dueWhen || null,
-      goal: p?.goal || null,
-      kpi: null,
-      source: { type: 'project', projectIndex: pIndex, projectId: p._id?.toString() },
-      deliverableCount: Array.isArray(p?.deliverables) ? p.deliverables.length : 0,
-      owner: p?.ownerName || null,
+    // Get active (non-completed) deliverables
+    const deliverables = Array.isArray(p?.deliverables) ? p.deliverables : [];
+    const activeDeliverables = deliverables.filter(d => {
+      const text = String(d?.text || '').trim();
+      return text && !d?.done;
     });
 
-    // Add deliverables
-    const deliverables = Array.isArray(p?.deliverables) ? p.deliverables : [];
-    deliverables.forEach((d, dIndex) => {
-      const text = String(d?.text || '').trim();
-      if (!text || d?.done) return; // Skip completed deliverables
-
+    // If project has active deliverables, track those instead of the project
+    if (activeDeliverables.length > 0) {
+      activeDeliverables.forEach((d, dIndex) => {
+        const originalIndex = deliverables.indexOf(d);
+        items.push({
+          title: String(d?.text || '').trim(),
+          dueWhen: d?.dueWhen || null,
+          goal: p?.goal || null,
+          kpi: d?.kpi || null,
+          source: { type: 'deliverable', projectIndex: pIndex, deliverableIndex: originalIndex, projectId: p._id?.toString(), deliverableId: d._id?.toString() },
+          projectTitle,
+          owner: p?.ownerName || null,
+        });
+      });
+    } else {
+      // No active deliverables - track the project itself
       items.push({
-        title: text,
-        dueWhen: d?.dueWhen || null,
+        title: projectTitle,
+        dueWhen: p?.dueWhen || null,
         goal: p?.goal || null,
-        kpi: d?.kpi || null,
-        source: { type: 'deliverable', projectIndex: pIndex, deliverableIndex: dIndex, projectId: p._id?.toString() },
-        projectTitle,
+        kpi: null,
+        source: { type: 'project', projectIndex: pIndex, projectId: p._id?.toString() },
+        deliverableCount: 0,
         owner: p?.ownerName || null,
       });
-    });
+    }
   });
 
   // Extract from DepartmentProjects
@@ -301,39 +307,46 @@ async function extractItemsFromModels(userId, workspaceId) {
     const projectTitle = String(assignment?.title || '').trim();
     if (!projectTitle) return;
 
-    // Skip completed items
+    // Skip completed projects
     const status = String(assignment?.status || '').toLowerCase();
     if (status === 'completed') return;
 
     const dept = assignment?.departmentKey || 'general';
+    const owner = [assignment?.firstName, assignment?.lastName].filter(Boolean).join(' ').trim();
 
-    // Add the departmental project itself
-    items.push({
-      title: projectTitle,
-      dueWhen: assignment?.dueWhen || null,
-      goal: assignment?.goal || null,
-      kpi: null,
-      source: { type: 'goal', department: dept, goalIndex: aIndex, projectId: assignment._id?.toString() },
-      owner: [assignment?.firstName, assignment?.lastName].filter(Boolean).join(' ').trim(),
-      deliverableCount: Array.isArray(assignment?.deliverables) ? assignment.deliverables.length : 0,
-    });
-
-    // Add deliverables from departmental projects
+    // Get active (non-completed) deliverables
     const deliverables = Array.isArray(assignment?.deliverables) ? assignment.deliverables : [];
-    deliverables.forEach((d, dIndex) => {
+    const activeDeliverables = deliverables.filter(d => {
       const text = String(d?.text || '').trim();
-      if (!text || d?.done) return; // Skip completed deliverables
-
-      items.push({
-        title: text,
-        dueWhen: d?.dueWhen || null,
-        goal: assignment?.goal || null,
-        kpi: d?.kpi || null,
-        source: { type: 'dept_deliverable', department: dept, goalIndex: aIndex, deliverableIndex: dIndex, projectId: assignment._id?.toString() },
-        projectTitle,
-        owner: [assignment?.firstName, assignment?.lastName].filter(Boolean).join(' ').trim(),
-      });
+      return text && !d?.done;
     });
+
+    // If project has active deliverables, track those instead of the project
+    if (activeDeliverables.length > 0) {
+      activeDeliverables.forEach((d) => {
+        const originalIndex = deliverables.indexOf(d);
+        items.push({
+          title: String(d?.text || '').trim(),
+          dueWhen: d?.dueWhen || null,
+          goal: assignment?.goal || null,
+          kpi: d?.kpi || null,
+          source: { type: 'dept_deliverable', department: dept, goalIndex: aIndex, deliverableIndex: originalIndex, projectId: assignment._id?.toString(), deliverableId: d._id?.toString() },
+          projectTitle,
+          owner,
+        });
+      });
+    } else {
+      // No active deliverables - track the project itself
+      items.push({
+        title: projectTitle,
+        dueWhen: assignment?.dueWhen || null,
+        goal: assignment?.goal || null,
+        kpi: null,
+        source: { type: 'goal', department: dept, goalIndex: aIndex, projectId: assignment._id?.toString() },
+        owner,
+        deliverableCount: 0,
+      });
+    }
   });
 
   return items;

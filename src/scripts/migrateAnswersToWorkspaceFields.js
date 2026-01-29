@@ -40,7 +40,7 @@ const FIELDS_TO_MIGRATE = [
   'valuesCore',
   'valuesCoreKeywords',
   'cultureFeeling',
-  // Market
+  // Market (both old and new field names)
   'targetMarket',
   'targetCustomer',
   'marketCustomer',
@@ -48,6 +48,7 @@ const FIELDS_TO_MIGRATE = [
   'partners',
   'partnersDesc',
   'partnersYN',
+  'partnerPrefs',
   'competitorsNotes',
   'compNotes',
   'competitorNames',
@@ -226,6 +227,30 @@ async function migrateOnboarding(ob) {
           ws.fields.set(field, answers[field]);
           fieldsMigrated++;
         }
+      }
+    }
+
+    // Alias old field names to new canonical field names for Market Opportunity
+    // This ensures data migrated with old names is accessible via new names
+    const FIELD_ALIASES = [
+      // [oldName, newCanonicalName]
+      ['custType', 'targetMarket'],
+      ['marketCustomer', 'targetCustomer'],
+      ['partnersDesc', 'partners'],
+      ['compNotes', 'competitorsNotes'],
+    ];
+
+    for (const [oldName, newName] of FIELD_ALIASES) {
+      const oldVal = ws.fields.get(oldName);
+      const newVal = ws.fields.get(newName);
+      const oldHasData = oldVal !== null && oldVal !== undefined && oldVal !== '';
+      const newIsEmpty = newVal === null || newVal === undefined || newVal === '';
+
+      // If old field has data but new field is empty, copy to new field
+      if (oldHasData && newIsEmpty) {
+        ws.fields.set(newName, oldVal);
+        fieldsMigrated++;
+        if (VERBOSE) console.log(`    Aliased ${oldName} → ${newName}`);
       }
     }
 

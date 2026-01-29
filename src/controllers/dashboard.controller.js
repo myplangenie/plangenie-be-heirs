@@ -6,7 +6,7 @@ const DailyWish = require('../models/DailyWish');
 const { hasDepartmentRestriction, filterCompiledPlan, filterActionAssignments } = require('../utils/filterByDepartment');
 const { getWorkspaceFilter, getWorkspaceId, addWorkspaceToDoc } = require('../utils/workspaceQuery');
 const { touchWorkspace } = require('../services/workspaceActivityService');
-const { getWorkspaceFields } = require('../services/workspaceFieldService');
+const { getWorkspaceFields, updateWorkspaceFields } = require('../services/workspaceFieldService');
 const Notification = require('../models/Notification');
 const NotificationSettings = require('../models/NotificationSettings');
 const Department = require('../models/Department');
@@ -20,13 +20,68 @@ const CoreProject = require('../models/CoreProject');
 const DepartmentProject = require('../models/DepartmentProject');
 const financialSnapshotService = require('../services/financialSnapshotService');
 const nodeCrypto = require('crypto');
+const Collaboration = require('../models/Collaboration');
+const { effectivePlan, plans } = require('../config/entitlements');
+const cache = require('../services/cache');
+// CRUD Models for individual data
+const OrgPosition = require('../models/OrgPosition');
+const Product = require('../models/Product');
+const Competitor = require('../models/Competitor');
+const SwotEntry = require('../models/SwotEntry');
 
 // Helper to get workspace fields as an "answers-like" object
-async function getAnswersFromWorkspace(workspaceId) {
+// Now fetches complex data from CRUD models instead of workspace.fields
+async function getAnswersFromWorkspace(workspaceId, userId = null) {
   if (!workspaceId) return {};
+
+  // Fetch text fields from workspace.fields
   const fields = await getWorkspaceFields(workspaceId);
-  // Map to legacy field names for compatibility
+
+  // Build workspace filter for CRUD models
+  const wsFilter = { workspace: workspaceId, isDeleted: false };
+
+  // Fetch complex data from CRUD models in parallel
+  const [orgPositions, products, competitors, swotEntries] = await Promise.all([
+    OrgPosition.find(wsFilter).sort({ order: 1 }).lean().catch(() => []),
+    Product.find(wsFilter).sort({ order: 1 }).lean().catch(() => []),
+    Competitor.find(wsFilter).sort({ order: 1 }).lean().catch(() => []),
+    SwotEntry.find(wsFilter).sort({ order: 1 }).lean().catch(() => []),
+  ]);
+
+  // Map org positions to legacy format
+  const orgPositionsList = orgPositions.map(p => ({
+    id: p._id.toString(),
+    name: p.name || '',
+    email: p.email || '',
+    position: p.position || '',
+    department: p.department || '',
+    status: p.status || 'Active',
+    parentId: p.parentId ? p.parentId.toString() : null,
+  }));
+
+  // Map products to legacy format
+  const productsList = products.map(p => ({
+    id: p._id.toString(),
+    name: p.name || '',
+    description: p.description || '',
+    pricing: p.pricing || '',
+    unitCost: p.unitCost || '',
+    monthlyVolume: p.monthlyVolume || '',
+  }));
+
+  // Map competitors to arrays
+  const competitorNames = competitors.map(c => c.name || '');
+
+  // Group SWOT entries by type
+  const swotByType = { strength: [], weakness: [], opportunity: [], threat: [] };
+  swotEntries.forEach(e => {
+    if (swotByType[e.entryType]) {
+      swotByType[e.entryType].push(e.text);
+    }
+  });
+
   return {
+    // Simple text fields from workspace.fields
     ubp: fields.ubp || '',
     purpose: fields.purpose || '',
     visionBhag: fields.bhag || fields.visionBhag || '',
@@ -61,30 +116,29 @@ async function getAnswersFromWorkspace(workspaceId) {
     finActualMarketing: fields.finActualMarketing || null,
     finActualPayroll: fields.finActualPayroll || null,
     finActualFixed: fields.finActualFixed || null,
-    // Complex objects
+    // Complex objects from workspace.fields (kept for compatibility)
     planProse: fields.planProse || {},
-    orgPositions: fields.orgPositions || [],
-    products: fields.products || [],
-    competitorNames: fields.competitorNames || [],
     actionSections: fields.actionSections || [],
-    // SWOT legacy text
-    swotStrengths: fields.swotStrengths || '',
-    swotWeaknesses: fields.swotWeaknesses || '',
-    swotOpportunities: fields.swotOpportunities || '',
-    swotThreats: fields.swotThreats || '',
     identitySummary: fields.identitySummary || '',
+    // Complex objects from CRUD models
+    orgPositions: orgPositionsList,
+    products: productsList,
+    competitorNames: competitorNames,
+    // SWOT from SwotEntry model
+    swotStrengths: swotByType.strength.join('\n'),
+    swotWeaknesses: swotByType.weakness.join('\n'),
+    swotOpportunities: swotByType.opportunity.join('\n'),
+    swotThreats: swotByType.threat.join('\n'),
   };
 }
 
-// Helper to save answers to Workspace.fields
-async function saveAnswersToWorkspace(workspaceId, updates) {
+// Helper to save text fields to Workspace.fields
+// Complex data (orgPositions, products, competitors, swot) should use CRUD APIs directly
+async function saveTextFieldsToWorkspace(workspaceId, updates) {
   if (!workspaceId) return;
-  const ws = await Workspace.findById(workspaceId);
-  if (!ws) return;
-  if (!ws.fields) ws.fields = new Map();
 
-  // Map legacy field names to new field names
-  const fieldMapping = {
+  // Map legacy field names to new field names (text fields only)
+  const textFieldMapping = {
     ubp: 'ubp',
     purpose: 'purpose',
     visionBhag: 'bhag',
@@ -119,27 +173,147 @@ async function saveAnswersToWorkspace(workspaceId, updates) {
     finActualMarketing: 'finActualMarketing',
     finActualPayroll: 'finActualPayroll',
     finActualFixed: 'finActualFixed',
-    // Complex objects
+    // Objects that stay in workspace.fields
     planProse: 'planProse',
-    orgPositions: 'orgPositions',
-    products: 'products',
-    competitorNames: 'competitorNames',
     actionSections: 'actionSections',
-    // SWOT legacy text
-    swotStrengths: 'swotStrengths',
-    swotWeaknesses: 'swotWeaknesses',
-    swotOpportunities: 'swotOpportunities',
-    swotThreats: 'swotThreats',
     identitySummary: 'identitySummary',
   };
 
+  // Filter to only text fields
+  const textUpdates = {};
   for (const [key, value] of Object.entries(updates)) {
-    const wsKey = fieldMapping[key] || key;
-    ws.fields.set(wsKey, value);
+    const wsKey = textFieldMapping[key];
+    if (wsKey) {
+      textUpdates[wsKey] = value;
+    }
   }
 
-  ws.markModified('fields');
-  await ws.save();
+  if (Object.keys(textUpdates).length > 0) {
+    await updateWorkspaceFields(workspaceId, textUpdates);
+  }
+}
+
+// Helper to save org positions to OrgPosition model
+async function saveOrgPositionsToModel(workspaceId, userId, orgPositions) {
+  if (!workspaceId || !Array.isArray(orgPositions)) return;
+
+  // Get existing positions
+  const existing = await OrgPosition.find({ workspace: workspaceId, isDeleted: false }).lean();
+  const existingIds = new Set(existing.map(p => p._id.toString()));
+
+  // Track which IDs are in the new list
+  const newIds = new Set();
+
+  for (let i = 0; i < orgPositions.length; i++) {
+    const pos = orgPositions[i];
+    const posId = pos.id || pos._id;
+
+    if (posId && existingIds.has(posId.toString())) {
+      // Update existing
+      newIds.add(posId.toString());
+      await OrgPosition.findByIdAndUpdate(posId, {
+        name: pos.name || '',
+        email: pos.email || '',
+        position: pos.position || '',
+        department: pos.department || '',
+        status: pos.status || 'Active',
+        parentId: pos.parentId || null,
+        order: i,
+      });
+    } else {
+      // Create new
+      const created = await OrgPosition.create({
+        workspace: workspaceId,
+        user: userId,
+        name: pos.name || '',
+        email: pos.email || '',
+        position: pos.position || '',
+        department: pos.department || '',
+        status: pos.status || 'Active',
+        parentId: pos.parentId || null,
+        order: i,
+      });
+      newIds.add(created._id.toString());
+    }
+  }
+
+  // Soft delete positions that are no longer in the list
+  for (const ex of existing) {
+    if (!newIds.has(ex._id.toString())) {
+      await OrgPosition.findByIdAndUpdate(ex._id, { isDeleted: true });
+    }
+  }
+}
+
+// Helper to save products to Product model
+async function saveProductsToModel(workspaceId, userId, products) {
+  if (!workspaceId || !Array.isArray(products)) return;
+
+  // Get existing products
+  const existing = await Product.find({ workspace: workspaceId, isDeleted: false }).lean();
+  const existingByName = new Map(existing.map(p => [p.name, p]));
+
+  // Track which names are in the new list
+  const newNames = new Set();
+
+  for (let i = 0; i < products.length; i++) {
+    const prod = products[i];
+    const name = prod.product || prod.name || '';
+    if (!name.trim()) continue;
+
+    newNames.add(name);
+    const existingProd = existingByName.get(name);
+
+    if (existingProd) {
+      // Update existing
+      await Product.findByIdAndUpdate(existingProd._id, {
+        name: name,
+        description: prod.description || '',
+        pricing: prod.pricing || prod.price || '',
+        unitCost: prod.unitCost || '',
+        monthlyVolume: prod.monthlyVolume || '',
+        order: i,
+      });
+    } else {
+      // Create new
+      await Product.create({
+        workspace: workspaceId,
+        user: userId,
+        name: name,
+        description: prod.description || '',
+        pricing: prod.pricing || prod.price || '',
+        unitCost: prod.unitCost || '',
+        monthlyVolume: prod.monthlyVolume || '',
+        order: i,
+      });
+    }
+  }
+
+  // Soft delete products that are no longer in the list
+  for (const ex of existing) {
+    if (!newNames.has(ex.name)) {
+      await Product.findByIdAndUpdate(ex._id, { isDeleted: true });
+    }
+  }
+}
+
+// Legacy wrapper - routes to appropriate save function
+// DEPRECATED: Use saveTextFieldsToWorkspace or CRUD APIs directly
+async function saveAnswersToWorkspace(workspaceId, updates, userId = null) {
+  if (!workspaceId) return;
+
+  // Handle orgPositions via OrgPosition model
+  if (updates.orgPositions && userId) {
+    await saveOrgPositionsToModel(workspaceId, userId, updates.orgPositions);
+  }
+
+  // Handle products via Product model
+  if (updates.products && userId) {
+    await saveProductsToModel(workspaceId, userId, updates.products);
+  }
+
+  // Save text fields to workspace.fields
+  await saveTextFieldsToWorkspace(workspaceId, updates);
 }
 const { PutObjectCommand } = require('@aws-sdk/client-s3');
 const { getR2Client } = require('../config/r2');
@@ -506,8 +680,8 @@ exports.createMember = async (req, res, next) => {
       role: '',
     };
     list.push(entry);
-    // Save to Workspace.fields
-    await saveAnswersToWorkspace(workspaceId, { orgPositions: list });
+    // Save to OrgPosition model via saveAnswersToWorkspace
+    await saveAnswersToWorkspace(workspaceId, { orgPositions: list }, userId);
     const member = {
       mid: id,
       name: entry.name,
@@ -3494,7 +3668,7 @@ exports.saveProducts = async (req, res, next) => {
     if (totalVol > 0) updates.finSalesVolume = String(totalVol);
     if (avgCost > 0) updates.finAvgUnitCost = String(Math.round(avgCost));
     if (marginPct > 0) updates.finTargetProfitMarginPct = String(marginPct);
-    await saveAnswersToWorkspace(workspaceId, updates);
+    await saveAnswersToWorkspace(workspaceId, updates, userId);
     // Update workspace lastActivityAt
     if (workspaceId) touchWorkspace(workspaceId);
     return res.json({ ok: true, items });
@@ -3717,7 +3891,7 @@ exports.getSettings = async (req, res, next) => {
         if (!p.id) { p.id = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`); changed = true; }
       }
       if (changed) {
-        await saveAnswersToWorkspace(workspaceId, { orgPositions: org }).catch(()=>{});
+        await saveAnswersToWorkspace(workspaceId, { orgPositions: org }, userId).catch(()=>{});
       }
       members = org.map((p) => ({
         mid: String(p.id || `${(p.position||'').slice(0,8)}-${(p.name||'').slice(0,8)}`),
@@ -3824,8 +3998,8 @@ exports.updateMember = async (req, res, next) => {
     if (typeof patch.status === 'string') next.status = patch.status;
     if (!next.id) { next.id = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`); }
     list[idx] = next;
-    // Save to Workspace.fields
-    await saveAnswersToWorkspace(workspaceId, { orgPositions: list });
+    // Save to OrgPosition model via saveAnswersToWorkspace
+    await saveAnswersToWorkspace(workspaceId, { orgPositions: list }, userId);
     const member = {
       mid: String(next.id || mid),
       name: next.name || '',
@@ -3859,8 +4033,8 @@ exports.deleteMember = async (req, res, next) => {
         if (String(fallback) === String(mid)) return false;
         return true;
       });
-      // Save to Workspace.fields
-      await saveAnswersToWorkspace(workspaceId, { orgPositions: filtered });
+      // Save to OrgPosition model via saveAnswersToWorkspace
+      await saveAnswersToWorkspace(workspaceId, { orgPositions: filtered }, userId);
       return res.json({ ok: true, removed: before !== filtered.length });
     }
     const result = await TeamMember.deleteOne({ user: userId, mid }).exec();
@@ -4147,6 +4321,144 @@ exports.markWishViewed = async (req, res, next) => {
     }
 
     return res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/dashboard/bootstrap
+// Single endpoint that returns all dashboard initialization data
+// Replaces 6 separate API calls on initial load
+exports.getBootstrap = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = wsFilter.workspace ? String(wsFilter.workspace) : 'default';
+
+    // Try to get from cache first
+    const cacheKey = cache.CACHE_KEYS.userBootstrap(userId, workspaceId);
+    const data = await cache.getOrSet(
+      cacheKey,
+      async () => {
+        // Fetch all data in parallel
+        const [
+          coreProjectsResult,
+          deptProjectsResult,
+          notificationsResult,
+          tourStatusResult,
+          workspacesResult,
+          collabViewablesResult,
+        ] = await Promise.all([
+          // 1. Core projects for current workspace
+          (async () => {
+            const filter = { user: userId, deletedAt: null };
+            if (wsFilter.workspace) filter.workspace = wsFilter.workspace;
+            return CoreProject.find(filter).sort({ order: 1, createdAt: -1 }).lean().exec();
+          })(),
+
+          // 2. Department projects grouped by department
+          (async () => {
+            const filter = { user: userId, deletedAt: null };
+            if (wsFilter.workspace) filter.workspace = wsFilter.workspace;
+            const projects = await DepartmentProject.find(filter).sort({ order: 1, createdAt: -1 }).lean().exec();
+            // Group by department
+            const grouped = {};
+            for (const p of projects) {
+              const key = p.departmentKey || 'other';
+              if (!grouped[key]) grouped[key] = [];
+              grouped[key].push(p);
+            }
+            return grouped;
+          })(),
+
+          // 3. Read notification IDs
+          (async () => {
+            const userDoc = await User.findById(userId).select('readNotificationIds').lean().exec();
+            return userDoc?.readNotificationIds || [];
+          })(),
+
+          // 4. Tour status
+          (async () => {
+            const userDoc = await User.findById(userId).select('toursCompleted').lean().exec();
+            return userDoc?.toursCompleted || {};
+          })(),
+
+          // 5. Workspaces for current user
+          (async () => {
+            let items = await Workspace.find({ user: userId }).sort({ defaultWorkspace: -1, createdAt: -1 }).lean().exec();
+            // Auto-create workspace for existing users who don't have one
+            if (items.length === 0) {
+              try {
+                const [ob, user] = await Promise.all([
+                  Onboarding.findOne({ user: userId }).lean().exec(),
+                  User.findById(userId).lean().exec(),
+                ]);
+                const businessName = ob?.businessProfile?.businessName || user?.companyName || `${user?.firstName || 'My'}'s Workspace`;
+                const industry = ob?.businessProfile?.industry || '';
+                const wid = nodeCrypto.randomBytes(8).toString('hex');
+                const workspace = await Workspace.create({
+                  user: userId,
+                  wid,
+                  name: businessName,
+                  industry,
+                  defaultWorkspace: true,
+                });
+                items = [workspace.toObject()];
+              } catch (autoCreateErr) {
+                console.error('[bootstrap] Auto-create workspace failed:', autoCreateErr?.message || autoCreateErr);
+              }
+            }
+            return items.map((w) => ({
+              _id: w._id,
+              wid: w.wid,
+              name: w.name,
+              industry: w.industry,
+              defaultWorkspace: w.defaultWorkspace,
+            }));
+          })(),
+
+          // 6. Collab viewables (owners this user can view)
+          (async () => {
+            const me = await User.findById(userId).lean().exec();
+            if (!me) return [];
+            const rows = await Collaboration.find({
+              status: 'accepted',
+              $or: [{ viewer: userId }, { collaborator: userId }],
+            }).lean().exec();
+            const ownerIds = Array.from(new Set(rows.map((r) => String(r.owner))));
+            if (ownerIds.length === 0) return [];
+            const owners = await User.find({ _id: { $in: ownerIds } }).lean().exec();
+            return owners.map((o) => {
+              const slug = effectivePlan(o);
+              return {
+                id: String(o._id),
+                name: (o.firstName || o.lastName)
+                  ? `${o.firstName || ''} ${o.lastName || ''}`.trim()
+                  : (o.fullName || o.email),
+                email: o.email,
+                companyName: o.companyName || '',
+                plan: { slug, name: plans[slug]?.name || slug },
+                hasActiveSubscription: !!o.hasActiveSubscription,
+              };
+            });
+          })(),
+        ]);
+
+        return {
+          coreProjects: coreProjectsResult,
+          deptProjects: deptProjectsResult,
+          readNotificationIds: notificationsResult,
+          toursCompleted: tourStatusResult,
+          workspaces: workspacesResult,
+          collabViewables: { owners: collabViewablesResult },
+        };
+      },
+      cache.TTL.MEDIUM // 5 minutes
+    );
+
+    return res.json(data);
   } catch (err) {
     next(err);
   }

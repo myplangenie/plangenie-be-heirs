@@ -1,18 +1,30 @@
 const CoreProject = require('../models/CoreProject');
 const User = require('../models/User');
-const { getWorkspaceFilter, addWorkspaceToDoc } = require('../utils/workspaceQuery');
+const { getWorkspaceFilter, addWorkspaceToDoc, getWorkspaceId } = require('../utils/workspaceQuery');
 const { getLimit } = require('../config/entitlements');
+const cache = require('../services/cache');
 
 /**
  * Get all core projects for the current workspace
  */
 exports.list = async (req, res, next) => {
   try {
+    const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
-    const projects = await CoreProject.find({
-      ...wsFilter,
-      isDeleted: false,
-    }).sort({ order: 1 }).lean();
+    const workspaceId = getWorkspaceId(req) || 'default';
+
+    // Try cache first
+    const cacheKey = cache.CACHE_KEYS.userCoreProjects(userId, workspaceId);
+    const projects = await cache.getOrSet(
+      cacheKey,
+      async () => {
+        return CoreProject.find({
+          ...wsFilter,
+          isDeleted: false,
+        }).sort({ order: 1 }).lean();
+      },
+      cache.TTL.MEDIUM
+    );
 
     return res.json({ projects });
   } catch (err) {
@@ -114,6 +126,10 @@ exports.create = async (req, res, next) => {
 
     const project = await CoreProject.create(projectData);
 
+    // Invalidate cache
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateCoreProjects(userId, workspaceId);
+
     return res.status(201).json({ project, message: 'Project created' });
   } catch (err) {
     next(err);
@@ -183,6 +199,11 @@ exports.update = async (req, res, next) => {
 
     await project.save();
 
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateCoreProjects(userId, workspaceId);
+
     return res.json({ project, message: 'Project updated' });
   } catch (err) {
     next(err);
@@ -209,6 +230,11 @@ exports.delete = async (req, res, next) => {
 
     await project.softDelete();
 
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateCoreProjects(userId, workspaceId);
+
     return res.json({ message: 'Project deleted', id });
   } catch (err) {
     next(err);
@@ -234,6 +260,11 @@ exports.restore = async (req, res, next) => {
     }
 
     await project.restore();
+
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateCoreProjects(userId, workspaceId);
 
     return res.json({ project, message: 'Project restored' });
   } catch (err) {
@@ -277,6 +308,11 @@ exports.addDeliverable = async (req, res, next) => {
     await project.save();
 
     const newDeliverable = project.deliverables[project.deliverables.length - 1];
+
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateCoreProjects(userId, workspaceId);
 
     return res.status(201).json({
       deliverable: newDeliverable,
@@ -322,6 +358,11 @@ exports.updateDeliverable = async (req, res, next) => {
 
     await project.save();
 
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateCoreProjects(userId, workspaceId);
+
     return res.json({ deliverable, project, message: 'Deliverable updated' });
   } catch (err) {
     next(err);
@@ -354,6 +395,11 @@ exports.deleteDeliverable = async (req, res, next) => {
     deliverable.deleteOne();
     await project.save();
 
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateCoreProjects(userId, workspaceId);
+
     return res.json({ message: 'Deliverable deleted', project });
   } catch (err) {
     next(err);
@@ -381,6 +427,11 @@ exports.reorder = async (req, res, next) => {
     );
 
     await Promise.all(updates);
+
+    // Invalidate cache
+    const userId = req.user?.id;
+    const workspaceId = getWorkspaceId(req) || 'default';
+    cache.invalidateCoreProjects(userId, workspaceId);
 
     return res.json({ message: 'Projects reordered' });
   } catch (err) {

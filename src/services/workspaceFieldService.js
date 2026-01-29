@@ -131,6 +131,28 @@ async function getFinancialFields(workspaceId) {
 }
 
 /**
+ * Update workspace fields
+ * @param {string} workspaceId - The workspace ID
+ * @param {Object} updates - Object with field names and values to update
+ * @returns {Promise<void>}
+ */
+async function updateWorkspaceFields(workspaceId, updates) {
+  if (!workspaceId || !updates || Object.keys(updates).length === 0) return;
+
+  const ws = await Workspace.findById(workspaceId);
+  if (!ws) return;
+
+  if (!ws.fields) ws.fields = new Map();
+
+  for (const [key, value] of Object.entries(updates)) {
+    ws.fields.set(key, value);
+  }
+
+  ws.markModified('fields');
+  await ws.save();
+}
+
+/**
  * Build a context object similar to what was previously built from Onboarding.answers
  * This is used by AI controllers and agents
  * @param {string} workspaceId - The workspace ID
@@ -192,5 +214,6 @@ module.exports = {
   getValuesCultureFields,
   getMarketFields,
   getFinancialFields,
+  updateWorkspaceFields,
   buildContextFromWorkspace,
 };

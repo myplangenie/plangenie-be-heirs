@@ -26,6 +26,9 @@ router.use(auth(true));
 router.use(viewAs);
 router.use(workspaceContext);
 
+// Bootstrap - single endpoint for initial dashboard data (replaces 6 API calls)
+router.get('/bootstrap', requireViewer, ctrl.getBootstrap);
+
 // Summary & Insights (read access)
 router.get('/summary', requireViewer, ctrl.getSummary);
 router.get('/insights', requireViewer, ctrl.getInsights);
