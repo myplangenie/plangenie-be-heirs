@@ -79,7 +79,12 @@ exports.list = async (req, res, next) => {
       }
 
       // Try to get industry from onboarding if not set on workspace
-      const industry = ws.industry || ob?.businessProfile?.industry || '';
+      // If industry is "other", use industryOther value instead
+      const bpIndustry = ob?.businessProfile?.industry;
+      const resolvedIndustry = bpIndustry === 'other' && ob?.businessProfile?.industryOther
+        ? ob.businessProfile.industryOther
+        : bpIndustry;
+      const industry = ws.industry || resolvedIndustry || '';
 
       return {
         ...ws,

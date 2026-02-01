@@ -8,6 +8,7 @@ const Product = require('../models/Product');
 const OrgPosition = require('../models/OrgPosition');
 const Competitor = require('../models/Competitor');
 const SwotEntry = require('../models/SwotEntry');
+const FinancialBaseline = require('../models/FinancialBaseline');
 const { getWorkspaceFilter, getWorkspaceId } = require('../utils/workspaceQuery');
 const { getWorkspaceFields } = require('../services/workspaceFieldService');
 
@@ -152,11 +153,12 @@ async function executeFactsPlan({ userId, me, ob, teamMembers, teamMembersCount,
   };
 }
 
-function buildContextText(ob, stats, extras, wsFields = {}) {
+function buildContextText(ob, stats, extras, wsFields = {}, financialBaseline = null) {
   const bp = (ob && ob.businessProfile) || {};
   const up = (ob && ob.userProfile) || {};
   // Use workspace fields instead of ob.answers
   const a = wsFields || {};
+  const fb = financialBaseline || {};
   const fallbackBiz = String(extras?.user?.companyName || '').trim();
   const userFullName = (String(up?.fullName || '').trim()) ||
     ([String(extras?.user?.firstName||'').trim(), String(extras?.user?.lastName||'').trim()].filter(Boolean).join(' ') || String(extras?.user?.fullName||'').trim());
@@ -242,48 +244,88 @@ function buildContextText(ob, stats, extras, wsFields = {}) {
     }
   } catch {}
 
-  // Section: Financial Snapshot
+  // Section: Financial Snapshot (prioritize FinancialBaseline model, fallback to workspace fields)
   const finLines = [];
-  try {
-    const add = (label, v) => { if (typeof v !== 'undefined' && String(v).trim() !== '') finLines.push(`${label}: ${String(v).trim()}`); };
-    add('Projected Sales Volume (M1)', a.finSalesVolume);
-    add('Projected Sales Growth %', a.finSalesGrowthPct);
-    add('Average Unit Cost', a.finAvgUnitCost);
-    add('Fixed Operating Costs (M1)', a.finFixedOperatingCosts);
-    add('Marketing/Sales Spend (M1)', a.finMarketingSalesSpend);
-    add('Payroll Cost (M1)', a.finPayrollCost);
-    add('Starting Cash', a.finStartingCash);
-    add('Additional Funding Amount', a.finAdditionalFundingAmount);
-    add('Additional Funding Month', a.finAdditionalFundingMonth);
-    add('Payment Collection Days', a.finPaymentCollectionDays);
-    add('Target Profit Margin %', a.finTargetProfitMarginPct);
-    add('Nonprofit', a.finIsNonprofit);
-  } catch {}
-  const finText = finLines.length ? `\n\nFinancial Snapshot:\n- ${finLines.join('\n- ')}` : '';
-
-  // Section: Derived Metrics (computed from provided numbers)
   let derivedText = '';
   try {
-    const num = (v) => {
-      const s = String(v ?? '').replace(/[^0-9.\-]/g, '').trim();
-      const n = parseFloat(s);
-      return isFinite(n) ? n : 0;
-    };
-    const vol = num(a.finSalesVolume);
-    const avgUnitCost = num(a.finAvgUnitCost);
-    const fixed = num(a.finFixedOperatingCosts);
-    const mkt = num(a.finMarketingSalesSpend);
-    const pay = num(a.finPayrollCost);
-    const cash = num(a.finStartingCash);
-    const targetMarginPct = num(a.finTargetProfitMarginPct);
-    const burnMonthly = Math.max(0, fixed + mkt + pay);
-    const runwayMonths = burnMonthly > 0 ? (cash / burnMonthly) : 0;
-    const derived = [];
-    if (burnMonthly > 0) derived.push(`Monthly Burn (approx): ${Math.round(burnMonthly)}`);
-    if (cash > 0 && burnMonthly > 0) derived.push(`Runway (months): ${Math.max(0, Math.round(runwayMonths * 10) / 10)}`);
-    if (vol > 0 && avgUnitCost > 0) derived.push(`Unit Cost: ${Math.round(avgUnitCost)} (Volume: ${Math.round(vol)})`);
-    if (targetMarginPct > 0) derived.push(`Target Gross Margin %: ${Math.round(targetMarginPct)}`);
-    if (derived.length) derivedText = `\n\nDerived Metrics (approx):\n- ${derived.join('\n- ')}`;
+    const add = (label, v) => { if (typeof v !== 'undefined' && v !== null && String(v).trim() !== '' && v !== 0) finLines.push(`${label}: ${String(v).trim()}`); };
+    const formatCurrency = (v) => v ? `$${Number(v).toLocaleString()}` : null;
+
+    // Use FinancialBaseline data if available
+    if (fb && fb.revenue) {
+      add('Monthly Revenue', formatCurrency(fb.revenue.totalMonthlyRevenue));
+      add('Monthly Delivery Costs', formatCurrency(fb.revenue.totalMonthlyDeliveryCost));
+      add('Revenue Streams Count', fb.revenue.streamCount);
+    }
+    if (fb && fb.workRelatedCosts) {
+      add('Work-Related Costs (Monthly)', formatCurrency(fb.workRelatedCosts.total));
+      if (fb.workRelatedCosts.contractors) add('  - Contractors', formatCurrency(fb.workRelatedCosts.contractors));
+      if (fb.workRelatedCosts.materials) add('  - Materials', formatCurrency(fb.workRelatedCosts.materials));
+      if (fb.workRelatedCosts.commissions) add('  - Commissions', formatCurrency(fb.workRelatedCosts.commissions));
+      if (fb.workRelatedCosts.shipping) add('  - Shipping', formatCurrency(fb.workRelatedCosts.shipping));
+    }
+    if (fb && fb.fixedCosts) {
+      add('Fixed Costs (Monthly)', formatCurrency(fb.fixedCosts.total));
+      if (fb.fixedCosts.salaries) add('  - Salaries', formatCurrency(fb.fixedCosts.salaries));
+      if (fb.fixedCosts.rent) add('  - Rent', formatCurrency(fb.fixedCosts.rent));
+      if (fb.fixedCosts.software) add('  - Software', formatCurrency(fb.fixedCosts.software));
+      if (fb.fixedCosts.insurance) add('  - Insurance', formatCurrency(fb.fixedCosts.insurance));
+      if (fb.fixedCosts.utilities) add('  - Utilities', formatCurrency(fb.fixedCosts.utilities));
+      if (fb.fixedCosts.marketing) add('  - Marketing', formatCurrency(fb.fixedCosts.marketing));
+    }
+    if (fb && fb.cash) {
+      add('Current Cash Balance', formatCurrency(fb.cash.currentBalance));
+      if (fb.cash.expectedFunding) add('Expected Funding', formatCurrency(fb.cash.expectedFunding));
+      if (fb.cash.fundingDate) add('Funding Expected Date', new Date(fb.cash.fundingDate).toLocaleDateString());
+    }
+    if (fb && fb.metrics) {
+      add('Monthly Net Surplus/Deficit', formatCurrency(fb.metrics.monthlyNetSurplus));
+      add('Gross Profit', formatCurrency(fb.metrics.grossProfit));
+      add('Gross Margin %', fb.metrics.grossMarginPercent ? `${Math.round(fb.metrics.grossMarginPercent)}%` : null);
+      add('Net Margin %', fb.metrics.netMarginPercent ? `${Math.round(fb.metrics.netMarginPercent)}%` : null);
+      add('Monthly Burn Rate', fb.metrics.monthlyBurnRate ? formatCurrency(fb.metrics.monthlyBurnRate) : null);
+      add('Cash Runway', fb.metrics.cashRunwayMonths !== null ? (fb.metrics.cashRunwayMonths >= 999 ? 'Infinite (profitable)' : `${fb.metrics.cashRunwayMonths} months`) : null);
+      add('Break-Even Revenue', formatCurrency(fb.metrics.breakEvenRevenue));
+    }
+
+    // Fallback to legacy workspace fields if no baseline data
+    if (finLines.length === 0) {
+      const addLegacy = (label, v) => { if (typeof v !== 'undefined' && String(v).trim() !== '') finLines.push(`${label}: ${String(v).trim()}`); };
+      addLegacy('Projected Sales Volume (M1)', a.finSalesVolume);
+      addLegacy('Projected Sales Growth %', a.finSalesGrowthPct);
+      addLegacy('Average Unit Cost', a.finAvgUnitCost);
+      addLegacy('Fixed Operating Costs (M1)', a.finFixedOperatingCosts);
+      addLegacy('Marketing/Sales Spend (M1)', a.finMarketingSalesSpend);
+      addLegacy('Payroll Cost (M1)', a.finPayrollCost);
+      addLegacy('Starting Cash', a.finStartingCash);
+      addLegacy('Additional Funding Amount', a.finAdditionalFundingAmount);
+      addLegacy('Additional Funding Month', a.finAdditionalFundingMonth);
+      addLegacy('Payment Collection Days', a.finPaymentCollectionDays);
+      addLegacy('Target Profit Margin %', a.finTargetProfitMarginPct);
+      addLegacy('Nonprofit', a.finIsNonprofit);
+
+      // Derived metrics for legacy data
+      const num = (v) => {
+        const s = String(v ?? '').replace(/[^0-9.\-]/g, '').trim();
+        const n = parseFloat(s);
+        return isFinite(n) ? n : 0;
+      };
+      const vol = num(a.finSalesVolume);
+      const avgUnitCost = num(a.finAvgUnitCost);
+      const fixed = num(a.finFixedOperatingCosts);
+      const mkt = num(a.finMarketingSalesSpend);
+      const pay = num(a.finPayrollCost);
+      const cash = num(a.finStartingCash);
+      const targetMarginPct = num(a.finTargetProfitMarginPct);
+      const burnMonthly = Math.max(0, fixed + mkt + pay);
+      const runwayMonths = burnMonthly > 0 ? (cash / burnMonthly) : 0;
+      const derived = [];
+      if (burnMonthly > 0) derived.push(`Monthly Burn (approx): ${Math.round(burnMonthly)}`);
+      if (cash > 0 && burnMonthly > 0) derived.push(`Runway (months): ${Math.max(0, Math.round(runwayMonths * 10) / 10)}`);
+      if (vol > 0 && avgUnitCost > 0) derived.push(`Unit Cost: ${Math.round(avgUnitCost)} (Volume: ${Math.round(vol)})`);
+      if (targetMarginPct > 0) derived.push(`Target Gross Margin %: ${Math.round(targetMarginPct)}`);
+      if (derived.length) derivedText = `\n\nDerived Metrics (approx):\n- ${derived.join('\n- ')}`;
+    }
   } catch {}
 
   // Section: Core Projects (from new CoreProject model via extras)
@@ -517,8 +559,15 @@ exports.respond = async (req, res) => {
         // Count departments
         const departmentsCount = (departments || []).length;
         stats = { teamMembersCount, departmentsCount, coreProjectsCount, departmentalProjectsCount, productsCount, orgPositionsCount, competitorsCount, swotCount, oneYearGoalsCount, threeYearGoalsCount };
-        // Build context with expanded extras (including new model data)
-        const contextText = buildContextText(ob, stats, { teamMembers, departments, user: me, coreProjects, deptProjects }, a);
+
+        // Fetch financial baseline data
+        let financialBaseline = null;
+        try {
+          financialBaseline = await FinancialBaseline.findOne({ user: userId, workspace: workspaceId }).lean();
+        } catch {}
+
+        // Build context with expanded extras (including new model data and financial baseline)
+        const contextText = buildContextText(ob, stats, { teamMembers, departments, user: me, coreProjects, deptProjects }, a, financialBaseline);
 
         // No regex intercepts — use tool-calling planner pattern below
 
@@ -708,6 +757,42 @@ exports.respond = async (req, res) => {
               return { count: (crudData.products || []).length };
             }
             case 'get_financial_snapshot': {
+              // Prioritize FinancialBaseline model data
+              if (financialBaseline && financialBaseline.revenue) {
+                return {
+                  // Revenue
+                  monthlyRevenue: financialBaseline.revenue.totalMonthlyRevenue || 0,
+                  monthlyDeliveryCost: financialBaseline.revenue.totalMonthlyDeliveryCost || 0,
+                  revenueStreamCount: financialBaseline.revenue.streamCount || 0,
+                  // Work-related costs
+                  workRelatedCostsTotal: financialBaseline.workRelatedCosts?.total || 0,
+                  contractors: financialBaseline.workRelatedCosts?.contractors || 0,
+                  materials: financialBaseline.workRelatedCosts?.materials || 0,
+                  commissions: financialBaseline.workRelatedCosts?.commissions || 0,
+                  shipping: financialBaseline.workRelatedCosts?.shipping || 0,
+                  // Fixed costs
+                  fixedCostsTotal: financialBaseline.fixedCosts?.total || 0,
+                  salaries: financialBaseline.fixedCosts?.salaries || 0,
+                  rent: financialBaseline.fixedCosts?.rent || 0,
+                  software: financialBaseline.fixedCosts?.software || 0,
+                  insurance: financialBaseline.fixedCosts?.insurance || 0,
+                  utilities: financialBaseline.fixedCosts?.utilities || 0,
+                  marketing: financialBaseline.fixedCosts?.marketing || 0,
+                  // Cash
+                  currentCashBalance: financialBaseline.cash?.currentBalance || 0,
+                  expectedFunding: financialBaseline.cash?.expectedFunding || 0,
+                  fundingDate: financialBaseline.cash?.fundingDate || null,
+                  // Metrics
+                  monthlyNetSurplus: financialBaseline.metrics?.monthlyNetSurplus || 0,
+                  grossProfit: financialBaseline.metrics?.grossProfit || 0,
+                  grossMarginPercent: financialBaseline.metrics?.grossMarginPercent || 0,
+                  netMarginPercent: financialBaseline.metrics?.netMarginPercent || 0,
+                  monthlyBurnRate: financialBaseline.metrics?.monthlyBurnRate || 0,
+                  cashRunwayMonths: financialBaseline.metrics?.cashRunwayMonths,
+                  breakEvenRevenue: financialBaseline.metrics?.breakEvenRevenue || 0,
+                };
+              }
+              // Fallback to legacy workspace fields
               return {
                 salesVolume: aAns.finSalesVolume || undefined,
                 salesGrowthPct: aAns.finSalesGrowthPct || undefined,
@@ -866,9 +951,16 @@ exports.respond = async (req, res) => {
       // Non-fatal: if stats fail, continue without them
     }
     // If we couldn't gather expanded data (e.g., unauthenticated), fallback to minimal context
-    const workspaceId = getWorkspaceId(req);
-    const wsFieldsFallback = workspaceId ? await getWorkspaceFields(workspaceId) : {};
-    const contextText = buildContextText(ob, stats, {}, wsFieldsFallback);
+    const wsIdFallback = getWorkspaceId(req);
+    const userIdFallback = req.user?.id;
+    const wsFieldsFallback = wsIdFallback ? await getWorkspaceFields(wsIdFallback) : {};
+    let financialBaselineFallback = null;
+    try {
+      if (userIdFallback && wsIdFallback) {
+        financialBaselineFallback = await FinancialBaseline.findOne({ user: userIdFallback, workspace: wsIdFallback }).lean();
+      }
+    } catch {}
+    const contextText = buildContextText(ob, stats, {}, wsFieldsFallback, financialBaselineFallback);
 
     const todayDateFallback = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const system = [

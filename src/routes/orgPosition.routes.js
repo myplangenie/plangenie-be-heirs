@@ -49,6 +49,7 @@ router.post(
     body('position').notEmpty().trim().withMessage('Position title is required'),
     body('role').optional().trim(),
     body('name').optional().trim(),
+    body('email').optional().trim().isEmail().withMessage('Invalid email format'),
     body('department').optional().trim(),
     body('parentId').optional(),
   ],

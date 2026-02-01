@@ -67,6 +67,7 @@ exports.create = async (req, res, next) => {
       position,
       role,
       name,
+      email,
       department,
       parentId,
     } = req.body;
@@ -82,6 +83,7 @@ exports.create = async (req, res, next) => {
       position: position.trim(),
       role: role?.trim() || undefined,
       name: name?.trim() || undefined,
+      email: email?.trim()?.toLowerCase() || '',
       department: department?.trim() || undefined,
       parentId: parentId || null,
       order,
