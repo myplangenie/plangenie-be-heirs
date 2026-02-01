@@ -49,6 +49,57 @@ function parseLines(str) {
 }
 
 /**
+ * Parse compNotes text to extract competitor data including weDoBetter
+ * Format:
+ *   Competitor Name
+ *   What they do better: advantage text
+ *   What we do better: weDoBetter text
+ *
+ * Blocks separated by double newlines
+ */
+function parseCompNotes(compNotes) {
+  if (!compNotes) return [];
+
+  const blocks = String(compNotes).split(/\n\n+/).filter(b => b.trim());
+  const competitors = [];
+
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length === 0) continue;
+
+    // First line is the competitor name (may have bullet prefix)
+    const name = lines[0].replace(/^[-•*]\s*/, '').trim();
+    if (!name) continue;
+
+    let theyDoBetter = '';
+    let weDoBetter = '';
+
+    // Parse remaining lines for "What they do better" and "What we do better"
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Check for "What they do better:" pattern
+      const theyMatch = line.match(/^what they do better[:\s]*(.*)$/i);
+      if (theyMatch) {
+        theyDoBetter = theyMatch[1].trim();
+        continue;
+      }
+
+      // Check for "What we do better:" pattern
+      const weMatch = line.match(/^what we do better[:\s]*(.*)$/i);
+      if (weMatch) {
+        weDoBetter = weMatch[1].trim();
+        continue;
+      }
+    }
+
+    competitors.push({ name, theyDoBetter, weDoBetter });
+  }
+
+  return competitors;
+}
+
+/**
  * Normalize priority value to lowercase enum
  */
 function normalizePriority(val) {
@@ -190,25 +241,53 @@ async function migrateOnboarding(ob) {
   }
 
   // 4. Migrate Competitors
+  // Try to parse compNotes first to get weDoBetter data, then fall back to arrays
+  const compNotes = answers.compNotes || answers.competitorsNotes || '';
+  const parsedCompetitors = parseCompNotes(compNotes);
   const competitorNames = answers.competitorNames || [];
   const competitorAdvantages = answers.competitorAdvantages || [];
-  if (competitorNames.length > 0) {
+
+  // Determine which source to use
+  const hasCompNotes = parsedCompetitors.length > 0;
+  const hasArrays = competitorNames.length > 0;
+
+  if (hasCompNotes || hasArrays) {
     const existingCompetitors = await Competitor.countDocuments({ ...wsFilter, isDeleted: false });
     if (existingCompetitors === 0) {
-      for (let i = 0; i < competitorNames.length; i++) {
-        const name = competitorNames[i];
-        if (!name?.trim()) continue;
+      if (hasCompNotes) {
+        // Use parsed compNotes (has weDoBetter data)
+        for (let i = 0; i < parsedCompetitors.length; i++) {
+          const c = parsedCompetitors[i];
+          if (!c.name) continue;
 
-        await Competitor.create({
-          workspace: workspaceId,
-          user: userId,
-          name: name.trim(),
-          advantage: competitorAdvantages[i] || '',
-          order: i,
-        });
-        stats.competitors++;
+          await Competitor.create({
+            workspace: workspaceId,
+            user: userId,
+            name: c.name,
+            advantage: c.theyDoBetter || '',
+            weDoBetter: c.weDoBetter || '',
+            order: i,
+          });
+          stats.competitors++;
+        }
+        console.log(`  - Migrated ${stats.competitors} competitors from compNotes (with weDoBetter)`);
+      } else {
+        // Fall back to arrays (no weDoBetter data available)
+        for (let i = 0; i < competitorNames.length; i++) {
+          const name = competitorNames[i];
+          if (!name?.trim()) continue;
+
+          await Competitor.create({
+            workspace: workspaceId,
+            user: userId,
+            name: name.trim(),
+            advantage: competitorAdvantages[i] || '',
+            order: i,
+          });
+          stats.competitors++;
+        }
+        console.log(`  - Migrated ${stats.competitors} competitors from arrays (no weDoBetter)`);
       }
-      console.log(`  - Migrated ${stats.competitors} competitors`);
     } else {
       console.log(`  - Skipping competitors (${existingCompetitors} already exist)`);
     }

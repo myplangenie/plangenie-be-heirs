@@ -26,7 +26,12 @@ exports.getNamesArray = async (req, res, next) => {
     const wsFilter = getWorkspaceFilter(req);
     const names = await Competitor.getNamesArray(wsFilter.workspace);
     const advantages = await Competitor.getAdvantagesArray(wsFilter.workspace);
-    return res.json({ competitorNames: names, competitorAdvantages: advantages });
+    const weDoBetters = await Competitor.getWeDoBettersArray(wsFilter.workspace);
+    return res.json({
+      competitorNames: names,
+      competitorAdvantages: advantages,
+      competitorWeDoBetters: weDoBetters,
+    });
   } catch (err) {
     next(err);
   }
@@ -64,7 +69,7 @@ exports.create = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
 
-    const { name, advantage, website, notes, threatLevel } = req.body;
+    const { name, advantage, weDoBetter, website, notes, threatLevel } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ message: 'Competitor name is required' });
@@ -76,6 +81,7 @@ exports.create = async (req, res, next) => {
       user: userId,
       name: name.trim(),
       advantage: advantage?.trim() || undefined,
+      weDoBetter: weDoBetter?.trim() || undefined,
       website: website?.trim() || undefined,
       notes: notes?.trim() || undefined,
       threatLevel: threatLevel || null,
@@ -108,10 +114,11 @@ exports.update = async (req, res, next) => {
       return res.status(404).json({ message: 'Competitor not found' });
     }
 
-    const { name, advantage, website, notes, threatLevel, order } = req.body;
+    const { name, advantage, weDoBetter, website, notes, threatLevel, order } = req.body;
 
     if (name !== undefined) competitor.name = name.trim();
     if (advantage !== undefined) competitor.advantage = advantage?.trim() || undefined;
+    if (weDoBetter !== undefined) competitor.weDoBetter = weDoBetter?.trim() || undefined;
     if (website !== undefined) competitor.website = website?.trim() || undefined;
     if (notes !== undefined) competitor.notes = notes?.trim() || undefined;
     if (threatLevel !== undefined) competitor.threatLevel = threatLevel || null;
@@ -225,6 +232,7 @@ exports.bulkCreate = async (req, res, next) => {
         user: userId,
         name: (name || '').trim(),
         advantage: typeof c === 'object' ? c.advantage?.trim() : undefined,
+        weDoBetter: typeof c === 'object' ? c.weDoBetter?.trim() : undefined,
         website: typeof c === 'object' ? c.website?.trim() : undefined,
         notes: typeof c === 'object' ? c.notes?.trim() : undefined,
         threatLevel: typeof c === 'object' ? c.threatLevel : null,

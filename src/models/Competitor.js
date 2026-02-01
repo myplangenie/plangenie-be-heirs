@@ -31,6 +31,11 @@ const CompetitorSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  // What we do better than this competitor (our advantage)
+  weDoBetter: {
+    type: String,
+    trim: true,
+  },
   // Website URL
   website: {
     type: String,
@@ -105,6 +110,15 @@ CompetitorSchema.statics.getAdvantagesArray = async function(workspaceId) {
     isDeleted: false,
   }).sort({ order: 1 }).lean();
   return competitors.map(c => c.advantage || '');
+};
+
+// Static method to get weDoBetter as array
+CompetitorSchema.statics.getWeDoBettersArray = async function(workspaceId) {
+  const competitors = await this.find({
+    workspace: workspaceId,
+    isDeleted: false,
+  }).sort({ order: 1 }).lean();
+  return competitors.map(c => c.weDoBetter || '');
 };
 
 module.exports = mongoose.model('Competitor', CompetitorSchema);
