@@ -9,6 +9,7 @@ const OrgPosition = require('../models/OrgPosition');
 const Competitor = require('../models/Competitor');
 const SwotEntry = require('../models/SwotEntry');
 const FinancialBaseline = require('../models/FinancialBaseline');
+const Collaboration = require('../models/Collaboration');
 const { getWorkspaceFilter, getWorkspaceId } = require('../utils/workspaceQuery');
 const { getWorkspaceFields } = require('../services/workspaceFieldService');
 
@@ -166,14 +167,19 @@ function buildContextText(ob, stats, extras, wsFields = {}, financialBaseline = 
   // Section: Business & User Profile
   const profileLines = [
     (bp.businessName || fallbackBiz) && `Business Name: ${bp.businessName || fallbackBiz}`,
+    bp.businessWebsite && `Website: ${bp.businessWebsite}`,
     bp.industry && `Industry: ${bp.industry}`,
     bp.city && bp.country && `Location: ${bp.city}, ${bp.country}`,
     bp.ventureType && `Venture Type: ${bp.ventureType}`,
     bp.teamSize && `Team Size: ${bp.teamSize}`,
     bp.businessStage && `Stage: ${bp.businessStage}`,
+    typeof bp.funding === 'boolean' && `Has Funding: ${bp.funding ? 'Yes' : 'No'}`,
+    Array.isArray(bp.tools) && bp.tools.length > 0 && `Tools Used: ${bp.tools.join(', ')}`,
     bp.description && `Business Profile Description: ${String(bp.description).trim()}`,
     up.role && `User Role: ${up.role}`,
     userFullName && `User Name: ${userFullName}`,
+    up.planningGoal && `Planning Goal: ${up.planningGoal}`,
+    typeof up.builtPlanBefore === 'boolean' && `Has Built Plan Before: ${up.builtPlanBefore ? 'Yes' : 'No'}`,
     typeof stats?.teamMembersCount === 'number' && `Active Team Members: ${stats.teamMembersCount}`,
     typeof stats?.departmentsCount === 'number' && `Departments: ${stats.departmentsCount}`,
     typeof stats?.coreProjectsCount === 'number' && `Core Projects: ${stats.coreProjectsCount}`,
@@ -184,6 +190,7 @@ function buildContextText(ob, stats, extras, wsFields = {}, financialBaseline = 
     typeof stats?.swotCount === 'number' && stats.swotCount > 0 && `SWOT Entries: ${stats.swotCount}`,
     typeof stats?.oneYearGoalsCount === 'number' && stats.oneYearGoalsCount > 0 && `1-Year Goals: ${stats.oneYearGoalsCount}`,
     typeof stats?.threeYearGoalsCount === 'number' && stats.threeYearGoalsCount > 0 && `3-Year Goals: ${stats.threeYearGoalsCount}`,
+    typeof stats?.collaboratorsCount === 'number' && `Collaborators: ${stats.collaboratorsCount}`,
   ].filter(Boolean);
   const profileText = profileLines.length ? `Context about the business:\n- ${profileLines.join('\n- ')}` : '';
 
@@ -244,7 +251,7 @@ function buildContextText(ob, stats, extras, wsFields = {}, financialBaseline = 
     }
   } catch {}
 
-  // Section: Financial Snapshot (prioritize FinancialBaseline model, fallback to workspace fields)
+  // Section: Financial Snapshot (from FinancialBaseline model only)
   const finLines = [];
   let derivedText = '';
   try {
@@ -288,45 +295,11 @@ function buildContextText(ob, stats, extras, wsFields = {}, financialBaseline = 
       add('Break-Even Revenue', formatCurrency(fb.metrics.breakEvenRevenue));
     }
 
-    // Fallback to legacy workspace fields if no baseline data
-    if (finLines.length === 0) {
-      const addLegacy = (label, v) => { if (typeof v !== 'undefined' && String(v).trim() !== '') finLines.push(`${label}: ${String(v).trim()}`); };
-      addLegacy('Projected Sales Volume (M1)', a.finSalesVolume);
-      addLegacy('Projected Sales Growth %', a.finSalesGrowthPct);
-      addLegacy('Average Unit Cost', a.finAvgUnitCost);
-      addLegacy('Fixed Operating Costs (M1)', a.finFixedOperatingCosts);
-      addLegacy('Marketing/Sales Spend (M1)', a.finMarketingSalesSpend);
-      addLegacy('Payroll Cost (M1)', a.finPayrollCost);
-      addLegacy('Starting Cash', a.finStartingCash);
-      addLegacy('Additional Funding Amount', a.finAdditionalFundingAmount);
-      addLegacy('Additional Funding Month', a.finAdditionalFundingMonth);
-      addLegacy('Payment Collection Days', a.finPaymentCollectionDays);
-      addLegacy('Target Profit Margin %', a.finTargetProfitMarginPct);
-      addLegacy('Nonprofit', a.finIsNonprofit);
-
-      // Derived metrics for legacy data
-      const num = (v) => {
-        const s = String(v ?? '').replace(/[^0-9.\-]/g, '').trim();
-        const n = parseFloat(s);
-        return isFinite(n) ? n : 0;
-      };
-      const vol = num(a.finSalesVolume);
-      const avgUnitCost = num(a.finAvgUnitCost);
-      const fixed = num(a.finFixedOperatingCosts);
-      const mkt = num(a.finMarketingSalesSpend);
-      const pay = num(a.finPayrollCost);
-      const cash = num(a.finStartingCash);
-      const targetMarginPct = num(a.finTargetProfitMarginPct);
-      const burnMonthly = Math.max(0, fixed + mkt + pay);
-      const runwayMonths = burnMonthly > 0 ? (cash / burnMonthly) : 0;
-      const derived = [];
-      if (burnMonthly > 0) derived.push(`Monthly Burn (approx): ${Math.round(burnMonthly)}`);
-      if (cash > 0 && burnMonthly > 0) derived.push(`Runway (months): ${Math.max(0, Math.round(runwayMonths * 10) / 10)}`);
-      if (vol > 0 && avgUnitCost > 0) derived.push(`Unit Cost: ${Math.round(avgUnitCost)} (Volume: ${Math.round(vol)})`);
-      if (targetMarginPct > 0) derived.push(`Target Gross Margin %: ${Math.round(targetMarginPct)}`);
-      if (derived.length) derivedText = `\n\nDerived Metrics (approx):\n- ${derived.join('\n- ')}`;
-    }
+    // No legacy fallback - only use FinancialBaseline data
   } catch {}
+
+  // Create finText from finLines
+  const finText = finLines.length ? `\n\nFinancial Snapshot:\n- ${finLines.join('\n- ')}` : '';
 
   // Section: Core Projects (from new CoreProject model via extras)
   let coreProjectsText = '';
@@ -488,14 +461,14 @@ exports.respond = async (req, res) => {
     // Derive simple, real user stats to ground AI responses
     let stats = {};
     // Store fetched data from new CRUD models for use in tool calls
-    let crudData = { coreProjects: [], deptProjects: [], products: [], orgPositions: [], competitors: [], swotEntries: [] };
+    let crudData = { coreProjects: [], deptProjects: [], products: [], orgPositions: [], competitors: [], swotEntries: [], collaborations: [] };
     try {
       if (userId) {
         const workspaceId = getWorkspaceId(req);
         const crudFilter = { user: userId, isDeleted: { $ne: true } };
         if (workspaceId) crudFilter.workspace = workspaceId;
 
-        let [me, teamMembersCount, teamMembers, departments, coreProjects, deptProjects, products, orgPositions, competitors, swotEntries] = await Promise.all([
+        let [me, teamMembersCount, teamMembers, departments, coreProjects, deptProjects, products, orgPositions, competitors, swotEntries, collaborations] = await Promise.all([
           User.findById(userId).lean().exec(),
           TeamMember.countDocuments({ ...wsFilter, status: 'Active' }).exec(),
           TeamMember.find({ ...wsFilter, status: 'Active' }).select('name email role department status').limit(200).lean().exec(),
@@ -507,10 +480,12 @@ exports.respond = async (req, res) => {
           OrgPosition.find(crudFilter).sort({ order: 1 }).lean(),
           Competitor.find(crudFilter).sort({ order: 1 }).lean(),
           SwotEntry.find(crudFilter).sort({ order: 1 }).lean(),
+          // Collaborators (people invited to the workspace)
+          Collaboration.find({ owner: userId, status: 'accepted' }).populate('collaborator', 'firstName lastName email').lean(),
         ]);
 
         // Store for use in runTool
-        crudData = { coreProjects: coreProjects || [], deptProjects: deptProjects || [], products: products || [], orgPositions: orgPositions || [], competitors: competitors || [], swotEntries: swotEntries || [] };
+        crudData = { coreProjects: coreProjects || [], deptProjects: deptProjects || [], products: products || [], orgPositions: orgPositions || [], competitors: competitors || [], swotEntries: swotEntries || [], collaborations: collaborations || [] };
 
         // Read from Workspace.fields instead of Onboarding.answers
         const a = await getWorkspaceFields(workspaceId);
@@ -552,18 +527,23 @@ exports.respond = async (req, res) => {
         const orgPositionsCount = orgPositions.length;
         const competitorsCount = competitors.length;
         const swotCount = swotEntries.length;
+        const collaboratorsCount = (collaborations || []).length;
         // Count 1-year goals
         const oneYearGoalsCount = String(a.vision1y || '').trim().split('\n').filter(Boolean).length;
         // Count 3-year goals
         const threeYearGoalsCount = String(a.vision3y || '').trim().split('\n').filter(Boolean).length;
         // Count departments
         const departmentsCount = (departments || []).length;
-        stats = { teamMembersCount, departmentsCount, coreProjectsCount, departmentalProjectsCount, productsCount, orgPositionsCount, competitorsCount, swotCount, oneYearGoalsCount, threeYearGoalsCount };
+        stats = { teamMembersCount, departmentsCount, coreProjectsCount, departmentalProjectsCount, productsCount, orgPositionsCount, competitorsCount, swotCount, oneYearGoalsCount, threeYearGoalsCount, collaboratorsCount };
 
-        // Fetch financial baseline data
+        // Fetch financial baseline data (use getOrCreate and sync to match financials page)
         let financialBaseline = null;
         try {
-          financialBaseline = await FinancialBaseline.findOne({ user: userId, workspace: workspaceId }).lean();
+          const baseline = await FinancialBaseline.getOrCreate(userId, workspaceId);
+          // Sync revenue from streams to ensure fresh data (like financials page does)
+          await baseline.syncRevenueFromStreams();
+          await baseline.save();
+          financialBaseline = baseline.toObject();
         } catch {}
 
         // Build context with expanded extras (including new model data and financial baseline)
@@ -588,13 +568,14 @@ exports.respond = async (req, res) => {
           `Today's date is ${todayDate}.`,
           'Be concise, human, and specific. Avoid buzzwords.',
           'Ground every answer in the provided business context and the conversation. Do not invent facts or numbers.',
-          'If a detail is missing from context, say what is missing and ask a concise follow-up question.',
+          'IMPORTANT: Information from your previous responses in this conversation is valid context. If you listed projects, team members, or other data earlier in the conversation, you can reference that information when answering follow-up questions.',
+          'If a detail is missing from both the provided context AND the conversation history, say what is missing and ask a concise follow-up question.',
           'When giving recommendations, explicitly reference the business name and/or industry when known.',
           'Treat any numeric counts in the context (e.g., Active Team Members) as the source of truth; do not contradict them.',
           'Prefer concrete, prioritized bullet points tied to departments, projects, team members, KPIs, and upcoming deadlines from the context.',
           'Do not provide generic templates or boilerplate. Keep advice specific to this business.',
           'Never mention that you are an AI model.',
-          'Never output example or placeholder names; only use names enumerated in the context.',
+          'Never output example or placeholder names; only use names enumerated in the context or mentioned in prior conversation messages.',
           'If team member names are not in context, do not guess; state that they are not provided.',
         ].join(' ');
 
@@ -606,8 +587,8 @@ exports.respond = async (req, res) => {
           }));
         // TOOL CALLING: Let the model decide which DB-backed tools to call, then answer with verified facts
         const tools = [
-          { type: 'function', function: { name: 'get_user_profile', description: 'Get user profile (name, email, role).', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
-          { type: 'function', function: { name: 'get_business_profile', description: 'Get business profile (name, industry, location).', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_user_profile', description: 'Get user profile from onboarding (name, email, role, planning goal, planning preferences).', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_business_profile', description: 'Get business profile from onboarding (name, website, industry, stage, location, venture type, team size, funding status, tools, description).', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_team_members_count', description: 'Get count of active team members.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_team_members', description: 'List active team members.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_departments_count', description: 'Get count of departments.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
@@ -630,6 +611,8 @@ exports.respond = async (req, res) => {
           { type: 'function', function: { name: 'get_upcoming_tasks', description: 'Get tasks and deadlines due in the future (not yet overdue).', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 100 }, days: { type: 'number', description: 'Optional: only include tasks due within this many days' } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_swot_analysis', description: 'Get SWOT analysis (strengths, weaknesses, opportunities, threats).', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_competitors', description: 'Get list of competitors with their advantages.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 20 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_collaborators', description: 'Get list of collaborators (people invited to collaborate on the workspace/team).', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_collaborators_count', description: 'Get count of collaborators on the team.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
         ];
 
         // 'a' contains workspace fields from above
@@ -672,9 +655,34 @@ exports.respond = async (req, res) => {
           switch (name) {
             case 'get_user_profile': {
               const full = [String(me?.firstName||'').trim(), String(me?.lastName||'').trim()].filter(Boolean).join(' ') || String(me?.fullName||'').trim();
-              return { name: full || undefined, email: me?.email || undefined, role: ob?.userProfile?.role || undefined };
+              const up = ob?.userProfile || {};
+              return {
+                name: full || up.fullName || undefined,
+                email: me?.email || undefined,
+                role: up.role || undefined,
+                builtPlanBefore: up.builtPlanBefore,
+                planningGoal: up.planningGoal || undefined,
+                includePersonalPlanning: up.includePersonalPlanning,
+                planningFor: up.planningFor || undefined,
+              };
             }
-            case 'get_business_profile': { const bp = ob?.businessProfile || {}; return { name: bp.businessName || me?.companyName || undefined, industry: bp.industry || undefined, location: [bp.city, bp.country].filter(Boolean).join(', ') || undefined }; }
+            case 'get_business_profile': {
+              const bp = ob?.businessProfile || {};
+              return {
+                name: bp.businessName || me?.companyName || undefined,
+                website: bp.businessWebsite || undefined,
+                industry: bp.industry || undefined,
+                businessStage: bp.businessStage || undefined,
+                location: [bp.city, bp.country].filter(Boolean).join(', ') || undefined,
+                city: bp.city || undefined,
+                country: bp.country || undefined,
+                ventureType: bp.ventureType || undefined,
+                teamSize: bp.teamSize || undefined,
+                hasFunding: bp.funding,
+                tools: Array.isArray(bp.tools) ? bp.tools : undefined,
+                description: bp.description || undefined,
+              };
+            }
             case 'get_team_members_count': return { count: teamMembersCount || 0 };
             case 'get_team_members': { const limit = limitNum(args?.limit, 20, 200); return { list: (teamMembers || []).slice(0, limit).map((t)=>({ name: t?.name||'', role: t?.role||'', department: t?.department||'', email: t?.email||'' })) }; }
             case 'get_departments_count': return { count: (departments || []).length };
@@ -757,55 +765,41 @@ exports.respond = async (req, res) => {
               return { count: (crudData.products || []).length };
             }
             case 'get_financial_snapshot': {
-              // Prioritize FinancialBaseline model data
-              if (financialBaseline && financialBaseline.revenue) {
-                return {
-                  // Revenue
-                  monthlyRevenue: financialBaseline.revenue.totalMonthlyRevenue || 0,
-                  monthlyDeliveryCost: financialBaseline.revenue.totalMonthlyDeliveryCost || 0,
-                  revenueStreamCount: financialBaseline.revenue.streamCount || 0,
-                  // Work-related costs
-                  workRelatedCostsTotal: financialBaseline.workRelatedCosts?.total || 0,
-                  contractors: financialBaseline.workRelatedCosts?.contractors || 0,
-                  materials: financialBaseline.workRelatedCosts?.materials || 0,
-                  commissions: financialBaseline.workRelatedCosts?.commissions || 0,
-                  shipping: financialBaseline.workRelatedCosts?.shipping || 0,
-                  // Fixed costs
-                  fixedCostsTotal: financialBaseline.fixedCosts?.total || 0,
-                  salaries: financialBaseline.fixedCosts?.salaries || 0,
-                  rent: financialBaseline.fixedCosts?.rent || 0,
-                  software: financialBaseline.fixedCosts?.software || 0,
-                  insurance: financialBaseline.fixedCosts?.insurance || 0,
-                  utilities: financialBaseline.fixedCosts?.utilities || 0,
-                  marketing: financialBaseline.fixedCosts?.marketing || 0,
-                  // Cash
-                  currentCashBalance: financialBaseline.cash?.currentBalance || 0,
-                  expectedFunding: financialBaseline.cash?.expectedFunding || 0,
-                  fundingDate: financialBaseline.cash?.fundingDate || null,
-                  // Metrics
-                  monthlyNetSurplus: financialBaseline.metrics?.monthlyNetSurplus || 0,
-                  grossProfit: financialBaseline.metrics?.grossProfit || 0,
-                  grossMarginPercent: financialBaseline.metrics?.grossMarginPercent || 0,
-                  netMarginPercent: financialBaseline.metrics?.netMarginPercent || 0,
-                  monthlyBurnRate: financialBaseline.metrics?.monthlyBurnRate || 0,
-                  cashRunwayMonths: financialBaseline.metrics?.cashRunwayMonths,
-                  breakEvenRevenue: financialBaseline.metrics?.breakEvenRevenue || 0,
-                };
+              // Use FinancialBaseline model data only (no legacy fallback)
+              if (!financialBaseline) {
+                return { message: 'No financial data available. Please set up financials in the Financials page.' };
               }
-              // Fallback to legacy workspace fields
               return {
-                salesVolume: aAns.finSalesVolume || undefined,
-                salesGrowthPct: aAns.finSalesGrowthPct || undefined,
-                avgUnitCost: aAns.finAvgUnitCost || undefined,
-                fixedOperatingCosts: aAns.finFixedOperatingCosts || undefined,
-                marketingSalesSpend: aAns.finMarketingSalesSpend || undefined,
-                payrollCost: aAns.finPayrollCost || undefined,
-                startingCash: aAns.finStartingCash || undefined,
-                additionalFundingAmount: aAns.finAdditionalFundingAmount || undefined,
-                additionalFundingMonth: aAns.finAdditionalFundingMonth || undefined,
-                paymentCollectionDays: aAns.finPaymentCollectionDays || undefined,
-                targetProfitMarginPct: aAns.finTargetProfitMarginPct || undefined,
-                isNonprofit: aAns.finIsNonprofit || undefined,
+                // Revenue
+                monthlyRevenue: financialBaseline.revenue?.totalMonthlyRevenue || 0,
+                monthlyDeliveryCost: financialBaseline.revenue?.totalMonthlyDeliveryCost || 0,
+                revenueStreamCount: financialBaseline.revenue?.streamCount || 0,
+                // Work-related costs
+                workRelatedCostsTotal: financialBaseline.workRelatedCosts?.total || 0,
+                contractors: financialBaseline.workRelatedCosts?.contractors || 0,
+                materials: financialBaseline.workRelatedCosts?.materials || 0,
+                commissions: financialBaseline.workRelatedCosts?.commissions || 0,
+                shipping: financialBaseline.workRelatedCosts?.shipping || 0,
+                // Fixed costs
+                fixedCostsTotal: financialBaseline.fixedCosts?.total || 0,
+                salaries: financialBaseline.fixedCosts?.salaries || 0,
+                rent: financialBaseline.fixedCosts?.rent || 0,
+                software: financialBaseline.fixedCosts?.software || 0,
+                insurance: financialBaseline.fixedCosts?.insurance || 0,
+                utilities: financialBaseline.fixedCosts?.utilities || 0,
+                marketing: financialBaseline.fixedCosts?.marketing || 0,
+                // Cash
+                currentCashBalance: financialBaseline.cash?.currentBalance || 0,
+                expectedFunding: financialBaseline.cash?.expectedFunding || 0,
+                fundingDate: financialBaseline.cash?.fundingDate || null,
+                // Metrics
+                monthlyNetSurplus: financialBaseline.metrics?.monthlyNetSurplus || 0,
+                grossProfit: financialBaseline.metrics?.grossProfit || 0,
+                grossMarginPercent: financialBaseline.metrics?.grossMarginPercent || 0,
+                netMarginPercent: financialBaseline.metrics?.netMarginPercent || 0,
+                monthlyBurnRate: financialBaseline.metrics?.monthlyBurnRate || 0,
+                cashRunwayMonths: financialBaseline.metrics?.cashRunwayMonths,
+                breakEvenRevenue: financialBaseline.metrics?.breakEvenRevenue || 0,
               };
             }
             case 'get_vision_and_goals': {
@@ -915,6 +909,26 @@ exports.respond = async (req, res) => {
                 }))
               };
             }
+            case 'get_collaborators': {
+              const limit = limitNum(args?.limit, 20, 50);
+              const collabs = crudData.collaborations || [];
+              return {
+                count: collabs.length,
+                list: collabs.slice(0, limit).map((c) => {
+                  const collab = c?.collaborator || {};
+                  return {
+                    name: [String(collab?.firstName || '').trim(), String(collab?.lastName || '').trim()].filter(Boolean).join(' ') || undefined,
+                    email: String(c?.email || collab?.email || '').trim() || undefined,
+                    accessType: c?.accessType || 'admin',
+                    departments: Array.isArray(c?.departments) ? c.departments : [],
+                    acceptedAt: c?.acceptedAt || undefined,
+                  };
+                })
+              };
+            }
+            case 'get_collaborators_count': {
+              return { count: (crudData.collaborations || []).length };
+            }
             default: return {};
           }
         };
@@ -957,7 +971,10 @@ exports.respond = async (req, res) => {
     let financialBaselineFallback = null;
     try {
       if (userIdFallback && wsIdFallback) {
-        financialBaselineFallback = await FinancialBaseline.findOne({ user: userIdFallback, workspace: wsIdFallback }).lean();
+        const baseline = await FinancialBaseline.getOrCreate(userIdFallback, wsIdFallback);
+        await baseline.syncRevenueFromStreams();
+        await baseline.save();
+        financialBaselineFallback = baseline.toObject();
       }
     } catch {}
     const contextText = buildContextText(ob, stats, {}, wsFieldsFallback, financialBaselineFallback);
@@ -968,12 +985,13 @@ exports.respond = async (req, res) => {
       `Today's date is ${todayDateFallback}.`,
       'Be concise, human, and specific. Avoid buzzwords.',
       'Use provided context if relevant; never contradict it.',
+      'IMPORTANT: Information from your previous responses in this conversation is valid context. If you listed projects, team members, or other data earlier in the conversation, you can reference that information when answering follow-up questions.',
       'When giving recommendations, explicitly reference the business name and/or industry when known.',
       'Treat any numeric counts in the context (e.g., Active Team Members) as the source of truth; do not contradict them.',
       'Prefer concrete, prioritized bullet points tied to departments, projects, team members, KPIs, and upcoming deadlines from the context.',
       'Do not provide generic templates or boilerplate. Keep advice specific to this business.',
       'Never mention that you are an AI model.',
-      'Never output example or placeholder names; only use names enumerated in the context.',
+      'Never output example or placeholder names; only use names enumerated in the context or mentioned in prior conversation messages.',
       'If team member names are not in context, do not guess; state that they are not provided.',
     ].join(' ');
 
