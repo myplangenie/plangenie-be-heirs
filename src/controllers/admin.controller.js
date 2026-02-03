@@ -506,13 +506,28 @@ exports.bulkDeleteUsers = async (req, res) => {
   }
 
   // Validate all IDs
-  const mongoose = require('mongoose');
   const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
   if (invalidIds.length > 0) {
     return res.status(400).json({ message: `Invalid IDs: ${invalidIds.join(', ')}` });
   }
 
+  console.log(`[bulkDeleteUsers] Attempting to delete ${ids.length} users:`, ids);
+
+  // First, verify which users actually exist
+  const existingUsers = await User.find({ _id: { $in: ids } }).select('_id email').lean().exec();
+  const existingIds = new Set(existingUsers.map(u => String(u._id)));
+
+  console.log(`[bulkDeleteUsers] Found ${existingUsers.length} existing users out of ${ids.length} requested`);
+
   const results = { deleted: [], failed: [] };
+
+  // Mark non-existent users as failed immediately
+  for (const id of ids) {
+    if (!existingIds.has(id)) {
+      console.log(`[bulkDeleteUsers] User ${id} not found in database`);
+      results.failed.push({ id, reason: 'Not found' });
+    }
+  }
 
   // Models to clean for each user
   const modelsToClean = [
@@ -548,14 +563,10 @@ exports.bulkDeleteUsers = async (req, res) => {
     'FinancialBaseline',
   ];
 
-  for (const id of ids) {
+  // Only process users that exist
+  for (const user of existingUsers) {
+    const id = String(user._id);
     try {
-      const user = await User.findById(id);
-      if (!user) {
-        results.failed.push({ id, reason: 'Not found' });
-        continue;
-      }
-
       // Delete collaborations
       try {
         await Collaboration.deleteMany({ $or: [{ owner: id }, { viewer: id }, { collaborator: id }] });
@@ -571,9 +582,11 @@ exports.bulkDeleteUsers = async (req, res) => {
 
       // Delete the user
       await User.deleteOne({ _id: id });
-      await log('User deleted (bulk)', 'warning', user.email, { userId: String(user._id) });
+      await log('User deleted (bulk)', 'warning', user.email, { userId: id });
+      console.log(`[bulkDeleteUsers] Successfully deleted user ${id} (${user.email})`);
       results.deleted.push({ id, email: user.email });
     } catch (e) {
+      console.error(`[bulkDeleteUsers] Error deleting user ${id}:`, e?.message || e);
       results.failed.push({ id, reason: e?.message || 'Unknown error' });
     }
   }
