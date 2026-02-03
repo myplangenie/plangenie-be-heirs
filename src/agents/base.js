@@ -305,7 +305,7 @@ async function callOpenAI(prompt, options = {}) {
     model = 'gpt-4o-mini',
     temperature = 0.7,
     maxTokens = 1500,
-    systemPrompt = 'You are an expert business advisor helping entrepreneurs build and execute their business plans.',
+    systemPrompt = 'You are a business transformation strategist who provides SPECIFIC, ACTIONABLE guidance. Every recommendation must include a concrete action the user can take TODAY. No generic advice - reference their specific business data, industry, and goals. Be concise and direct. End every insight with a clear next step.',
   } = options;
 
   const openai = getOpenAI();

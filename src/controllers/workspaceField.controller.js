@@ -141,6 +141,8 @@ exports.getField = async (req, res, next) => {
  * Update a single field value
  * PATCH /api/workspace-fields/:fieldName
  * Body: { value: any }
+ *
+ * Uses atomic $set to avoid race conditions when multiple fields are updated in parallel
  */
 exports.updateField = async (req, res, next) => {
   try {
@@ -157,29 +159,26 @@ exports.updateField = async (req, res, next) => {
     }
 
     const workspaceId = getWorkspaceId(req);
+
+    // Ensure workspace exists (will create if needed)
     const ws = await getOrCreateWorkspace(userId, workspaceId);
 
-    // Initialize fields Map if needed
-    if (!ws.fields) {
-      ws.fields = new Map();
-    }
-
-    // Update the specific field
-    const oldValue = ws.fields.get(fieldName);
-    ws.fields.set(fieldName, value);
-
-    // Mark fields as modified for Mongoose
-    ws.markModified('fields');
-    await ws.save();
+    // Use atomic $set to update only this field, avoiding race conditions
+    // when multiple fields are updated in parallel via Promise.all()
+    const updatedWs = await Workspace.findByIdAndUpdate(
+      ws._id,
+      { $set: { [`fields.${fieldName}`]: value } },
+      { new: true } // Return the updated document
+    );
 
     // Update workspace lastActivityAt
     touchWorkspace(ws._id);
 
-    console.log(`[updateField] user=${userId} workspace=${workspaceId} field=${fieldName} oldLen=${JSON.stringify(oldValue || '').length} newLen=${JSON.stringify(value || '').length}`);
+    console.log(`[updateField] user=${userId} workspace=${ws._id} field=${fieldName} valueLen=${String(value || '').length}`);
 
     return res.json({
       field: fieldName,
-      value: ws.fields.get(fieldName),
+      value: updatedWs?.fields?.get(fieldName) ?? value,
       message: `Field '${fieldName}' updated`,
     });
   } catch (err) {

@@ -227,64 +227,41 @@ async function generateAIInsights(baseline, scenario, context) {
 
   const contextStr = formatContextForPrompt(context);
 
-  const prompt = `You are a financial reasoning engine for a business planning tool. Analyze this financial data and provide actionable insights.
+  const prompt = `You are a Finance Analyst who translates financial data into SPECIFIC ACTIONS. Not observations - executable decisions.
 
-BUSINESS CONTEXT:
 ${contextStr}
 
-CURRENT FINANCIAL STATE:
-- Monthly Revenue: $${metrics?.revenue?.toLocaleString() || 0}
-- Monthly Costs: $${metrics?.totalCosts?.toLocaleString() || 0}
-- Net Surplus: $${metrics?.netSurplus?.toLocaleString() || 0}
-- Gross Margin: ${metrics?.grossMargin || 0}%
-- Operating Margin: ${metrics?.operatingMargin || 0}%
-- Cash Runway: ${metrics?.runway || 'Infinite'} months
-- Break-even Revenue: $${metrics?.breakEven?.toLocaleString() || 0}
-- Fixed Cost Ratio: ${metrics?.fixedCostRatio || 0}%
-
+FINANCIALS:
+Revenue: $${metrics?.revenue?.toLocaleString() || 0}/mo | Costs: $${metrics?.totalCosts?.toLocaleString() || 0}/mo | Net: $${metrics?.netSurplus?.toLocaleString() || 0}/mo
+Gross Margin: ${metrics?.grossMargin || 0}% | Operating Margin: ${metrics?.operatingMargin || 0}%
+Runway: ${metrics?.runway || 'Infinite'} months | Break-even: $${metrics?.breakEven?.toLocaleString() || 0}
 ${scenario ? `
-SCENARIO BEING ANALYZED:
-Name: ${scenario.name || 'Unnamed'}
-Levers:
-- Pricing: ${levers?.pricingAdjustment || 0}%
-- Volume: ${levers?.volumeAdjustment || 0}%
-- Work Costs: ${levers?.workCostAdjustment || 0}%
-- Fixed Costs: ${levers?.fixedCostAdjustment || 0}%
-- One-time Expense: $${levers?.oneTimeExpense || 0}
-- Additional Monthly Cost: $${levers?.additionalMonthlyCost || 0}
+SCENARIO "${scenario.name || 'Unnamed'}":
+Changes: Pricing ${levers?.pricingAdjustment || 0}% | Volume ${levers?.volumeAdjustment || 0}% | Costs ${levers?.workCostAdjustment || 0}%
+Impact: Revenue ${scenarioImpact?.revenueDeltaPct?.toFixed(1) || 0}% | Surplus $${scenarioImpact?.surplusDelta?.toLocaleString() || 0} | Runway ${scenarioImpact?.runwayDelta || 0} months` : ''}
 
-SCENARIO IMPACT:
-- Revenue Change: $${scenarioImpact?.revenueDelta?.toLocaleString() || 0} (${scenarioImpact?.revenueDeltaPct?.toFixed(1) || 0}%)
-- Costs Change: $${scenarioImpact?.costsDelta?.toLocaleString() || 0} (${scenarioImpact?.costsDeltaPct?.toFixed(1) || 0}%)
-- Surplus Change: $${scenarioImpact?.surplusDelta?.toLocaleString() || 0}
-- Runway Change: ${scenarioImpact?.runwayDelta || 0} months
-` : ''}
+REQUIREMENTS:
+- Every insight must end with a SPECIFIC ACTION (verb + number + outcome)
+- Use exact numbers from their data
+- Be concise - maximum 2 sentences per field
 
-Provide financial insights in JSON format. Be specific with numbers. Focus on:
-1. Key insight about current financial health
-2. The most important lever for improving finances
-3. One specific decision the user can make now
-${scenario ? '4. Analysis of this scenario\'s trade-offs' : ''}
-
-IMPORTANT: Be concise and specific. Cite actual numbers. No generic advice.
-
-Response format:
+Respond in JSON:
 {
-  "healthSummary": "One sentence about current financial state with specific numbers",
+  "healthSummary": "One sentence: Financial status with specific numbers + biggest opportunity or threat",
   "primaryLever": {
     "lever": "pricing|volume|costs|timing",
-    "explanation": "Why this lever matters most for THIS business, with specific numbers"
+    "explanation": "Specific action with numbers (e.g., 'Raise prices 10% to add $X/month to margin')"
   },
   "actionableDecision": {
-    "question": "Specific yes/no question they should consider",
-    "recommendation": "Your recommendation based on the numbers",
-    "impact": "Estimated impact of this decision"
+    "question": "Yes/no decision they face NOW",
+    "recommendation": "Clear recommendation with specific numbers",
+    "impact": "$ or % impact of this decision"
   },
-  "scenarioAnalysis": {
-    "tradeOffs": "What they gain and lose with this scenario",
-    "recommendation": "Whether to proceed and why"
-  },
-  "hiddenRisk": "One risk they might not have considered"
+  ${scenario ? `"scenarioAnalysis": {
+    "tradeOffs": "What they gain and lose with this scenario - specific numbers",
+    "recommendation": "Proceed/reconsider/reject and why"
+  },` : ''}
+  "hiddenRisk": "One specific risk they may not have considered + what triggers it"
 }`;
 
   const result = await callOpenAIJSON(prompt, {
@@ -365,29 +342,25 @@ async function answerFinancialQuestion(userId, baseline, question, workspaceId =
   const context = await buildAgentContext(userId, workspaceId);
   const contextStr = formatContextForPrompt(context);
 
-  const prompt = `You are a financial advisor for a small business. Answer this specific question based on their financial data.
+  const prompt = `You are a Finance Analyst answering a specific financial question. Give a DIRECT answer with SPECIFIC numbers and a CLEAR action.
 
-BUSINESS CONTEXT:
 ${contextStr}
 
-FINANCIAL DATA:
-- Monthly Revenue: $${metrics?.revenue?.toLocaleString() || 0}
-- Monthly Costs: $${metrics?.totalCosts?.toLocaleString() || 0}
-- Net Surplus: $${metrics?.netSurplus?.toLocaleString() || 0}
-- Cash Runway: ${metrics?.runway || 'Infinite'} months
-- Current Cash: $${metrics?.currentCash?.toLocaleString() || 0}
-- Break-even Revenue: $${metrics?.breakEven?.toLocaleString() || 0}
+FINANCIALS: Revenue $${metrics?.revenue?.toLocaleString() || 0}/mo | Costs $${metrics?.totalCosts?.toLocaleString() || 0}/mo | Net $${metrics?.netSurplus?.toLocaleString() || 0}/mo | Cash $${metrics?.currentCash?.toLocaleString() || 0} | Runway ${metrics?.runway || 'Infinite'} months
 
-USER QUESTION: "${question}"
+QUESTION: "${question}"
 
-Provide a direct, actionable answer. Use specific numbers from their data. If the question is about affordability, include the financial impact.
+REQUIREMENTS:
+- Answer directly with specific numbers from their data
+- Include calculation or reasoning
+- End with a specific action they should take
 
-Response format:
+Response in JSON:
 {
-  "answer": "Direct answer to their question with specific numbers",
-  "reasoning": "Brief explanation of the financial logic",
-  "recommendation": "What they should do",
-  "caveat": "Any important assumption or limitation"
+  "answer": "Direct answer with specific numbers from their data",
+  "reasoning": "Brief explanation showing the financial logic/math",
+  "recommendation": "Specific action to take (verb + number + outcome)",
+  "caveat": "Key assumption or what would change this answer"
 }`;
 
   const result = await callOpenAIJSON(prompt, {

@@ -708,7 +708,7 @@ exports.getAISuggestions = async (req, res, next) => {
 
     // Build AI prompt
     const contextType = hasWeeklyItems ? 'weekly priorities' : 'upcoming priorities';
-    const prompt = `You are an AI assistant for a business planning app. Analyze the user's ${contextType} and provide actionable suggestions.
+    const prompt = `You are a strategic execution advisor who helps leaders focus on the highest-impact activities. Think like a chief of staff who understands what drives results - helping prioritize ruthlessly and identify execution risks before they become problems. Analyze the user's ${contextType} and provide actionable suggestions.
 
 Current ${contextType}:
 ${prioritySummary || 'No priorities found'}

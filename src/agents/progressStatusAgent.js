@@ -1,12 +1,15 @@
 /**
- * Progress and Plan Status Agent
- * Assesses how complete a business plan is and suggests next steps.
- * Uses v2 data: RevenueStreams + FinancialBaseline
+ * Project Manager Agent
+ * Provides execution status and identifies blockers across all projects.
  *
- * Evaluates:
- * - Section completeness
- * - Content quality
- * - Overall plan readiness
+ * VALUE PROPOSITION:
+ * Answers: "What's the status of my projects and what needs my attention?"
+ *
+ * This agent:
+ * 1. Shows overall execution health (on track / at risk / blocked)
+ * 2. Identifies specific deliverables that are overdue or at risk
+ * 3. Provides actionable next steps to unblock progress
+ * 4. Highlights wins to maintain momentum
  */
 
 const {
@@ -315,34 +318,47 @@ Financial Summary:
 - Total Costs: $${((baseline?.workRelatedCosts?.total || 0) + (baseline?.fixedCosts?.total || 0)).toLocaleString()}
 - Cash Position: $${baseline?.cash?.currentBalance?.toLocaleString() || 0}` : '';
 
-    const prompt = `You are reviewing a business plan's progress.
+    // Include project execution data
+    const coreProjects = context.coreProjects || [];
+    const deptProjects = context.departmentProjects || [];
+    const totalProjects = coreProjects.length + deptProjects.length;
 
-Business: ${context.businessName || 'Unnamed Business'}
-Industry: ${context.industry || 'Unknown'}
-Overall Progress: ${overallProgress}%
+    // Calculate deliverable stats
+    const allDeliverables = [
+      ...coreProjects.flatMap(p => p.deliverables || []),
+      ...deptProjects.flatMap(p => p.deliverables || [])
+    ];
+    const completedDeliverables = allDeliverables.filter(d => d.done).length;
+    const totalDeliverables = allDeliverables.length;
 
-COMPLETE SECTIONS:
-${completeSections.join(', ') || 'None'}
+    // Find overdue items
+    const today = new Date();
+    const overdueDeliverables = allDeliverables.filter(d => {
+      if (d.done) return false;
+      const due = d.dueWhen ? new Date(d.dueWhen) : null;
+      return due && due < today;
+    });
 
-INCOMPLETE SECTIONS:
-${incompleteSections.join(', ') || 'None'}
+    const prompt = `You are a Project Manager. Your job: Give a quick execution status and tell the user what needs attention RIGHT NOW.
 
-UBP: ${context.ubp || 'Not defined'}
-Purpose: ${context.purpose || 'Not defined'}
+EXECUTION DATA:
+- Projects: ${totalProjects} total (${coreProjects.length} core, ${deptProjects.length} departmental)
+- Deliverables: ${completedDeliverables}/${totalDeliverables} complete (${totalDeliverables > 0 ? Math.round(completedDeliverables/totalDeliverables*100) : 0}%)
+- Overdue: ${overdueDeliverables.length} items need immediate attention
 ${financialSummary}
 
-IMPORTANT TONE GUIDELINES:
-- Be specific - reference actual section names and percentages
-- Encouragement must be brief and grounded (e.g., "3 sections complete" not "you're doing amazing!")
-- Strengths should cite what they actually completed
-- Avoid generic phrases like "great job" or "keep it up"
+RULES:
+- Lead with the most important insight (what needs attention?)
+- Be SPECIFIC: name actual projects and deliverables
+- MAX 15 words per field
+- No motivational fluff - just status and actions
 
-Provide brief feedback in JSON format:
+Respond in JSON:
 {
-  "overallFeedback": "1-2 sentence assessment citing their ${overallProgress}% progress and specific sections",
-  "strengths": ["Specific completed section or strong area"],
-  "priorities": ["Most important section to complete next with why"],
-  "encouragement": "Brief, grounded note referencing their actual progress"
+  "overallFeedback": "One sentence status: what's working or what's blocked",
+  "strengths": ["Win with specific number (e.g., '${completedDeliverables} deliverables done this month')"],
+  "priorities": ["Action: Do X on project Y to unblock Z"],
+  "encouragement": "Factual momentum note with number"
 }`;
 
     const result = await callOpenAIJSON(prompt, {

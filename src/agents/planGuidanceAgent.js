@@ -1,8 +1,12 @@
 /**
- * Plan Guidance Agent
- * Suggests what the user should work on next and explains why.
+ * Plan Guidance Agent (Priority Coach)
+ * Suggests what the user should work on next with specific action steps.
  *
- * Uses priority scoring + AI reasoning to provide actionable guidance.
+ * Key improvements:
+ * - Outputs are action-oriented with specific next steps
+ * - Concise recommendations (not verbose)
+ * - Explains trade-offs when deprioritizing items
+ * - Integrates project management guidance
  */
 
 const {
@@ -72,53 +76,42 @@ async function generateGuidance(userId, options = {}) {
   // Identify deprioritized items (items 4-6 that didn't make top 3)
   const deprioritizedItems = topItems.slice(3, 6);
 
-  // Build prompt for AI reasoning
+  // Build prompt for AI reasoning - CONCISE and ACTION-ORIENTED
   const contextStr = formatContextForPrompt(context);
-  const prompt = `You are a business planning advisor. Based on the user's business context and current priorities, provide guidance on what they should focus on.
+  const prompt = `You are a Priority Coach. Your ONE job: Tell the user exactly what to work on TODAY and give them the first action step.
 
 ${contextStr}
 
-CURRENT STATUS:
-- Total active items: ${scoredItems.length}
-- Overdue items: ${overdue.length}
-- Due within 7 days: ${dueSoon.length}
+STATUS: ${scoredItems.length} items | ${overdue.length} overdue | ${dueSoon.length} due in 7 days
 
-TOP PRIORITY ITEMS (by score breakdown):
+TOP 5 BY PRIORITY:
 ${topItems.slice(0, 5).map((item, i) =>
-  `${i + 1}. "${item.title}" - Total: ${item.totalScore}/100
-     Breakdown: Importance=${item.scores?.goalImportance || 0}, Urgency=${item.scores?.dueDateProximity || 0}, Overdue=${item.scores?.overdueScore || 0}, Blocker=${item.scores?.blockerScore || 0}
-     Due: ${item.dueWhen || 'No date'}, Type: ${item.source?.type || 'unknown'}`
+  `${i + 1}. "${item.title}" [Score: ${item.totalScore}] Due: ${item.dueWhen || 'No date'}`
 ).join('\n')}
+${overdue.length > 0 ? `\nOVERDUE: ${overdue.slice(0, 3).map(item => `"${item.title}"`).join(', ')}` : ''}
 
-${overdue.length > 0 ? `\nOVERDUE ITEMS:\n${overdue.slice(0, 3).map(item => `- "${item.title}" (was due: ${item.dueWhen})`).join('\n')}` : ''}
+RULES:
+- MAX 15 words per field unless it's actionSteps
+- Every action must be EXECUTABLE: "Open X, do Y, update Z"
+- No motivational fluff - just facts and actions
+- Reference their actual project names
 
-${monthlyThrust ? `\nMONTHLY FOCUS PROJECT: "${monthlyThrust.title}"` : ''}
-
-${deprioritizedItems.length > 0 ? `\nITEMS NOT IN TOP 3 (explain why deprioritized):\n${deprioritizedItems.map(item => `- "${item.title}" (Score: ${item.totalScore})`).join('\n')}` : ''}
-
-IMPORTANT TONE GUIDELINES:
-- Be direct and specific, not generic
-- Encouragement must be brief, grounded in actual progress, and non-generic (avoid fluffy phrases like "you're doing great!")
-- Reference specific items or numbers when giving feedback
-- Explain WHY something is prioritized over alternatives
-
-Provide guidance in this JSON format:
+Respond in JSON:
 {
-  "focusRecommendation": "One clear sentence about what to focus on today",
+  "focusRecommendation": "Do [specific action] on [specific project] - max 15 words",
   "topPriority": {
-    "title": "The #1 thing to work on",
-    "reason": "Why this is the top priority - reference specific scores or deadlines",
-    "actionSteps": ["Step 1", "Step 2", "Step 3"]
+    "title": "Exact project title from their data",
+    "reason": "One sentence why this is #1",
+    "actionSteps": ["Step 1: verb + object", "Step 2: verb + object", "Step 3: verb + object"]
   },
   "weeklyGoals": [
-    {"title": "Goal 1", "reason": "Brief reason"},
-    {"title": "Goal 2", "reason": "Brief reason"}
+    {"title": "Project title", "reason": "Next action in 10 words or less"}
   ],
   "deprioritized": [
-    {"title": "Item not chosen", "reason": "Why this was deprioritized (e.g., lower urgency, further deadline)"}
+    {"title": "Project title", "reason": "Why it can wait (10 words)"}
   ],
-  "warnings": ["Any urgent warnings about overdue or at-risk items"],
-  "encouragement": "Brief, specific note grounded in their actual data (e.g., '3 items completed this week' not 'keep going!')"
+  "warnings": ["Issue + fix in one sentence"],
+  "encouragement": "Factual progress statement with numbers"
 }`;
 
   const { data, generationTimeMs, error } = await callOpenAIJSON(prompt, {
@@ -135,36 +128,38 @@ Provide guidance in this JSON format:
     kpiImpact: Math.round((topItems[0].scores.kpiWeight || 0) * 0.10),
   } : null;
 
-  // Build response
+  // Build response - action-oriented structure with backward-compatible field names
   const response = {
     guidance: data || {
       focusRecommendation: topItems[0]?.title
-        ? `Focus on "${topItems[0].title}" - scored ${topItems[0].totalScore}/100 based on urgency and importance.`
-        : 'Start by setting up your core strategic projects.',
+        ? `Complete "${topItems[0].title}" - open it and work on the next deliverable.`
+        : 'Create your first strategic project to get started.',
       topPriority: topItems[0] ? {
         title: topItems[0].title,
-        reason: `Highest priority (${topItems[0].totalScore}/100) due to ${topItems[0].scores?.overdueScore > 0 ? 'being overdue' : topItems[0].scores?.dueDateProximity > 70 ? 'upcoming deadline' : 'strategic importance'}.`,
-        actionSteps: ['Review the requirements', 'Break into smaller tasks', 'Set a deadline for completion'],
+        reason: `Score ${topItems[0].totalScore}/100 - ${topItems[0].scores?.overdueScore > 0 ? 'overdue, needs immediate attention' : topItems[0].scores?.dueDateProximity > 70 ? 'deadline approaching' : 'highest strategic impact'}`,
+        actionSteps: [
+          'Open this project and review deliverables',
+          'Mark the next incomplete deliverable as in-progress',
+          'Set a specific time block to complete it today'
+        ],
         priorityBreakdown: topItemBreakdown,
       } : null,
       weeklyGoals: weeklyPriorities.slice(0, 3).map(item => ({
         title: item.title,
-        reason: `Due: ${item.dueWhen || 'No date set'}`,
+        reason: `Due ${item.dueWhen || 'soon'} - schedule time to complete`,
       })),
-      deprioritized: deprioritizedItems.slice(0, 3).map(item => ({
+      deprioritized: deprioritizedItems.slice(0, 2).map(item => ({
         title: item.title,
         reason: item.scores?.dueDateProximity < 50
-          ? `Lower urgency - due ${item.dueWhen || 'later'}`
-          : `Lower overall score (${item.totalScore}/100)`,
+          ? `Due ${item.dueWhen || 'later'} - focus on urgent items first`
+          : `Lower impact score (${item.totalScore}/100)`,
       })),
       warnings: overdue.length > 0
-        ? [`You have ${overdue.length} overdue item(s) that need attention.`]
+        ? [`${overdue.length} overdue item(s) - reschedule or complete today: ${overdue.slice(0, 2).map(i => i.title).join(', ')}`]
         : [],
-      encouragement: dueSoon.length > 0
-        ? `${dueSoon.length} item(s) due this week - stay focused.`
-        : scoredItems.length > 0
-          ? `${scoredItems.length} items tracked. Solid progress.`
-          : 'Add your first project to get started.',
+      encouragement: scoredItems.length > 0
+        ? `Tracking ${scoredItems.length} items, ${dueSoon.length} due this week.`
+        : 'Add projects to start tracking progress.',
     },
     stats: {
       totalItems: scoredItems.length,

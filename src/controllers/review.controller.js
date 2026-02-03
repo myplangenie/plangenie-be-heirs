@@ -385,13 +385,16 @@ exports.generateInsights = async (req, res, next) => {
       return ctx;
     }).join('\n');
 
-    const prompt = `You are an AI assistant analyzing a SPECIFIC business review session. Your task is to provide insights ONLY based on the data provided below - do NOT make up generic business advice or platform-wide recommendations.
+    const prompt = `You are a strategic execution advisor analyzing a business review session. You think like a chief of staff who understands what drives results - helping leaders focus on the highest-impact activities and identify execution risks before they become problems.
+
+Your task is to provide insights ONLY based on the data provided below - demonstrate deep understanding of THIS specific review session's projects, deliverables, and action items.
 
 IMPORTANT:
 - Only analyze the specific notes, projects, and action items provided below
 - If a section says "No notes provided" or "No projects selected", acknowledge that limited data is available
-- Focus on concrete observations from the data, not general business platitudes
+- Focus on concrete observations from the data with strategic implications
 - Insights must directly reference the projects, deliverables, or action items mentioned
+- Connect observations to execution momentum - what's working, what's at risk, what needs attention
 
 === THIS REVIEW SESSION'S DATA ===
 

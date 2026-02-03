@@ -1,13 +1,19 @@
 /**
- * Strategy Suggestion Agent
- * Recommends business models, positioning tweaks, and strategic improvements.
- * Uses v2 data: RevenueStreams + FinancialBaseline
+ * Strategy Suggestion Agent (Growth Strategist)
  *
- * Analyzes:
- * - Current business model
- * - Market positioning
- * - Competitive landscape
- * - Growth opportunities
+ * VALUE PROPOSITION:
+ * Answers the question: "What's the ONE strategic move I should make right now?"
+ *
+ * This agent helps users:
+ * 1. Identify their highest-leverage growth opportunity
+ * 2. Get a concrete 3-step action plan to capture it
+ * 3. Understand risks that could derail their strategy
+ *
+ * KEY PRINCIPLES:
+ * - ONE primary focus, not a list of suggestions
+ * - Every recommendation has a specific action attached
+ * - Connects strategy to existing projects and deliverables
+ * - Grounded in their actual data (financials, products, market)
  */
 
 const {
@@ -131,9 +137,9 @@ ${streams.slice(0, 5).map(s => `- ${s.name} (${s.type}): $${s.metrics?.estimated
 - Runway: ${baseline?.metrics?.cashRunwayMonths || 'N/A'} months`
     : 'FINANCIAL POSITION: Not yet defined';
 
-  // Build comprehensive prompt
+  // Build focused prompt - ONE strategic move with clear action plan
   const contextStr = formatContextForPrompt(context);
-  const prompt = `You are a strategic business consultant analyzing a company's business strategy.
+  const prompt = `You are a Growth Strategist. Your job: Identify THE ONE strategic move this business should make right now and give them a concrete action plan.
 
 ${contextStr}
 
@@ -141,97 +147,108 @@ ${productsSection}
 
 ${financialSection}
 
-SWOT ANALYSIS:
-- Strengths: ${context.swot?.strengths || 'Not defined'}
-- Weaknesses: ${context.swot?.weaknesses || 'Not defined'}
-- Opportunities: ${context.swot?.opportunities || 'Not defined'}
-- Threats: ${context.swot?.threats || 'Not defined'}
+SWOT: Strengths: ${context.swot?.strengths || 'N/A'} | Weaknesses: ${context.swot?.weaknesses || 'N/A'} | Opportunities: ${context.swot?.opportunities || 'N/A'} | Threats: ${context.swot?.threats || 'N/A'}
 
-CURRENT STRATEGY SCORE: ${strategyAssessment.total}/100
-GAPS IDENTIFIED: ${strategyAssessment.gaps.join(', ') || 'None'}
+Strategy Foundation: ${strategyAssessment.total}/100 | Gaps: ${strategyAssessment.gaps.join(', ') || 'None'}
+${focusArea ? `User asked about: ${focusArea}` : ''}
 
-${focusArea ? `USER WANTS FOCUS ON: ${focusArea}` : ''}
+YOUR TASK:
+1. Analyze their situation and identify the SINGLE highest-impact strategic move
+2. Create a 3-step action plan they can start THIS WEEK
+3. Flag any risks that could derail this strategy
 
-Based on this information, provide strategic recommendations. Consider:
-1. Business model improvements or pivots
-2. Market positioning enhancements
-3. Competitive differentiation strategies
-4. Growth opportunities
-5. Risk mitigation strategies
+RULES:
+- Be SPECIFIC: "Increase prices by 20% on premium tier" not "consider pricing changes"
+- Be CONCISE: One sentence per field, no fluff
+- Be ACTIONABLE: Every output should answer "What do I DO?"
+- Reference their actual data: products, margins, competitors, SWOT
 
-IMPORTANT TONE GUIDELINES:
-- Be direct and specific to THIS business - no generic advice
-- Reference their actual industry, competitors, or products by name when possible
-- Quick wins must be truly actionable this week, not vague suggestions
-- Risk alerts must cite specific vulnerabilities from their data
-- Avoid consultant-speak like "leverage synergies" - be concrete
-
-Respond in JSON format:
+Respond in JSON:
 {
   "strategicDirection": {
-    "currentAssessment": "Brief assessment of current strategy (1-2 sentences)",
-    "recommendedFocus": "The #1 strategic priority to focus on"
+    "currentAssessment": "One sentence diagnosis of their strategic position",
+    "recommendedFocus": "THE single strategic priority (be specific - what exactly to do)"
   },
-  "businessModelSuggestions": [
+  "actionPlan": [
     {
-      "suggestion": "Specific business model improvement",
-      "rationale": "Why this would help",
-      "effort": "low|medium|high",
-      "impact": "low|medium|high"
-    }
-  ],
-  "positioningTweaks": [
+      "step": 1,
+      "action": "Specific action (verb + object + outcome)",
+      "timeline": "This week | This month | This quarter"
+    },
     {
-      "current": "What they're doing now (or not doing)",
-      "suggested": "What they should do instead",
-      "benefit": "Expected benefit"
-    }
-  ],
-  "competitiveStrategies": [
+      "step": 2,
+      "action": "Specific action (verb + object + outcome)",
+      "timeline": "This week | This month | This quarter"
+    },
     {
-      "strategy": "Specific competitive strategy",
-      "targetCompetitor": "Who this addresses (or 'market' for general)",
-      "implementation": "How to implement"
+      "step": 3,
+      "action": "Specific action (verb + object + outcome)",
+      "timeline": "This week | This month | This quarter"
     }
   ],
   "growthOpportunities": [
     {
-      "opportunity": "Specific growth opportunity",
-      "requirements": "What's needed to pursue this",
+      "opportunity": "Specific growth lever from their data",
+      "requirements": "What they need to capture it",
       "timeline": "short-term|medium-term|long-term"
     }
   ],
   "quickWins": [
-    "Easy improvement #1 that can be done this week",
-    "Easy improvement #2"
+    "Action completable THIS WEEK (verb + object)"
   ],
   "riskAlerts": [
-    "Strategic risk or concern to address"
+    "Specific risk + what to do about it"
   ]
 }`;
 
   const { data, generationTimeMs, error } = await callOpenAIJSON(prompt, {
     maxTokens: 1500,
     temperature: 0.7,
-    systemPrompt: 'You are a seasoned business strategist with expertise in helping startups and small businesses refine their strategy. Be specific and actionable in your recommendations.',
+    systemPrompt: 'You are a world-class business transformation strategist. Every recommendation must be specific to this business\'s industry, stage, competitive position, and goals. Avoid generic advice - provide insights that demonstrate deep understanding of their unique situation.',
   });
 
-  // Build response
+  // Build response with focused action-oriented structure
   const response = {
     strategyScore: strategyAssessment.total,
     strategyBreakdown: strategyAssessment.breakdown,
     gaps: strategyAssessment.gaps,
     suggestions: data || {
       strategicDirection: {
-        currentAssessment: 'Unable to generate assessment. Please ensure your business profile is complete.',
-        recommendedFocus: 'Complete your business plan sections',
+        currentAssessment: strategyAssessment.total < 50
+          ? 'Strategy foundation incomplete - need to define core positioning before growth planning.'
+          : 'Strategy defined but lacks a clear growth initiative.',
+        recommendedFocus: strategyAssessment.gaps.length > 0
+          ? `Complete ${strategyAssessment.gaps[0]} section - this is blocking strategic clarity`
+          : 'Define your primary growth initiative for the next quarter',
       },
-      businessModelSuggestions: [],
-      positioningTweaks: [],
-      competitiveStrategies: [],
+      actionPlan: [
+        {
+          step: 1,
+          action: strategyAssessment.gaps.length > 0
+            ? `Fill out the ${strategyAssessment.gaps[0]} section in your business plan`
+            : 'Review your top-performing product and identify upsell opportunities',
+          timeline: 'This week',
+        },
+        {
+          step: 2,
+          action: 'Schedule 30 minutes to define your unique value proposition',
+          timeline: 'This week',
+        },
+        {
+          step: 3,
+          action: 'List 3 competitors and what makes you different from each',
+          timeline: 'This week',
+        },
+      ],
       growthOpportunities: [],
-      quickWins: ['Fill in missing business plan sections', 'Define your unique value proposition'],
-      riskAlerts: [],
+      quickWins: [
+        strategyAssessment.gaps.length > 0
+          ? `Complete your ${strategyAssessment.gaps[0]} section today`
+          : 'Review pricing on your highest-margin offering',
+      ],
+      riskAlerts: strategyAssessment.gaps.length > 0
+        ? [`Strategy gaps in ${strategyAssessment.gaps.slice(0, 2).join(', ')} - address before scaling`]
+        : [],
     },
     focusArea,
     generatedAt: new Date().toISOString(),

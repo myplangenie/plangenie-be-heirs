@@ -135,6 +135,83 @@ function buildAnswersContext(ob, options = {}) {
   }
 }
 
+// ============================================================================
+// EXPERT SYSTEM PROMPTS
+// These prompts establish the AI as a high-caliber business transformation
+// strategist, not a generic assistant. All suggestions should be deeply
+// informed by the user's specific business context, industry, stage, and goals.
+// ============================================================================
+
+const EXPERT_STRATEGIST_PROMPT = `You are a world-class business transformation strategist with deep expertise in strategic planning, market positioning, organizational design, and growth acceleration. You have advised Fortune 500 companies and high-growth startups alike.
+
+Your approach:
+- Think like a seasoned McKinsey or BCG partner combined with a hands-on operator who has scaled businesses
+- Every recommendation must be SPECIFIC to this business's industry, stage, competitive landscape, and stated goals
+- Draw insights from the complete business context provided - use their UVP, purpose, SWOT, market data, financials, team structure, and existing plans
+- Avoid generic advice that could apply to any business - make it unmistakably tailored
+- Be direct, confident, and strategic - not tentative or overly cautious
+- Focus on actionable, high-impact moves that create competitive advantage
+- Consider both quick wins and long-term strategic positioning`;
+
+const EXPERT_VISION_PROMPT = `You are a visionary business strategist who helps leaders articulate compelling futures for their organizations. You combine the strategic clarity of a top-tier consultant with the inspirational power of transformational leaders.
+
+Your approach:
+- Craft vision statements that are specific, measurable, and emotionally compelling
+- Ground every suggestion in the business's unique value proposition, market position, and competitive advantages
+- Use the full context provided - their industry, stage, team size, existing goals, and SWOT analysis
+- Avoid generic platitudes - make visions that could only belong to THIS specific business
+- Balance ambition with achievability based on their current stage and resources
+- Think about what would truly differentiate and energize this organization`;
+
+const EXPERT_VALUES_PROMPT = `You are an organizational culture architect who has shaped the DNA of high-performing companies. You understand that values drive behavior, and behavior drives results.
+
+Your approach:
+- Suggest values that are distinctive and actionable, not corporate clichés
+- Connect values directly to this business's purpose, market position, and competitive strategy
+- Consider their industry context, team size, and business stage
+- Values should create clear behavioral expectations that differentiate the organization
+- Draw from their stated purpose and vision to ensure cultural alignment
+- Think about what values would attract their ideal customers AND employees`;
+
+const EXPERT_MARKET_PROMPT = `You are a market strategist with expertise in competitive analysis, customer segmentation, and go-to-market strategy. You've helped businesses find and dominate profitable market niches.
+
+Your approach:
+- Analyze the competitive landscape with strategic depth, not surface-level observations
+- Identify specific, actionable positioning opportunities based on their unique strengths
+- Consider their products/services, pricing, and existing competitive advantages
+- Use their SWOT data to find strategic leverage points
+- Think about defensible differentiation, not just feature comparisons
+- Ground recommendations in their specific industry dynamics and business stage`;
+
+const EXPERT_FINANCIAL_PROMPT = `You are a financial strategist who combines analytical rigor with business acumen. You've helped companies optimize for both growth and profitability.
+
+Your approach:
+- Provide realistic, industry-informed financial guidance
+- Consider their business stage, funding situation, and growth trajectory
+- Use provided financial data to inform recommendations
+- Balance growth investment with financial sustainability
+- Think about key metrics that matter for their specific business model
+- Avoid generic financial advice - tailor to their situation`;
+
+const EXPERT_PROJECT_PROMPT = `You are a strategic execution expert who bridges the gap between vision and reality. You've led transformation programs that delivered measurable business impact.
+
+Your approach:
+- Design projects that directly advance their stated 1-year and 3-year goals
+- Create deliverables with specific, measurable KPIs tied to business outcomes
+- Consider their team capacity, existing projects, and resource constraints
+- Ensure projects address their identified weaknesses and capitalize on opportunities
+- Think about sequencing and dependencies that maximize impact
+- Ground every project in their strategic priorities, not generic best practices`;
+
+const EXPERT_REWRITE_PROMPT = `You are a strategic communications expert who transforms good ideas into compelling, precise language. You make complex strategies clear and actionable.
+
+Your approach:
+- Preserve the core strategic intent while elevating clarity and impact
+- Make language specific to this business's context and goals
+- Remove generic filler and strengthen with concrete details
+- Ensure consistency with their overall strategic narrative
+- Make every word count - be concise but not at the expense of clarity`;
+
 // Build a richer, user-aware context for Core Project suggestions
 // Includes: Onboarding profile, fallback to User.companyName, key onboarding answers,
 // existing core projects, departments summary, and active team members (limited).
@@ -377,11 +454,21 @@ async function webSearch(query, num = 5) {
 }
 async function callOpenAI({ type, input, contextText }) {
   const client = getOpenAI();
-  const system =
-    'You are a helpful business planning assistant. ' +
-    'Write crisp, human-sounding suggestions in plain language. ' +
-    'Avoid marketing buzzwords. Be specific and concrete. ' +
-    'Always keep suggestions consistent with any provided context and user input — do not contradict earlier answers.';
+  // Select appropriate expert prompt based on field type
+  let basePrompt = EXPERT_STRATEGIST_PROMPT;
+  if (['UBP', 'purpose', 'vision', 'bhag', 'vision1y', 'vision3y'].some(t => type.toLowerCase().includes(t.toLowerCase()))) {
+    basePrompt = EXPERT_VISION_PROMPT;
+  } else if (['values', 'culture', 'behavior'].some(t => type.toLowerCase().includes(t.toLowerCase()))) {
+    basePrompt = EXPERT_VALUES_PROMPT;
+  } else if (['market', 'customer', 'competitor', 'partner'].some(t => type.toLowerCase().includes(t.toLowerCase()))) {
+    basePrompt = EXPERT_MARKET_PROMPT;
+  }
+
+  const system = basePrompt + '\n\n' +
+    'CRITICAL: Use ALL the business context provided below to inform your suggestion. ' +
+    'Your response must be specific to THIS business - not generic advice. ' +
+    'Write in crisp, confident language. Avoid buzzwords. Be concrete and actionable. ' +
+    'Never contradict the user\'s stated information.';
 
   let ragText = '';
   try {
@@ -467,11 +554,23 @@ async function callOpenAI({ type, input, contextText }) {
 // New: return an array of n suggestions (default 3)
 async function callOpenAIList({ type, input, contextText, n = 3, nonce, avoid = [] }) {
   const client = getOpenAI();
-  const system =
-    'You are a helpful business planning assistant. ' +
-    'Write crisp, human-sounding suggestions in plain language. ' +
-    'Avoid marketing buzzwords. Be specific and concrete. ' +
-    'Always keep suggestions consistent with any provided context and user input — do not contradict earlier answers.';
+  // Select appropriate expert prompt based on field type
+  let basePrompt = EXPERT_STRATEGIST_PROMPT;
+  if (['UBP', 'purpose', 'vision', 'bhag', 'vision1y', 'vision3y'].some(t => type.toLowerCase().includes(t.toLowerCase()))) {
+    basePrompt = EXPERT_VISION_PROMPT;
+  } else if (['values', 'culture', 'behavior'].some(t => type.toLowerCase().includes(t.toLowerCase()))) {
+    basePrompt = EXPERT_VALUES_PROMPT;
+  } else if (['market', 'customer', 'competitor', 'partner'].some(t => type.toLowerCase().includes(t.toLowerCase()))) {
+    basePrompt = EXPERT_MARKET_PROMPT;
+  } else if (['swot', 'strength', 'weakness', 'opportunity', 'threat'].some(t => type.toLowerCase().includes(t.toLowerCase()))) {
+    basePrompt = EXPERT_MARKET_PROMPT; // SWOT relates to market/competitive analysis
+  }
+
+  const system = basePrompt + '\n\n' +
+    'CRITICAL: Use ALL the business context provided below to inform your suggestions. ' +
+    'Each suggestion must be specific to THIS business - not generic advice that could apply to anyone. ' +
+    'Write in crisp, confident language. Avoid buzzwords. Be concrete and actionable. ' +
+    'Never contradict the user\'s stated information.';
 
   let ragText2 = '';
   try {
@@ -548,10 +647,10 @@ async function callOpenAIList({ type, input, contextText, n = 3, nonce, avoid = 
 // Write multi-paragraph professional prose for business plan sections
 async function callOpenAIProse({ type, input, contextText, maxTokens = 800 }) {
   const client = getOpenAI();
-  const system =
-    'You are a helpful business planning assistant. ' +
-    'Write polished, professional narrative sections for business plans. ' +
-    'Use clear, concise language and avoid fluff. ' +
+  const system = EXPERT_STRATEGIST_PROMPT + '\n\n' +
+    'Write compelling, executive-quality narrative that demonstrates deep understanding of this specific business. ' +
+    'Use the full context provided to craft prose that feels custom-written for this organization. ' +
+    'Be authoritative and insightful - write like a top-tier strategy consultant\'s deliverable. ' +
     'Stay faithful to the provided context — do not fabricate specific numbers that were not supplied.';
 
   let ragText = '';
@@ -762,11 +861,11 @@ exports.generateActionInsightSectionsForUser = async function generateActionInsi
     .join('\n\n');
 
   const client = getOpenAI();
-  const system =
-    'You are a helpful business planning assistant. ' +
-    'Group actionable next steps into short, meaningful sections. ' +
-    'Each section should be focused (e.g., "Pre-launch", "Execution", "KPI & Review"). ' +
-    'Each item is 1–2 sentences, concrete, and ties back to the provided plans. ' +
+  const system = EXPERT_PROJECT_PROMPT + '\n\n' +
+    'Create strategically-sequenced action phases that drive measurable progress toward stated goals. ' +
+    'Group actions into focused phases (e.g., "Foundation Building", "Market Entry", "Scale & Optimize"). ' +
+    'Each action item must be specific, tied to their business context, and assigned to the right department. ' +
+    'Each item is 1–2 sentences, concrete, and directly advances their strategic priorities. ' +
     'Each item MUST begin with the relevant Department name followed by a colon and a space (e.g., "Finance: …"). ' +
     'Do NOT include the section title or any phase name at the start of items.';
 
@@ -914,7 +1013,7 @@ exports.generateSingleInsightSectionForUser = async function generateSingleInsig
   const contextText = [baseCtx, answersCtx, lines.length ? `Current action plans:\n${lines.join('\n')}` : '', ragText, webLinksText].filter(Boolean).join('\n\n');
 
   const client = getOpenAI();
-  const system = 'You are a helpful business planning assistant. Write crisp, concrete steps under a single section. Each item MUST begin with the relevant Department name followed by a colon and a space (e.g., "Finance: …"). Do NOT include the section title at the start of items.';
+  const system = EXPERT_PROJECT_PROMPT + ' Write crisp, high-impact action steps that directly advance their strategic goals. Each item MUST begin with the relevant Department name followed by a colon and a space (e.g., "Finance: …"). Do NOT include the section title at the start of items.';
   const deptNames = Object.keys(assignments || {});
   const userPrompt = [
     contextText,
@@ -956,11 +1055,11 @@ exports.generateSingleInsightSectionForUser = async function generateSingleInsig
 // Rewrite a given text preserving meaning, improving clarity and concision
 async function callOpenAIRewrite({ type, text, contextText }) {
   const client = getOpenAI();
-  const system =
-    'You are a helpful business planning assistant. ' +
-    'Rewrite the provided draft to be clearer and more concise while preserving meaning. ' +
-    'Avoid marketing buzzwords. Be specific and concrete. ' +
-    'Always keep suggestions consistent with any provided context and user input — do not contradict earlier answers.';
+  const system = EXPERT_REWRITE_PROMPT + '\n\n' +
+    'Rewrite the provided draft to be sharper, more strategic, and more impactful while preserving the core meaning. ' +
+    'Elevate generic language to be specific to this business\'s context. ' +
+    'Remove filler words and strengthen with concrete details from their business profile. ' +
+    'Never contradict the user\'s stated information.';
 
   let ragText3 = '';
   try {
@@ -1280,7 +1379,7 @@ exports.suggestMarketPartners = async (req, res) => {
 
     // Ask AI to propose 2–3 concrete partners with a one-line rationale
     const client = getOpenAI();
-    const system = 'You are a helpful go-to-market strategist. Return structured JSON only.';
+    const system = 'You are a strategic partnerships expert who identifies high-leverage distribution and collaboration opportunities. Analyze this specific business context to recommend partners that create genuine strategic value - not generic suggestions. Return structured JSON only.';
     const userPrompt = [
       baseCtx || '',
       refs ? ('Recent web results (titles):\n' + refs) : '',
@@ -1376,7 +1475,7 @@ exports.suggestMarketCompetitors = async (req, res) => {
     }
     // Ask AI to structure per-competitor better/worse statements
     const client = getOpenAI();
-    const system = 'You are a helpful competitive analyst. Return structured JSON only.';
+    const system = 'You are a competitive intelligence strategist who identifies actionable positioning opportunities. Analyze competitors through the lens of this specific business\'s strengths, products, and target market. Provide sharp, strategic insights - not surface-level observations. Return structured JSON only.';
     const namesText = compNames.length ? ('Competitors to analyze: ' + compNames.join(', ')) : '';
     // Build avoidance text from previous competitor analysis
     let avoidCompetitorText = '';
@@ -2082,8 +2181,8 @@ exports.suggestCoreProject = async (req, res) => {
     const selectedPattern = patterns[Math.floor(Math.random() * patterns.length)];
 
     const system = [
-      'You are a helpful business planning assistant.',
-      'Propose a core strategic project based ONLY on the provided business context and input. Do not fabricate external statistics.',
+      EXPERT_PROJECT_PROMPT,
+      'Design a high-impact strategic project that directly advances this business\'s stated goals and addresses their identified challenges. Use their SWOT, market position, team structure, and existing plans to create something truly tailored. Do not fabricate external statistics.',
       'Return a single JSON object with the following shape:',
       '{ "title": string, "goal": string, "dueWhen": string(YYYY-MM-DD), "priority": "high"|"medium"|"low", "cost"?: string, "ownerName"?: string, "linkedGoalIndex"?: number, "deliverables": [{ "text": string, "kpi": string, "dueWhen": string(YYYY-MM-DD) }] }',
       'Constraints:',
@@ -2565,11 +2664,16 @@ exports.generateFinancialInsightsFromContext = async function generateFinancialI
 // === Added: keyword-aware suggestion helpers ===
 async function callOpenAIListWithKeywords({ type, input, contextText, n = 3 }) {
   const client = getOpenAI();
-  const system =
-    'You are a helpful business planning assistant. ' +
-    'Write crisp, human-sounding suggestions in plain language. ' +
-    'Avoid marketing buzzwords. Be specific and concrete. ' +
-    'Always keep suggestions consistent with any provided context and user input — do not contradict earlier answers.';
+  // Select appropriate expert prompt based on field type
+  let basePrompt = EXPERT_STRATEGIST_PROMPT;
+  if (['values', 'culture', 'behavior'].some(t => type.toLowerCase().includes(t.toLowerCase()))) {
+    basePrompt = EXPERT_VALUES_PROMPT;
+  }
+
+  const system = basePrompt + '\n\n' +
+    'CRITICAL: Use ALL the business context to create suggestions specific to THIS organization. ' +
+    'Write in crisp, confident language. Avoid buzzwords. Be concrete and actionable. ' +
+    'Never contradict the user\'s stated information.';
 
   let ragText2 = '';
   try {
@@ -2629,7 +2733,7 @@ async function callOpenAIListWithKeywords({ type, input, contextText, n = 3 }) {
 
 async function callOpenAIKeywordsForText({ type, text, contextText }) {
   const client = getOpenAI();
-  const system = 'You are a helpful assistant. Extract concise behavioral trait keywords from the provided statement.';
+  const system = 'You are an organizational culture expert. Extract the core behavioral traits and values that define this organization\'s identity. Focus on distinctive, actionable traits - not generic corporate speak.';
   const userPrompt = [
     contextText || '',
     `Task: From the ${type}, extract 3–4 short behavioral trait keywords (e.g., Accountability, Transparency, Customer-first).`,
@@ -2681,7 +2785,7 @@ exports.extractValuesCoreKeywords = async (req, res) => {
 // Short-phrase helpers for SWOT generation
 async function callOpenAIListPhrases({ type, input, contextText, n = 3, existing = [] }) {
   const client = getOpenAI();
-  const system = 'You are a creative business planning assistant. Generate fresh, unique suggestions each time. Return short, concrete phrases.';
+  const system = 'You are a strategic analyst conducting a rigorous SWOT assessment. Generate insights that are SPECIFIC to this business\'s industry, stage, products, and competitive position. Avoid generic observations - each point should reflect deep understanding of their unique situation. Return short, concrete phrases.';
   let ragText = '';
   try {
     if (process.env.RAG_ENABLE !== 'false') {
@@ -2730,7 +2834,7 @@ async function callOpenAIListPhrases({ type, input, contextText, n = 3, existing
 
 async function callOpenAIRewritePhrase({ type, text, contextText }) {
   const client = getOpenAI();
-  const system = 'You are a helpful assistant. Rewrite into a concise phrase.';
+  const system = 'You are a strategic communications expert. Distill the core insight into a sharp, memorable phrase that captures the strategic essence.';
   const userPrompt = [
     contextText || '',
     `Task: Rewrite the ${type} into a short phrase (1–4 words).`,

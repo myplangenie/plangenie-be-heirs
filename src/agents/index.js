@@ -1,11 +1,16 @@
 /**
  * AI Agents - Unified Export
  *
- * Four specialized agents for business plan guidance:
- * 1. Plan Guidance Agent - What to work on next
- * 2. Financial Validation Agent - Flag unrealistic numbers
- * 3. Strategy Suggestion Agent - Business model and positioning
- * 4. Progress Status Agent - Plan completeness
+ * Four specialized agents for execution support:
+ * 1. Priority Coach (Plan Guidance) - What to work on next with SPECIFIC actions
+ * 2. Finance Analyst (Financial Validation) - Financial issues + SPECIFIC fixes
+ * 3. Strategy Advisor (Strategy Suggestion) - ONE strategic move with implementation steps
+ * 4. Project Manager (Progress Status) - Execution status, blockers, and next actions
+ *
+ * All agents are ACTION-ORIENTED:
+ * - Every insight includes a specific, executable action
+ * - Outputs are concise and focused, not verbose lists
+ * - Recommendations reference the user's actual business data
  */
 
 const planGuidance = require('./planGuidanceAgent');

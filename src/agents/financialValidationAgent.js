@@ -1,13 +1,13 @@
 /**
- * Financial Validation Agent
- * Analyzes financial data and flags numbers that are unrealistic or inconsistent.
+ * Financial Validation Agent (Finance Analyst)
+ * Analyzes financial data and provides specific action recommendations.
  * Uses v2 data: FinancialBaseline + RevenueStreams
  *
- * Checks for:
- * - Revenue vs cost ratios
- * - Margin consistency
- * - Cash flow sustainability
- * - Industry benchmarks
+ * Key improvements:
+ * - Each finding includes a specific action to fix it
+ * - Prioritizes issues by financial impact
+ * - Provides concrete targets, not just observations
+ * - Compares to industry benchmarks with specific gaps
  */
 
 const {
@@ -274,45 +274,34 @@ Cash Position:
 PRODUCTS/SERVICES:
 ${revenueStreams.slice(0, 5).map(s => `- ${s.name} (${s.type}): $${s.metrics?.estimatedMonthlyRevenue?.toLocaleString() || 0}/mo, ${s.metrics?.grossMarginPercent?.toFixed(0) || 0}% margin`).join('\n') || 'No products/services added yet'}`;
 
-    const prompt = `You are a financial analyst reviewing a business plan's financial projections.
+    const prompt = `You are a Finance Analyst. Your job: Tell the user exactly how to improve their financial health with specific numbers.
 
 ${contextStr}
 
 ${financialDataSection}
 
-CALCULATED METRICS:
-${JSON.stringify(basicValidation.metrics, null, 2)}
+ISSUES DETECTED: ${basicValidation.errors.length} errors, ${basicValidation.warnings.length} warnings
 
-ISSUES FOUND:
-Errors: ${JSON.stringify(basicValidation.errors)}
-Warnings: ${JSON.stringify(basicValidation.warnings)}
+RULES:
+- Every recommendation MUST include specific numbers (e.g., "Increase prices 15% to add $X/month")
+- Compare to benchmarks with exact gaps (e.g., "25% margin is 15 points below SaaS median of 40%")
+- Prioritize by $ impact - what moves the needle most?
+- MAX 20 words per field - be direct
 
-Analyze these financials and provide:
-1. Are the numbers realistic for this industry and business stage?
-2. Are there any inconsistencies between different financial figures?
-3. What specific improvements would you recommend?
-
-IMPORTANT TONE GUIDELINES:
-- Be direct and specific - cite actual numbers
-- Positives must reference specific metrics (e.g., "40% gross margin is solid for retail") not generic praise
-- Recommendations must be actionable with specific targets where possible
-- Avoid vague language like "looks good" or "seems reasonable"
-
-Respond in JSON format:
+Respond in JSON:
 {
   "overallAssessment": "healthy|concerning|critical",
   "realism": {
     "score": 1-10,
-    "explanation": "Brief explanation citing specific numbers that support this score"
+    "explanation": "One sentence with numbers"
   },
   "consistencyIssues": [
-    {"issue": "Specific inconsistency with numbers", "recommendation": "Concrete fix with target values"}
+    {"issue": "Problem with numbers", "recommendation": "Action: verb + number + outcome"}
   ],
   "topRecommendations": [
-    "Specific actionable recommendation with target numbers",
-    "Another specific recommendation"
+    "Action with $ impact (e.g., 'Raise prices 10% = +$X/month')"
   ],
-  "positives": ["Specific positive citing actual metrics from their data"]
+  "positives": ["Strength with actual number from their data"]
 }`;
 
     const result = await callOpenAIJSON(prompt, {
