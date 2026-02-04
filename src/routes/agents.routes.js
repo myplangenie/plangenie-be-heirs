@@ -1,11 +1,12 @@
 /**
  * AI Agents Routes
  *
- * Endpoints for the 4 AI agents:
+ * Endpoints for the 5 AI agents:
  * - POST /api/agents/plan-guidance - What to work on next
  * - POST /api/agents/financial-validate - Validate financial projections
  * - POST /api/agents/strategy-suggest - Get strategy recommendations
  * - GET /api/agents/progress-status - Get plan completion status
+ * - POST /api/agents/strategic-integrate - Strategic coherence and tradeoffs
  * - POST /api/agents/invalidate-cache - Clear agent caches
  */
 
@@ -22,19 +23,31 @@ router.use(auth());
 router.use(workspaceContext);
 
 /**
- * Plan Guidance Agent
+ * Plan Guidance Agent (Priority Coach)
  * POST /api/agents/plan-guidance
- * Returns prioritized tasks with AI reasoning
+ * Returns tile-based guidance with zones
+ *
+ * Body params:
+ * - forceRefresh: boolean - Skip cache
+ * - timeHorizon: 'today' | 'week' | 'month' - Time context for recommendations
  */
 router.post('/plan-guidance', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
-    const { forceRefresh } = req.body;
+    const { forceRefresh, timeHorizon = 'week' } = req.body;
 
-    console.log('[Agent] plan-guidance - userId:', userId, 'workspaceId:', workspaceId, 'workspace.wid:', req.workspace?.wid);
+    // Validate timeHorizon
+    const validHorizons = ['today', 'week', 'month'];
+    const horizon = validHorizons.includes(timeHorizon) ? timeHorizon : 'week';
 
-    const result = await agents.generateGuidance(userId, { forceRefresh, workspaceId });
+    console.log('[Agent] plan-guidance - userId:', userId, 'workspaceId:', workspaceId, 'timeHorizon:', horizon);
+
+    const result = await agents.generateGuidance(userId, {
+      forceRefresh,
+      workspaceId,
+      timeHorizon: horizon,
+    });
 
     res.json({
       success: true,
@@ -59,6 +72,8 @@ router.post('/financial-validate', requireViewer, async (req, res) => {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
     const { forceRefresh } = req.body;
+
+    console.log('[Agent] financial-validate - userId:', userId, 'workspaceId:', workspaceId);
 
     const result = await agents.validateFinancials(userId, { forceRefresh, workspaceId });
 
@@ -106,21 +121,30 @@ router.post('/strategy-suggest', requireViewer, async (req, res) => {
 });
 
 /**
- * Progress Status Agent
- * GET /api/agents/progress-status
- * Returns plan completion status
+ * Project Manager Agent (Progress Status)
+ * POST /api/agents/progress-status
+ * Returns execution health and momentum tracking
+ *
+ * Body params:
+ * - forceRefresh: boolean - Skip cache
+ * - timeHorizon: 'today' | 'week' | 'month' - Time context for execution view
  */
-router.get('/progress-status', requireViewer, async (req, res) => {
+router.post('/progress-status', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
-    const forceRefresh = req.query.refresh === 'true';
-    const includeAIFeedback = req.query.ai !== 'false';
+    const { forceRefresh, timeHorizon = 'week' } = req.body;
+
+    // Validate timeHorizon
+    const validHorizons = ['today', 'week', 'month'];
+    const horizon = validHorizons.includes(timeHorizon) ? timeHorizon : 'week';
+
+    console.log('[Agent] progress-status - userId:', userId, 'workspaceId:', workspaceId, 'timeHorizon:', horizon);
 
     const result = await agents.getProgressStatus(userId, {
       forceRefresh,
-      includeAIFeedback,
       workspaceId,
+      timeHorizon: horizon,
     });
 
     res.json({
@@ -132,6 +156,34 @@ router.get('/progress-status', requireViewer, async (req, res) => {
     res.status(500).json({
       success: false,
       error: err.message || 'Failed to get progress status',
+    });
+  }
+});
+
+/**
+ * Strategic Integrator Agent
+ * POST /api/agents/strategic-integrate
+ * Returns strategic coherence, tensions, and tradeoffs
+ */
+router.post('/strategic-integrate', requireViewer, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const workspaceId = req.workspace?._id;
+    const { forceRefresh } = req.body;
+
+    console.log('[Agent] strategic-integrate - userId:', userId, 'workspaceId:', workspaceId);
+
+    const result = await agents.getStrategicIntegration(userId, { forceRefresh, workspaceId });
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  } catch (err) {
+    console.error('[Agent] Strategic integration error:', err.message);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Failed to get strategic integration',
     });
   }
 });
@@ -184,19 +236,21 @@ router.get('/summary', requireViewer, async (req, res) => {
       success: true,
       data: {
         guidance: guidance.status === 'fulfilled' ? {
-          topPriority: guidance.value?.guidance?.topPriority?.title,
+          decision: guidance.value?.decisionZone?.decision,
+          topPriority: guidance.value?.topPriority?.title,
           overdueCount: guidance.value?.stats?.overdueCount,
-          focusRecommendation: guidance.value?.guidance?.focusRecommendation,
+          timeHorizon: guidance.value?.timeHorizon,
         } : null,
         financial: financial.status === 'fulfilled' ? {
-          status: financial.value?.status,
-          errorCount: financial.value?.errors?.length || 0,
-          warningCount: financial.value?.warnings?.length || 0,
+          status: financial.value?.financialState?.status,
+          errorCount: 0,
+          warningCount: financial.value?.financialState?.status === 'watch' ? 1 : 0,
         } : null,
         progress: progress.status === 'fulfilled' ? {
-          overallProgress: progress.value?.overallProgress,
-          overallStatus: progress.value?.overallStatus,
-          nextStep: progress.value?.nextSteps?.[0]?.action,
+          executionHealth: progress.value?.executionHealth?.state,
+          overdueCount: progress.value?.stats?.overdueCount || 0,
+          blockedCount: progress.value?.stats?.blockedCount || 0,
+          completionRate: progress.value?.momentum?.completionRate || 0,
         } : null,
       },
     });

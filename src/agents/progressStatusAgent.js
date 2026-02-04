@@ -1,15 +1,26 @@
 /**
  * Project Manager Agent
- * Provides execution status and identifies blockers across all projects.
+ * Execution Integrity and Momentum Control Layer
  *
- * VALUE PROPOSITION:
- * Answers: "What's the status of my projects and what needs my attention?"
+ * Purpose: Ensure decisions turn into outcomes.
+ * This agent monitors execution health, surfaces breakdowns in momentum,
+ * identifies blockers and slippage early, and makes execution risk visible.
  *
- * This agent:
- * 1. Shows overall execution health (on track / at risk / blocked)
- * 2. Identifies specific deliverables that are overdue or at risk
- * 3. Provides actionable next steps to unblock progress
- * 4. Highlights wins to maintain momentum
+ * This agent answers:
+ * - Is execution holding?
+ * - Where is momentum breaking?
+ * - What needs intervention?
+ * - What will slip next if nothing changes?
+ *
+ * It never sets priorities. It never defines strategy. It protects execution quality.
+ *
+ * Tile-based UI Structure:
+ * - Zone 1: Execution Health (Hero status tile)
+ * - Zone 2: Execution Signals (Delivery, Dependencies, Ownership)
+ * - Zone 3: Execution Risk (Slippage Risk, Blockers)
+ * - Zone 4: Intervention Focus
+ * - Zone 5: Momentum and Throughput
+ * - Zone 6: Control and Context (Time Horizon)
  */
 
 const {
@@ -18,399 +29,554 @@ const {
   setCache,
   buildAgentContext,
   callOpenAIJSON,
+  formatContextForPrompt,
 } = require('./base');
 
-// Plan sections with their weights and required fields
-const PLAN_SECTIONS = {
-  userProfile: {
-    name: 'User Profile',
-    weight: 5,
-    fields: ['fullName', 'role'],
-    description: 'Your personal information and role',
-  },
-  businessProfile: {
-    name: 'Business Profile',
-    weight: 15,
-    fields: ['businessName', 'industry', 'businessStage', 'ventureType', 'teamSize'],
-    description: 'Core business information',
-  },
-  vision: {
-    name: 'Vision & Purpose',
-    weight: 15,
-    fields: ['ubp', 'purpose', 'vision1y', 'vision3y'],
-    description: 'Your business purpose and goals',
-  },
-  values: {
-    name: 'Values & Culture',
-    weight: 10,
-    fields: ['valuesCore', 'cultureFeeling'],
-    description: 'Company values and culture',
-  },
-  market: {
-    name: 'Market Analysis',
-    weight: 15,
-    checkMarket: true, // Uses new Competitor CRUD model via context._competitors
-    description: 'Target market and competitive landscape',
-  },
-  swot: {
-    name: 'SWOT Analysis',
-    weight: 10,
-    checkSwot: true, // Uses new SwotEntry CRUD model via context.swot
-    description: 'Strengths, weaknesses, opportunities, threats',
-  },
-  products: {
-    name: 'Products & Services',
-    weight: 10,
-    checkV2: 'revenueStreams', // Uses v2 RevenueStreams
-    minItems: 1,
-    description: 'Your product/service offerings with pricing',
-  },
-  financial: {
-    name: 'Financial Projections',
-    weight: 10,
-    checkV2Financial: true, // Uses v2 FinancialBaseline
-    description: 'Revenue, costs, and cash position',
-  },
-  projects: {
-    name: 'Strategic Projects',
-    weight: 10,
-    requiresArray: 'coreProjectDetails',
-    minItems: 1,
-    description: 'Core strategic initiatives',
-  },
-};
+/**
+ * Assess execution health state
+ */
+function assessExecutionHealth(deliveryStats, dependencyStats, ownershipStats) {
+  const { overdueCount, totalActive, dueSoonCount } = deliveryStats;
+  const { blockedCount, criticalChains } = dependencyStats;
+  const { overloadedOwners, unassignedCount } = ownershipStats;
+
+  // Calculate risk factors
+  const overdueRatio = totalActive > 0 ? overdueCount / totalActive : 0;
+  const blockedRatio = totalActive > 0 ? blockedCount / totalActive : 0;
+
+  // Determine state
+  if (overdueRatio > 0.3 || blockedCount > 3 || criticalChains > 1) {
+    return {
+      state: 'compromised',
+      supportingSentence: buildHealthSentence('compromised', { overdueCount, blockedCount, criticalChains, overloadedOwners }),
+    };
+  }
+
+  if (overdueCount > 0 || blockedCount > 0 || overloadedOwners > 0 || dueSoonCount > 3) {
+    return {
+      state: 'at-risk',
+      supportingSentence: buildHealthSentence('at-risk', { overdueCount, blockedCount, dueSoonCount, overloadedOwners }),
+    };
+  }
+
+  return {
+    state: 'on-track',
+    supportingSentence: buildHealthSentence('on-track', { totalActive, dueSoonCount }),
+  };
+}
 
 /**
- * Calculate completion for each section using v2 data
+ * Build health supporting sentence
  */
-function calculateSectionCompletion(context) {
-  const sections = [];
-  const answers = context._rawAnswers || {};
+function buildHealthSentence(state, stats) {
+  const { overdueCount, blockedCount, criticalChains, overloadedOwners, totalActive, dueSoonCount } = stats;
 
-  for (const [key, config] of Object.entries(PLAN_SECTIONS)) {
-    let filled = 0;
-    let total = 0;
-    let status = 'empty';
-    const missingFields = [];
+  if (state === 'compromised') {
+    const issues = [];
+    if (overdueCount > 0) issues.push(`${overdueCount} overdue deliverable${overdueCount > 1 ? 's' : ''}`);
+    if (blockedCount > 0) issues.push(`${blockedCount} blocked item${blockedCount > 1 ? 's' : ''}`);
+    if (criticalChains > 0) issues.push(`${criticalChains} critical dependency chain${criticalChains > 1 ? 's' : ''}`);
+    return `Execution is compromised due to ${issues.join(' and ')}.`;
+  }
 
-    if (config.checkSwot) {
-      // Check SWOT from new SwotEntry CRUD model (via context.swot)
-      const swot = context.swot || {};
-      const swotFields = ['strengths', 'weaknesses', 'opportunities', 'threats'];
-      total = swotFields.length;
-      for (const field of swotFields) {
-        const value = swot[field];
-        if (value && String(value).trim().length > 0) {
-          filled++;
-        } else {
-          missingFields.push(`swot${field.charAt(0).toUpperCase() + field.slice(1)}`);
-        }
-      }
-    } else if (config.checkMarket) {
-      // Check Market from answers + new Competitor CRUD model
-      total = 3; // marketCustomer, marketPartners, competitors
+  if (state === 'at-risk') {
+    const issues = [];
+    if (overdueCount > 0) issues.push(`${overdueCount} overdue`);
+    if (blockedCount > 0) issues.push(`${blockedCount} blocked`);
+    if (dueSoonCount > 0) issues.push(`${dueSoonCount} due soon`);
+    if (overloadedOwners > 0) issues.push(`${overloadedOwners} overloaded owner${overloadedOwners > 1 ? 's' : ''}`);
+    return `Execution is at risk: ${issues.join(', ')}.`;
+  }
 
-      // Check marketCustomer (also check targetCustomer as alternate field name)
-      const customerValue = answers.marketCustomer || answers.targetCustomer || context.marketCustomer || '';
-      if (customerValue.trim().length > 0) {
-        filled++;
-      } else {
-        missingFields.push('marketCustomer');
-      }
+  if (totalActive === 0) {
+    return 'No active deliverables. Add projects to track execution.';
+  }
 
-      // Check marketPartners (also check partners as alternate field name)
-      const partnersValue = answers.marketPartners || answers.partners || context.marketPartners || '';
-      if (partnersValue.trim().length > 0) {
-        filled++;
-      } else {
-        missingFields.push('marketPartners');
-      }
+  return `Execution is on track with ${totalActive} active deliverable${totalActive > 1 ? 's' : ''}${dueSoonCount > 0 ? ` (${dueSoonCount} due soon)` : ''}.`;
+}
 
-      // Check competitors from Competitor CRUD model only
-      const competitors = context._competitors || [];
-      if (competitors.length > 0) {
-        filled++;
-      } else {
-        missingFields.push('marketCompetitors');
-      }
-    } else if (config.fields) {
-      // Regular field checks
-      total = config.fields.length;
-      for (const field of config.fields) {
-        const value = answers[field] ||
-          context[field] ||
-          (key === 'businessProfile' ? context[field] : null);
+/**
+ * Calculate delivery statistics
+ */
+function calculateDeliveryStats(context, timeHorizon = 'week') {
+  const coreProjects = context.coreProjects || [];
+  const deptProjects = context.departmentProjects || [];
 
-        if (value && String(value).trim().length > 0) {
-          filled++;
-        } else {
-          missingFields.push(field);
-        }
-      }
-    } else if (config.checkV2) {
-      // Check v2 RevenueStreams
-      total = config.minItems || 1;
-      const arr = context[config.checkV2] || [];
-      filled = Math.min(arr.length, total);
-      if (arr.length === 0) {
-        missingFields.push('products/services');
-      }
-    } else if (config.checkV2Financial) {
-      // Check v2 FinancialBaseline
-      const baseline = context.financialBaseline;
-      const revenueAggregate = context.revenueAggregate;
-      const streams = context.revenueStreams || [];
+  const allDeliverables = [
+    ...coreProjects.flatMap(p => (p.deliverables || []).map(d => ({
+      ...d,
+      projectName: p.title || p.name,
+      projectType: 'core',
+      projectOwner: p.ownerName || p.ownerId || '',
+    }))),
+    ...deptProjects.flatMap(p => (p.deliverables || []).map(d => ({
+      ...d,
+      projectName: p.title || p.name,
+      projectType: 'department',
+      projectOwner: p.ownerName || p.ownerId || (p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : ''),
+    }))),
+  ];
 
-      // Check for revenue data (from RevenueStreams)
-      const hasRevenue = streams.length > 0 || (revenueAggregate?.totalMonthlyRevenue > 0);
-      // Check for costs data
-      const hasCosts = (baseline?.workRelatedCosts?.total > 0) || (baseline?.fixedCosts?.total > 0);
-      // Check for cash data
-      const hasCash = (baseline?.cash?.currentBalance > 0);
+  const today = new Date();
+  const horizonDays = timeHorizon === 'today' ? 1 : timeHorizon === 'week' ? 7 : 30;
+  const horizonDate = new Date(today.getTime() + horizonDays * 24 * 60 * 60 * 1000);
 
-      total = 3; // Revenue, Costs, Cash
-      if (hasRevenue) filled++;
-      else missingFields.push('revenue (products/services)');
-      if (hasCosts) filled++;
-      else missingFields.push('costs');
-      if (hasCash) filled++;
-      else missingFields.push('cash position');
-    } else if (config.requiresArray) {
-      total = config.minItems || 1;
-      const arr = context[config.requiresArray] || [];
-      filled = Math.min(arr.length, total);
-      if (arr.length === 0) {
-        missingFields.push(config.requiresArray);
-      }
+  const activeDeliverables = allDeliverables.filter(d => !d.done);
+  const completedDeliverables = allDeliverables.filter(d => d.done);
+
+  const overdueDeliverables = activeDeliverables.filter(d => {
+    const due = d.dueWhen ? new Date(d.dueWhen) : null;
+    return due && due < today;
+  });
+
+  const dueSoonDeliverables = activeDeliverables.filter(d => {
+    const due = d.dueWhen ? new Date(d.dueWhen) : null;
+    return due && due >= today && due <= horizonDate;
+  });
+
+  return {
+    totalActive: activeDeliverables.length,
+    totalCompleted: completedDeliverables.length,
+    totalAll: allDeliverables.length,
+    overdueCount: overdueDeliverables.length,
+    overdueItems: overdueDeliverables.slice(0, 5),
+    dueSoonCount: dueSoonDeliverables.length,
+    dueSoonItems: dueSoonDeliverables.slice(0, 5),
+  };
+}
+
+/**
+ * Calculate dependency statistics
+ */
+function calculateDependencyStats(context) {
+  const coreProjects = context.coreProjects || [];
+  const deptProjects = context.departmentProjects || [];
+
+  const allDeliverables = [
+    ...coreProjects.flatMap(p => (p.deliverables || []).map(d => ({ ...d, projectName: p.title || p.name }))),
+    ...deptProjects.flatMap(p => (p.deliverables || []).map(d => ({ ...d, projectName: p.title || p.name }))),
+  ];
+
+  // Find deliverables that are blocked by incomplete dependencies
+  const blockedDeliverables = allDeliverables.filter(d => {
+    if (d.done) return false;
+    // Check if has dependencies and they're not complete
+    const deps = d.dependencies || d.blockedBy || [];
+    if (deps.length === 0) return false;
+
+    // For now, consider it blocked if it has dependencies listed
+    // In a more complete implementation, we'd check if those deps are done
+    return deps.some(dep => {
+      const depItem = allDeliverables.find(item => item.id === dep || item.title === dep);
+      return depItem && !depItem.done;
+    });
+  });
+
+  // Identify critical chains (deliverables that block multiple others)
+  const blockingCounts = {};
+  allDeliverables.forEach(d => {
+    const deps = d.dependencies || d.blockedBy || [];
+    deps.forEach(dep => {
+      blockingCounts[dep] = (blockingCounts[dep] || 0) + 1;
+    });
+  });
+
+  const criticalChains = Object.values(blockingCounts).filter(count => count >= 2).length;
+
+  return {
+    blockedCount: blockedDeliverables.length,
+    blockedItems: blockedDeliverables.slice(0, 5),
+    criticalChains,
+    totalDependencies: Object.keys(blockingCounts).length,
+  };
+}
+
+/**
+ * Calculate ownership statistics
+ */
+function calculateOwnershipStats(context) {
+  const coreProjects = context.coreProjects || [];
+  const deptProjects = context.departmentProjects || [];
+
+  // Map deliverables with their parent project's owner as fallback
+  const allDeliverables = [
+    ...coreProjects.flatMap(p => (p.deliverables || []).map(d => ({
+      ...d,
+      projectName: p.title || p.name,
+      // Deliverable's own owner (check correct field names from schema)
+      deliverableOwner: d.ownerName || d.ownerId || d.owner || d.assignedTo || d.responsible || '',
+      // Fallback to project-level owner
+      projectOwner: p.ownerName || p.ownerId || '',
+    }))),
+    ...deptProjects.flatMap(p => (p.deliverables || []).map(d => ({
+      ...d,
+      projectName: p.title || p.name,
+      // Deliverable's own owner (check correct field names from schema)
+      deliverableOwner: d.ownerName || d.ownerId || d.owner || d.assignedTo || d.responsible || '',
+      // Fallback to project-level owner (department projects use firstName/lastName)
+      projectOwner: p.ownerName || p.ownerId || (p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : ''),
+    }))),
+  ];
+
+  const activeDeliverables = allDeliverables.filter(d => !d.done);
+
+  // Count by owner
+  const ownerCounts = {};
+  let unassignedCount = 0;
+
+  activeDeliverables.forEach(d => {
+    // Use deliverable's owner, fallback to project owner
+    const owner = d.deliverableOwner || d.projectOwner || '';
+    if (!owner || owner.trim() === '') {
+      unassignedCount++;
+    } else {
+      const ownerKey = owner.trim();
+      ownerCounts[ownerKey] = (ownerCounts[ownerKey] || 0) + 1;
     }
+  });
 
-    const percentage = total > 0 ? Math.round((filled / total) * 100) : 0;
+  // Find overloaded owners (more than 5 active items)
+  const OVERLOAD_THRESHOLD = 5;
+  const overloadedOwners = Object.entries(ownerCounts)
+    .filter(([_, count]) => count > OVERLOAD_THRESHOLD)
+    .map(([owner, count]) => ({ owner, count }));
 
-    if (percentage === 100) status = 'complete';
-    else if (percentage >= 50) status = 'partial';
-    else if (percentage > 0) status = 'started';
-    else status = 'empty';
+  return {
+    ownerCounts,
+    overloadedOwners: overloadedOwners.length,
+    overloadedOwnersList: overloadedOwners,
+    unassignedCount,
+    totalOwners: Object.keys(ownerCounts).length,
+  };
+}
 
-    sections.push({
-      key,
-      name: config.name,
-      description: config.description,
-      weight: config.weight,
-      filled,
-      total,
-      percentage,
-      status,
-      missingFields,
-      weightedScore: (percentage / 100) * config.weight,
+/**
+ * Identify slippage risks
+ */
+function identifySlippageRisks(deliveryStats, dependencyStats, ownershipStats) {
+  const risks = [];
+
+  // Deliverables due soon with dependencies
+  deliveryStats.dueSoonItems.forEach(d => {
+    const deps = d.dependencies || d.blockedBy || [];
+    if (deps.length > 0) {
+      risks.push({
+        deliverable: d.title,
+        project: d.projectName,
+        reason: 'Has unresolved dependencies',
+        likelihood: 'high',
+      });
+    }
+  });
+
+  // Deliverables assigned to overloaded owners
+  ownershipStats.overloadedOwnersList.forEach(({ owner, count }) => {
+    risks.push({
+      deliverable: `${count} items assigned to ${owner}`,
+      project: 'Multiple',
+      reason: `Owner is overloaded with ${count} active items`,
+      likelihood: 'medium',
+    });
+  });
+
+  // Deliverables without clear ownership
+  if (ownershipStats.unassignedCount > 0) {
+    risks.push({
+      deliverable: `${ownershipStats.unassignedCount} unassigned items`,
+      project: 'Multiple',
+      reason: 'No clear ownership means no accountability',
+      likelihood: 'high',
     });
   }
 
-  return sections;
+  return risks.slice(0, 5);
 }
 
 /**
- * Determine next priority actions
+ * Identify blockers
  */
-function determineNextSteps(sections) {
-  const steps = [];
+function identifyBlockers(deliveryStats, dependencyStats, context) {
+  const blockers = [];
 
-  // Sort by: empty first, then partial, weighted by importance
-  const prioritized = [...sections].sort((a, b) => {
-    // Prioritize empty and partial sections
-    if (a.status === 'empty' && b.status !== 'empty') return -1;
-    if (b.status === 'empty' && a.status !== 'empty') return 1;
-    if (a.status === 'partial' && b.status === 'complete') return -1;
-    if (b.status === 'partial' && a.status === 'complete') return 1;
-    // Then by weight (higher weight = more important)
-    return b.weight - a.weight;
+  // Dependency blockers
+  dependencyStats.blockedItems.forEach(d => {
+    blockers.push({
+      item: d.title,
+      type: 'dependency',
+      description: `Waiting on dependencies to complete`,
+      project: d.projectName,
+    });
   });
 
-  for (const section of prioritized) {
-    if (section.status === 'complete') continue;
+  // Overdue items as blockers (they may be blocking other work)
+  deliveryStats.overdueItems.slice(0, 3).forEach(d => {
+    blockers.push({
+      item: d.title,
+      type: 'overdue',
+      description: `Overdue and may be blocking downstream work`,
+      project: d.projectName,
+    });
+  });
 
-    if (section.status === 'empty') {
-      steps.push({
-        section: section.name,
-        action: `Start filling out "${section.name}"`,
-        reason: section.description,
-        priority: 'high',
-        estimatedTime: '5-10 minutes',
-      });
-    } else if (section.status === 'partial' || section.status === 'started') {
-      const missing = section.missingFields.slice(0, 2).join(', ');
-      steps.push({
-        section: section.name,
-        action: `Complete "${section.name}" - missing: ${missing}`,
-        reason: `${section.percentage}% done, needs ${100 - section.percentage}% more`,
-        priority: section.percentage < 50 ? 'high' : 'medium',
-        estimatedTime: '2-5 minutes',
-      });
-    }
-
-    if (steps.length >= 5) break; // Limit to 5 next steps
-  }
-
-  return steps;
+  return blockers.slice(0, 5);
 }
 
 /**
- * Generate progress status report using v2 data
+ * Calculate momentum metrics
+ */
+function calculateMomentum(context) {
+  const coreProjects = context.coreProjects || [];
+  const deptProjects = context.departmentProjects || [];
+
+  const allDeliverables = [
+    ...coreProjects.flatMap(p => p.deliverables || []),
+    ...deptProjects.flatMap(p => p.deliverables || []),
+  ];
+
+  const completed = allDeliverables.filter(d => d.done);
+  const total = allDeliverables.length;
+
+  // Calculate completion rate
+  const completionRate = total > 0 ? Math.round((completed.length / total) * 100) : 0;
+
+  // Determine trend (would need historical data for real trend)
+  // For now, base it on completion rate
+  let trend = 'stable';
+  if (completionRate >= 70) trend = 'accelerating';
+  else if (completionRate < 30 && total > 5) trend = 'declining';
+
+  return {
+    completedCount: completed.length,
+    totalCount: total,
+    completionRate,
+    trend,
+    statement: buildMomentumStatement(completed.length, total, trend),
+  };
+}
+
+/**
+ * Build momentum statement
+ */
+function buildMomentumStatement(completed, total, trend) {
+  if (total === 0) {
+    return 'No deliverables to track. Add projects to monitor momentum.';
+  }
+
+  const rate = Math.round((completed / total) * 100);
+
+  if (trend === 'accelerating') {
+    return `Strong momentum: ${completed} of ${total} deliverables complete (${rate}%).`;
+  }
+
+  if (trend === 'declining') {
+    return `Momentum declining: Only ${completed} of ${total} deliverables complete (${rate}%).`;
+  }
+
+  return `${completed} of ${total} deliverables complete (${rate}%). Throughput is stable.`;
+}
+
+/**
+ * Generate Project Manager execution report
  * @param {string} userId - User ID
- * @param {Object} options - Optional parameters (workspaceId, forceRefresh, includeAIFeedback)
- * @returns {Object} Progress report with sections and recommendations
+ * @param {Object} options - Optional parameters
+ * @returns {Object} Execution report with 6 zones
  */
 async function getProgressStatus(userId, options = {}) {
-  const { forceRefresh = false, includeAIFeedback = true, workspaceId = null } = options;
+  const { forceRefresh = false, workspaceId = null, timeHorizon = 'week' } = options;
 
-  // Build context (includes v2 data)
+  // Build context
   const context = await buildAgentContext(userId, workspaceId);
 
-  // Create cache key using v2 data
+  // Calculate all statistics
+  const deliveryStats = calculateDeliveryStats(context, timeHorizon);
+  const dependencyStats = calculateDependencyStats(context);
+  const ownershipStats = calculateOwnershipStats(context);
+
+  // Create cache key
   const inputHash = hashInput({
-    businessName: context.businessName,
-    answersKeys: Object.keys(context._rawAnswers || {}),
-    revenueStreamsCount: context.revenueStreams?.length || 0,
-    hasFinancialBaseline: !!context.financialBaseline,
-    projectsCount: context.coreProjectDetails?.length || 0,
+    totalDeliverables: deliveryStats.totalAll,
+    completedCount: deliveryStats.totalCompleted,
+    overdueCount: deliveryStats.overdueCount,
+    blockedCount: dependencyStats.blockedCount,
+    timeHorizon,
   });
 
   // Check cache
   if (!forceRefresh) {
     const cached = await getFromCache(userId, 'progress-status', inputHash, workspaceId);
     if (cached) {
+      console.log('[Project Manager] Returning CACHED response');
       return { ...cached, fromCache: true };
     }
   }
+  console.log('[Project Manager] Generating FRESH response');
 
-  // Calculate section completion
-  const sections = calculateSectionCompletion(context);
+  // Zone 1: Execution Health
+  const executionHealth = assessExecutionHealth(deliveryStats, dependencyStats, ownershipStats);
 
-  // Calculate overall progress
-  const totalWeight = sections.reduce((sum, s) => sum + s.weight, 0);
-  const earnedWeight = sections.reduce((sum, s) => sum + s.weightedScore, 0);
-  const overallProgress = Math.round((earnedWeight / totalWeight) * 100);
+  // Zone 2: Execution Signals
+  const executionSignals = {
+    delivery: {
+      totalActive: deliveryStats.totalActive,
+      overdueCount: deliveryStats.overdueCount,
+      dueSoonCount: deliveryStats.dueSoonCount,
+      context: deliveryStats.totalActive === 0
+        ? 'No active deliverables'
+        : deliveryStats.overdueCount > 0
+          ? `${deliveryStats.overdueCount} overdue, ${deliveryStats.dueSoonCount} due soon`
+          : `${deliveryStats.dueSoonCount} due within ${timeHorizon}`,
+    },
+    dependencies: {
+      blockedCount: dependencyStats.blockedCount,
+      criticalChains: dependencyStats.criticalChains,
+      context: dependencyStats.blockedCount === 0
+        ? 'No blocked deliverables'
+        : `${dependencyStats.blockedCount} items blocked by dependencies`,
+    },
+    ownership: {
+      overloadedOwners: ownershipStats.overloadedOwners,
+      unassignedCount: ownershipStats.unassignedCount,
+      context: ownershipStats.unassignedCount > 0
+        ? `${ownershipStats.unassignedCount} items lack ownership`
+        : ownershipStats.overloadedOwners > 0
+          ? `${ownershipStats.overloadedOwners} owner(s) overloaded`
+          : 'Ownership is balanced',
+    },
+  };
 
-  // Determine status
-  let overallStatus = 'getting-started';
-  if (overallProgress >= 90) overallStatus = 'ready';
-  else if (overallProgress >= 70) overallStatus = 'almost-there';
-  else if (overallProgress >= 40) overallStatus = 'making-progress';
-  else if (overallProgress >= 10) overallStatus = 'getting-started';
+  // Zone 3: Execution Risk
+  const slippageRisks = identifySlippageRisks(deliveryStats, dependencyStats, ownershipStats);
+  const blockers = identifyBlockers(deliveryStats, dependencyStats, context);
 
-  // Get next steps
-  const nextSteps = determineNextSteps(sections);
+  // Zone 5: Momentum
+  const momentum = calculateMomentum(context);
 
-  // Get AI feedback if requested and plan is substantially complete
-  let aiFeedback = null;
+  // Zone 4: Intervention Focus (AI-generated if there are issues)
+  let interventionFocus = {
+    items: [],
+    hasData: false,
+  };
+
   let generationTimeMs = 0;
 
-  if (includeAIFeedback && overallProgress >= 50) {
-    const completeSections = sections.filter(s => s.status === 'complete').map(s => s.name);
-    const incompleteSections = sections.filter(s => s.status !== 'complete').map(s => `${s.name} (${s.percentage}%)`);
+  const needsIntervention = executionHealth.state !== 'on-track' ||
+    deliveryStats.overdueCount > 0 ||
+    dependencyStats.blockedCount > 0 ||
+    ownershipStats.unassignedCount > 2;
 
-    // Include v2 financial data in prompt
-    const revenueAggregate = context.revenueAggregate;
-    const baseline = context.financialBaseline;
-    const financialSummary = revenueAggregate || baseline ? `
-Financial Summary:
-- Revenue Streams: ${context.revenueStreams?.length || 0}
-- Monthly Revenue: $${revenueAggregate?.totalMonthlyRevenue?.toLocaleString() || 0}
-- Total Costs: $${((baseline?.workRelatedCosts?.total || 0) + (baseline?.fixedCosts?.total || 0)).toLocaleString()}
-- Cash Position: $${baseline?.cash?.currentBalance?.toLocaleString() || 0}` : '';
+  if (needsIntervention && (deliveryStats.totalActive > 0 || deliveryStats.overdueCount > 0)) {
+    const contextStr = formatContextForPrompt(context);
 
-    // Include project execution data
-    const coreProjects = context.coreProjects || [];
-    const deptProjects = context.departmentProjects || [];
-    const totalProjects = coreProjects.length + deptProjects.length;
+    const executionSummary = `EXECUTION STATUS:
+Health: ${executionHealth.state}
+Active Deliverables: ${deliveryStats.totalActive}
+Overdue: ${deliveryStats.overdueCount}
+Due Soon: ${deliveryStats.dueSoonCount}
+Blocked: ${dependencyStats.blockedCount}
+Unassigned: ${ownershipStats.unassignedCount}
+Overloaded Owners: ${ownershipStats.overloadedOwners}
 
-    // Calculate deliverable stats
-    const allDeliverables = [
-      ...coreProjects.flatMap(p => p.deliverables || []),
-      ...deptProjects.flatMap(p => p.deliverables || [])
-    ];
-    const completedDeliverables = allDeliverables.filter(d => d.done).length;
-    const totalDeliverables = allDeliverables.length;
+OVERDUE ITEMS:
+${deliveryStats.overdueItems.map(d => `- ${d.title} (${d.projectName})`).join('\n') || 'None'}
 
-    // Find overdue items
-    const today = new Date();
-    const overdueDeliverables = allDeliverables.filter(d => {
-      if (d.done) return false;
-      const due = d.dueWhen ? new Date(d.dueWhen) : null;
-      return due && due < today;
-    });
+BLOCKED ITEMS:
+${dependencyStats.blockedItems.map(d => `- ${d.title} (${d.projectName})`).join('\n') || 'None'}
 
-    const prompt = `You are a Project Manager. Your job: Give a quick execution status and tell the user what needs attention RIGHT NOW.
+SLIPPAGE RISKS:
+${slippageRisks.map(r => `- ${r.deliverable}: ${r.reason}`).join('\n') || 'None identified'}`;
 
-EXECUTION DATA:
-- Projects: ${totalProjects} total (${coreProjects.length} core, ${deptProjects.length} departmental)
-- Deliverables: ${completedDeliverables}/${totalDeliverables} complete (${totalDeliverables > 0 ? Math.round(completedDeliverables/totalDeliverables*100) : 0}%)
-- Overdue: ${overdueDeliverables.length} items need immediate attention
-${financialSummary}
+    const prompt = `You are the Project Manager Agent. Identify 1-2 execution issues that require leadership intervention.
 
-RULES:
-- Lead with the most important insight (what needs attention?)
-- Be SPECIFIC: name actual projects and deliverables
-- MAX 15 words per field
-- No motivational fluff - just status and actions
+${contextStr}
+
+${executionSummary}
 
 Respond in JSON:
 {
-  "overallFeedback": "One sentence status: what's working or what's blocked",
-  "strengths": ["Win with specific number (e.g., '${completedDeliverables} deliverables done this month')"],
-  "priorities": ["Action: Do X on project Y to unblock Z"],
-  "encouragement": "Factual momentum note with number"
-}`;
+  "items": [
+    {
+      "issue": "Clear statement of the execution issue (max 15 words)",
+      "whyIntervention": "Why leadership attention is needed (max 20 words)",
+      "consequence": "What happens if ignored (max 15 words)"
+    }
+  ]
+}
+
+RULES:
+- Focus on issues that need LEADERSHIP decision or escalation
+- Not operational tasks - things that need authority to resolve
+- Maximum 2 items
+- Be specific to actual projects and deliverables
+- No generic advice`;
 
     const result = await callOpenAIJSON(prompt, {
       maxTokens: 400,
-      temperature: 0.6,
+      temperature: 0.4,
     });
 
-    aiFeedback = result.data;
+    if (result.data?.items && Array.isArray(result.data.items)) {
+      interventionFocus = {
+        items: result.data.items.slice(0, 2),
+        hasData: true,
+      };
+    }
+
     generationTimeMs = result.generationTimeMs;
   }
 
   // Build response
   const response = {
-    overallProgress,
-    overallStatus,
-    statusLabels: {
-      'getting-started': 'Getting Started',
-      'making-progress': 'Making Progress',
-      'almost-there': 'Almost There',
-      'ready': 'Ready to Execute',
+    // Zone 1: Execution Health (Hero)
+    executionHealth,
+
+    // Zone 2: Execution Signals
+    executionSignals,
+
+    // Zone 3: Execution Risk
+    slippageRisk: {
+      items: slippageRisks,
+      hasRisks: slippageRisks.length > 0,
     },
-    sections: sections.map(s => ({
-      key: s.key,
-      name: s.name,
-      percentage: s.percentage,
-      status: s.status,
-      weight: s.weight,
-    })),
-    sectionDetails: sections,
-    nextSteps,
-    aiFeedback: aiFeedback || {
-      overallFeedback: overallProgress < 30
-        ? "You're just getting started. Focus on completing your business profile and vision first."
-        : overallProgress < 60
-          ? "Good progress! Keep filling in the remaining sections to complete your plan."
-          : "You're almost there! Complete the final sections to have a comprehensive plan.",
-      strengths: sections.filter(s => s.status === 'complete').map(s => `${s.name} is complete`).slice(0, 2),
-      priorities: nextSteps.slice(0, 2).map(s => s.action),
-      encouragement: "Every step forward brings you closer to a complete business plan!",
+    blockers: {
+      items: blockers,
+      hasBlockers: blockers.length > 0,
     },
+
+    // Zone 4: Intervention Focus
+    interventionFocus,
+
+    // Zone 5: Momentum
+    momentum,
+
+    // Zone 6: Time Horizon Context
+    timeHorizon,
+
+    // Metadata
+    stats: {
+      totalProjects: (context.coreProjects?.length || 0) + (context.departmentProjects?.length || 0),
+      totalDeliverables: deliveryStats.totalAll,
+      completedDeliverables: deliveryStats.totalCompleted,
+      activeDeliverables: deliveryStats.totalActive,
+      overdueCount: deliveryStats.overdueCount,
+      blockedCount: dependencyStats.blockedCount,
+    },
+    hasData: deliveryStats.totalAll > 0,
     generatedAt: new Date().toISOString(),
   };
 
   // Cache the response
   await setCache(userId, 'progress-status', inputHash, response, generationTimeMs, workspaceId);
 
+  console.log('[Project Manager] Execution health:', response.executionHealth.state);
+  console.log('[Project Manager] Active deliverables:', deliveryStats.totalActive);
+
   return { ...response, fromCache: false, generationTimeMs };
 }
 
 module.exports = {
   getProgressStatus,
-  calculateSectionCompletion,
-  determineNextSteps,
-  PLAN_SECTIONS,
+  calculateDeliveryStats,
+  calculateDependencyStats,
+  calculateOwnershipStats,
+  assessExecutionHealth,
 };

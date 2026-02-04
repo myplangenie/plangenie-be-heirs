@@ -1,11 +1,12 @@
 /**
  * AI Agents - Unified Export
  *
- * Four specialized agents for execution support:
+ * Five specialized agents for execution support:
  * 1. Priority Coach (Plan Guidance) - What to work on next with SPECIFIC actions
  * 2. Finance Analyst (Financial Validation) - Financial issues + SPECIFIC fixes
  * 3. Strategy Advisor (Strategy Suggestion) - ONE strategic move with implementation steps
  * 4. Project Manager (Progress Status) - Execution status, blockers, and next actions
+ * 5. Strategic Integrator - System coherence, tensions, and tradeoff resolution
  *
  * All agents are ACTION-ORIENTED:
  * - Every insight includes a specific, executable action
@@ -17,6 +18,7 @@ const planGuidance = require('./planGuidanceAgent');
 const financialValidation = require('./financialValidationAgent');
 const strategySuggestion = require('./strategySuggestionAgent');
 const progressStatus = require('./progressStatusAgent');
+const strategicIntegrator = require('./strategicIntegratorAgent');
 const base = require('./base');
 
 module.exports = {
@@ -33,6 +35,9 @@ module.exports = {
   // Progress Status
   getProgressStatus: progressStatus.getProgressStatus,
 
+  // Strategic Integrator
+  getStrategicIntegration: strategicIntegrator.getStrategicIntegration,
+
   // Utilities
   invalidateCache: base.invalidateCache,
   buildAgentContext: base.buildAgentContext,
@@ -43,5 +48,6 @@ module.exports = {
     financialValidation,
     strategySuggestion,
     progressStatus,
+    strategicIntegrator,
   },
 };

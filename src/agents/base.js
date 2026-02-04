@@ -120,6 +120,8 @@ async function invalidateCache(userId, agentType, workspaceId = null) {
  * Uses new individual CRUD models (CoreProject, Competitor, SwotEntry, etc.)
  */
 async function buildAgentContext(userId, workspaceId = null) {
+  console.log('[buildAgentContext] userId:', userId, 'workspaceId:', workspaceId);
+
   const obFilter = { user: userId };
   if (workspaceId) obFilter.workspace = workspaceId;
 
@@ -129,11 +131,21 @@ async function buildAgentContext(userId, workspaceId = null) {
   const tmFilter = { user: userId, status: 'Active' };
   if (workspaceId) tmFilter.workspace = workspaceId;
 
+  // For revenue streams and baseline, also match null workspace for backward compatibility
+  // This handles data created before workspace system was fully integrated
   const streamFilter = { user: userId, isActive: true };
-  if (workspaceId) streamFilter.workspace = workspaceId;
+  if (workspaceId) {
+    streamFilter.$or = [{ workspace: workspaceId }, { workspace: null }];
+  }
 
   const baselineFilter = { user: userId };
-  if (workspaceId) baselineFilter.workspace = workspaceId;
+  if (workspaceId) {
+    baselineFilter.$or = [{ workspace: workspaceId }, { workspace: null }];
+  }
+
+  console.log('[buildAgentContext] Query filters:');
+  console.log('  - streamFilter:', JSON.stringify(streamFilter));
+  console.log('  - baselineFilter:', JSON.stringify(baselineFilter));
 
   // Filter for new individual models (workspace-aware, not deleted)
   // Always include workspace in filter to match how data is stored (workspace is required)
@@ -167,6 +179,15 @@ async function buildAgentContext(userId, workspaceId = null) {
     Product.find(crudFilter).sort({ order: 1 }).lean(),
     OrgPosition.find(crudFilter).sort({ order: 1 }).lean(),
   ]);
+
+  console.log('[buildAgentContext] Data found:');
+  console.log('  - revenueStreams:', revenueStreams?.length || 0);
+  console.log('  - financialBaseline:', financialBaseline ? 'yes' : 'no');
+  if (financialBaseline) {
+    console.log('    - revenue.totalMonthlyRevenue:', financialBaseline.revenue?.totalMonthlyRevenue);
+    console.log('    - workRelatedCosts.total:', financialBaseline.workRelatedCosts?.total);
+    console.log('    - fixedCosts.total:', financialBaseline.fixedCosts?.total);
+  }
 
   const bp = ob?.businessProfile || {};
   const up = ob?.userProfile || {};
