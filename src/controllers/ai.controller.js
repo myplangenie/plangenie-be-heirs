@@ -8,6 +8,7 @@ const Competitor = require('../models/Competitor');
 const SwotEntry = require('../models/SwotEntry');
 const Product = require('../models/Product');
 const OrgPosition = require('../models/OrgPosition');
+const StrategyDocument = require('../models/StrategyDocument');
 const { getWorkspaceFilter, getWorkspaceId } = require('../utils/workspaceQuery');
 const { getWorkspaceFields } = require('../services/workspaceFieldService');
 let rag;
@@ -55,7 +56,7 @@ function buildAnswersContext(ob, options = {}) {
     const a = options.wsFields || (ob && ob.answers) || {};
     const bp = (ob && ob.businessProfile) || {};
     const up = (ob && ob.userProfile) || {};
-    const { swotEntries = [], competitors = [] } = options;
+    const { swotEntries = [], competitors = [], strategyDocuments = [] } = options;
     const lines = [];
 
     // Business Profile from initial onboarding
@@ -91,7 +92,7 @@ function buildAnswersContext(ob, options = {}) {
         lines.push(`1-Year Goals (indexed): ${numberedGoals}`);
       }
     }
-    if (a.vision3y) lines.push(`3-Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
+    if (a.vision3y) lines.push(`3-5 Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
     if (a.valuesCore) lines.push(`Core Values: ${String(a.valuesCore).trim()}`);
     if (a.cultureFeeling) lines.push(`Culture & Behaviors: ${String(a.cultureFeeling).trim()}`);
     // SWOT - from SwotEntry model only (no legacy fallback)
@@ -129,7 +130,31 @@ function buildAnswersContext(ob, options = {}) {
     if (a.finSalesGrowthPct) lines.push(`Expected Sales Growth: ${a.finSalesGrowthPct}%`);
     if (a.finAdditionalFundingAmount) lines.push(`Additional Funding Expected: $${a.finAdditionalFundingAmount}`);
     if (a.finIsNonprofit) lines.push(`Organization Type: Non-profit`);
-    return lines.length ? `\n\nUser-provided answers:\n- ${lines.join('\n- ')}` : '';
+
+    // Strategy Documents (RAG context from uploaded documents)
+    let strategyDocsSection = '';
+    if (strategyDocuments && strategyDocuments.length > 0) {
+      const categoryLabels = {
+        'strategy-vision': 'Strategy & Vision',
+        'okrs-goals': 'OKRs & Goals',
+        'board-decisions': 'Board Decisions',
+        'operating-plans': 'Operating Plans',
+        'other': 'Other Document',
+      };
+      const docLines = strategyDocuments.map((doc) => {
+        const label = categoryLabels[doc.category] || doc.category;
+        const content = doc.content?.length > 2000
+          ? doc.content.substring(0, 2000) + '...[truncated]'
+          : doc.content;
+        return `[${label}: ${doc.title}]\n${content || '(No content extracted)'}`;
+      });
+      if (docLines.length) {
+        strategyDocsSection = `\n\n--- STRATEGY DOCUMENTS (Reference Material) ---\n${docLines.join('\n\n')}\n--- END STRATEGY DOCUMENTS ---`;
+      }
+    }
+
+    const baseContext = lines.length ? `\n\nUser-provided answers:\n- ${lines.join('\n- ')}` : '';
+    return baseContext + strategyDocsSection;
   } catch (_) {
     return '';
   }
@@ -196,7 +221,7 @@ Your approach:
 const EXPERT_PROJECT_PROMPT = `You are a strategic execution expert who bridges the gap between vision and reality. You've led transformation programs that delivered measurable business impact.
 
 Your approach:
-- Design projects that directly advance their stated 1-year and 3-year goals
+- Design projects that directly advance their stated 1-year and 3-5 year goals
 - Create deliverables with specific, measurable KPIs tied to business outcomes
 - Consider their team capacity, existing projects, and resource constraints
 - Ensure projects address their identified weaknesses and capitalize on opportunities
@@ -226,7 +251,7 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     const crudFilter = { user: userId, isDeleted: { $ne: true } };
     if (workspaceId) crudFilter.workspace = workspaceId;
 
-    const [ob, user, departments, teamMembers, coreProjects, competitors, swotEntries, products, orgPositions, wsFields] = await Promise.all([
+    const [ob, user, departments, teamMembers, coreProjects, competitors, swotEntries, products, orgPositions, wsFields, strategyDocuments] = await Promise.all([
       userId ? Onboarding.findOne(wsFilter) : null,
       userId ? User.findById(userId) : null,
       userId ? Department.find(wsFilter).select('name status owner dueDate').limit(50).lean().exec() : [],
@@ -239,6 +264,8 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
       userId ? OrgPosition.find(crudFilter).sort({ order: 1 }).lean() : [],
       // Fetch workspace fields from Workspace.fields
       workspaceId ? getWorkspaceFields(workspaceId) : {},
+      // Strategy documents for RAG context
+      workspaceId ? StrategyDocument.getContextForWorkspace(workspaceId) : [],
     ]);
 
     // Profile section (with fallback business name)
@@ -288,7 +315,7 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
         vvParts.push(`1-Year Goals (indexed for linkedGoalIndex):\n${numberedGoals}`);
       }
     }
-    if (answers.vision3y) vvParts.push(`3-Year Goals: ${String(answers.vision3y).trim().split('\n').filter(Boolean).join('; ')}`);
+    if (answers.vision3y) vvParts.push(`3-5 Year Goals: ${String(answers.vision3y).trim().split('\n').filter(Boolean).join('; ')}`);
     if (answers.valuesCore) vvParts.push(`Core Values: ${String(answers.valuesCore).trim()}`);
     if (answers.cultureFeeling) vvParts.push(`Culture & Behaviors: ${String(answers.cultureFeeling).trim()}`);
     const vvText = vvParts.length ? `\n\nVision & Values:\n- ${vvParts.join('\n- ')}` : '';
@@ -400,7 +427,32 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
       if (lines.length) teamText = `\n\nTeam Members (Active):\n${lines.join('\n')}`;
     } catch {}
 
-    return [profileText, vvText, swotText, marketText, productsText, finText, coreProjectsText, departmentsText, teamText].filter(Boolean).join('\n\n');
+    // Strategy Documents (RAG context from uploaded documents)
+    let strategyDocsText = '';
+    try {
+      if (strategyDocuments && strategyDocuments.length > 0) {
+        const categoryLabels = {
+          'strategy-vision': 'Strategy & Vision',
+          'okrs-goals': 'OKRs & Goals',
+          'board-decisions': 'Board Decisions',
+          'operating-plans': 'Operating Plans',
+          'other': 'Other Document',
+        };
+        const docLines = strategyDocuments.map((doc) => {
+          const label = categoryLabels[doc.category] || doc.category;
+          // Truncate content to avoid excessive token usage (max ~2000 chars per doc)
+          const content = doc.content?.length > 2000
+            ? doc.content.substring(0, 2000) + '...[truncated]'
+            : doc.content;
+          return `[${label}: ${doc.title}]\n${content || '(No content extracted)'}`;
+        });
+        if (docLines.length) {
+          strategyDocsText = `\n\n--- STRATEGY DOCUMENTS (Reference Material) ---\n${docLines.join('\n\n')}\n--- END STRATEGY DOCUMENTS ---`;
+        }
+      }
+    } catch {}
+
+    return [profileText, vvText, swotText, marketText, productsText, finText, coreProjectsText, departmentsText, teamText, strategyDocsText].filter(Boolean).join('\n\n');
   } catch (_) {
     return '';
   }
@@ -706,10 +758,13 @@ exports.callOpenAIProse = callOpenAIProse;
 exports.generateActionInsightsForUser = async function generateActionInsightsForUser(userId, assignments = {}, n = 6, workspaceId = null) {
   const filter = { user: userId };
   if (workspaceId) filter.workspace = workspaceId;
-  const ob = userId ? await Onboarding.findOne(filter) : null;
-  const wsFields = await getWorkspaceFields(workspaceId);
+  const [ob, wsFields, strategyDocuments] = await Promise.all([
+    userId ? Onboarding.findOne(filter) : null,
+    getWorkspaceFields(workspaceId),
+    workspaceId ? StrategyDocument.getContextForWorkspace(workspaceId) : [],
+  ]);
   const baseCtx = buildContextText(ob);
-  const answersCtx = buildAnswersContext(ob, { wsFields });
+  const answersCtx = buildAnswersContext(ob, { wsFields, strategyDocuments });
   const lines = [];
   try {
     Object.entries(assignments || {}).forEach(([dept, arr]) => {
@@ -791,10 +846,13 @@ exports.generateActionInsightsForUser = async function generateActionInsightsFor
 exports.generateActionInsightSectionsForUser = async function generateActionInsightSectionsForUser(userId, assignments = {}, maxSections = 2, workspaceId = null) {
   const filter = { user: userId };
   if (workspaceId) filter.workspace = workspaceId;
-  const ob = userId ? await Onboarding.findOne(filter) : null;
-  const wsFields = await getWorkspaceFields(workspaceId);
+  const [ob, wsFields, strategyDocuments] = await Promise.all([
+    userId ? Onboarding.findOne(filter) : null,
+    getWorkspaceFields(workspaceId),
+    workspaceId ? StrategyDocument.getContextForWorkspace(workspaceId) : [],
+  ]);
   const baseCtx = buildContextText(ob);
-  const answersCtx = buildAnswersContext(ob, { wsFields });
+  const answersCtx = buildAnswersContext(ob, { wsFields, strategyDocuments });
   const lines = [];
   try {
     Object.entries(assignments || {}).forEach(([dept, arr]) => {
@@ -952,10 +1010,13 @@ exports.generateActionInsightSectionsForUser = async function generateActionInsi
 exports.generateSingleInsightSectionForUser = async function generateSingleInsightSectionForUser(userId, assignments = {}, title = 'Recommendations', workspaceId = null) {
   const filter = { user: userId };
   if (workspaceId) filter.workspace = workspaceId;
-  const ob = userId ? await Onboarding.findOne(filter) : null;
-  const wsFields = await getWorkspaceFields(workspaceId);
+  const [ob, wsFields, strategyDocuments] = await Promise.all([
+    userId ? Onboarding.findOne(filter) : null,
+    getWorkspaceFields(workspaceId),
+    workspaceId ? StrategyDocument.getContextForWorkspace(workspaceId) : [],
+  ]);
   const baseCtx = buildContextText(ob);
-  const answersCtx = buildAnswersContext(ob, { wsFields });
+  const answersCtx = buildAnswersContext(ob, { wsFields, strategyDocuments });
   const lines = [];
   try {
     Object.entries(assignments || {}).forEach(([dept, arr]) => {
@@ -1994,11 +2055,12 @@ exports.suggestVision3y = async (req, res) => {
     const userId = req.user?.id;
     const now = new Date();
     const currentIso = now.toISOString().slice(0, 10);
-    const targetYear = now.getUTCFullYear() + 3;
-    const anchor = `Current date: ${currentIso}. When referring to "3 years", anchor outcomes to the year ${targetYear} (not earlier years).`;
+    const targetYearStart = now.getUTCFullYear() + 3;
+    const targetYearEnd = now.getUTCFullYear() + 5;
+    const anchor = `Current date: ${currentIso}. When referring to "3-5 years", anchor outcomes to the years ${targetYearStart}-${targetYearEnd}.`;
     const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const contextText = [baseCtx, anchor].filter(Boolean).join('\n');
-    const suggestions = await callOpenAIList({ type: '3-year thriving vision', input, contextText, n: 3 });
+    const suggestions = await callOpenAIList({ type: '3-5 year thriving vision', input, contextText, n: 3 });
     return res.json({ suggestion: suggestions[0] || '', suggestions });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -2511,11 +2573,12 @@ exports.rewriteVision3y = async (req, res) => {
     const userId = req.user?.id;
     const now = new Date();
     const currentIso = now.toISOString().slice(0, 10);
-    const targetYear = now.getUTCFullYear() + 3;
-    const anchor = `Current date: ${currentIso}. When referring to "3 years", anchor outcomes to the year ${targetYear} (not earlier years).`;
+    const targetYearStart = now.getUTCFullYear() + 3;
+    const targetYearEnd = now.getUTCFullYear() + 5;
+    const anchor = `Current date: ${currentIso}. When referring to "3-5 years", anchor outcomes to the years ${targetYearStart}-${targetYearEnd}.`;
     const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const contextText = [baseCtx, anchor].filter(Boolean).join('\n');
-    const rewrite = await callOpenAIRewrite({ type: '3-year thriving vision', text, contextText });
+    const rewrite = await callOpenAIRewrite({ type: '3-5 year thriving vision', text, contextText });
     return res.json({ rewrite });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -2555,6 +2618,93 @@ exports.rewriteVisionBhag = async (req, res) => {
       return res.status(500).json({ message: 'OpenAI API key not configured on server' });
     }
     const message = err?.response?.data?.error?.message || err?.message || 'Failed to rewrite';
+    return res.status(500).json({ message });
+  }
+};
+
+// OKRs (Objectives and Key Results) generation
+exports.suggestOkrs = async (req, res) => {
+  try {
+    const { count = 3, existingObjectives = [] } = req.body || {};
+    const userId = req.user?.id;
+    const workspaceId = req.workspace?._id;
+
+    // Build context from 1-year goals, 3-5 year goals, and strategy documents
+    const baseCtx = userId ? await buildCoreProjectContextForUser(userId, workspaceId) : '';
+
+    // Get OKR-specific documents from strategy documents (category 'okrs-goals')
+    let okrDocsContext = '';
+    if (workspaceId) {
+      const okrDocs = await StrategyDocument.find({
+        workspace: workspaceId,
+        isDeleted: false,
+        extractionStatus: 'completed',
+        category: 'okrs-goals',
+        extractedText: { $exists: true, $ne: '' },
+      }).select('title extractedText').lean();
+
+      if (okrDocs.length > 0) {
+        const docLines = okrDocs.map(doc => `[${doc.title}]:\n${doc.extractedText.substring(0, 3000)}`);
+        okrDocsContext = `\n\n--- OKR REFERENCE DOCUMENTS ---\n${docLines.join('\n\n')}\n--- END OKR DOCUMENTS ---`;
+      }
+    }
+
+    const contextText = [baseCtx, okrDocsContext].filter(Boolean).join('\n');
+
+    const prompt = `Based on the business context provided (especially the 1-Year Goals and 3-5 Year Goals), generate ${count} professional OKRs (Objectives and Key Results).
+
+Each OKR should have:
+- 1 clear, ambitious but achievable Objective
+- 2-4 measurable Key Results for that objective
+
+Format your response as a JSON array:
+[
+  {
+    "objective": "The objective statement",
+    "keyResults": ["Key result 1", "Key result 2", "Key result 3"]
+  }
+]
+
+Guidelines:
+- Objectives should be qualitative and inspirational
+- Key Results should be quantitative and measurable (use numbers, percentages, dates)
+- Align OKRs with the stated 1-year and 3-5 year goals
+- If OKR reference documents are provided, use them as additional context for realistic targets
+- Keep objectives concise (1 sentence)
+- Make key results specific and time-bound where possible
+- IMPORTANT: Each generated OKR must be completely different from any previously generated or existing ones listed below${existingObjectives.length > 0 ? `\n\nDo NOT repeat or rephrase any of these existing objectives:\n${existingObjectives.map((o, i) => `${i + 1}. ${o}`).join('\n')}` : ''}`;
+
+    const openai = getOpenAI();
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: `You are a strategic planning expert specializing in OKR frameworks. Generate professional, actionable OKRs based on the business context.\n\n${contextText}` },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+    });
+
+    const content = response.choices?.[0]?.message?.content || '[]';
+
+    // Parse JSON from response
+    let okrs = [];
+    try {
+      // Extract JSON array from response (handle markdown code blocks)
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        okrs = JSON.parse(jsonMatch[0]);
+      }
+    } catch (parseErr) {
+      console.warn('[suggestOkrs] Failed to parse OKR JSON:', parseErr.message);
+    }
+
+    return res.json({ okrs, raw: content });
+  } catch (err) {
+    if (err && err.code === 'NO_API_KEY') {
+      return res.status(500).json({ message: 'OpenAI API key not configured on server' });
+    }
+    const message = err?.response?.data?.error?.message || err?.message || 'Failed to generate OKRs';
     return res.status(500).json({ message });
   }
 };

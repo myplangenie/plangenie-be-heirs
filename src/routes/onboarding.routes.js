@@ -69,6 +69,7 @@ router.post('/vision/purpose/suggest', requireContributor, requireAI('vision'), 
 router.post('/vision/destination/1y/suggest', requireContributor, requireAI('vision'), ai.suggestVision1y);
 router.post('/vision/destination/3y/suggest', requireContributor, requireAI('vision'), ai.suggestVision3y);
 router.post('/vision/destination/bhag/suggest', requireContributor, requireAI('vision'), ai.suggestVisionBhag);
+router.post('/vision/okr/suggest', requireContributor, requireAI('vision'), ai.suggestOkrs);
 // Rewrite endpoints (immediate rewrite of current text)
 router.post('/vision/ubp/rewrite', requireContributor, requireAI('vision'), ai.rewriteUbp);
 router.post('/vision/purpose/rewrite', requireContributor, requireAI('vision'), ai.rewritePurpose);

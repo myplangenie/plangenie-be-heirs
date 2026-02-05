@@ -21,6 +21,7 @@ const Competitor = require('../models/Competitor');
 const SwotEntry = require('../models/SwotEntry');
 const Product = require('../models/Product');
 const OrgPosition = require('../models/OrgPosition');
+const StrategyDocument = require('../models/StrategyDocument');
 const { getWorkspaceFields } = require('../services/workspaceFieldService');
 
 // Cache TTL configurations (in milliseconds)
@@ -164,6 +165,7 @@ async function buildAgentContext(userId, workspaceId = null) {
     swotEntries,
     products,
     orgPositions,
+    strategyDocuments,
   ] = await Promise.all([
     Onboarding.findOne(obFilter).lean(),
     User.findById(userId).lean(),
@@ -178,6 +180,8 @@ async function buildAgentContext(userId, workspaceId = null) {
     SwotEntry.find(crudFilter).sort({ order: 1 }).lean(),
     Product.find(crudFilter).sort({ order: 1 }).lean(),
     OrgPosition.find(crudFilter).sort({ order: 1 }).lean(),
+    // Strategy documents for RAG context
+    workspaceId ? StrategyDocument.getContextForWorkspace(workspaceId) : Promise.resolve([]),
   ]);
 
   console.log('[buildAgentContext] Data found:');
@@ -310,6 +314,9 @@ async function buildAgentContext(userId, workspaceId = null) {
       threats: swotThreats || '',
     },
 
+    // Strategy documents for RAG context
+    strategyDocuments: strategyDocuments || [],
+
     // Raw data for advanced use
     _rawAnswers: answers,
     _user: user,
@@ -388,7 +395,7 @@ function formatContextForPrompt(context) {
   if (context.ubp) lines.push(`\nUnique Business Proposition: ${context.ubp}`);
   if (context.purpose) lines.push(`Purpose: ${context.purpose}`);
   if (context.vision1y) lines.push(`1-Year Goals: ${context.vision1y}`);
-  if (context.vision3y) lines.push(`3-Year Goals: ${context.vision3y}`);
+  if (context.vision3y) lines.push(`3-5 Year Goals: ${context.vision3y}`);
 
   if (context.valuesCore) lines.push(`\nCore Values: ${context.valuesCore}`);
 
@@ -412,6 +419,31 @@ function formatContextForPrompt(context) {
       .map(p => p.title || 'Untitled')
       .join(', ');
     lines.push(`\nActive Projects: ${projectList}`);
+  }
+
+  // Strategy documents (RAG context) - include at the end as reference material
+  if (context.strategyDocuments?.length > 0) {
+    lines.push('\n--- STRATEGY DOCUMENTS (Reference Material) ---');
+
+    const categoryLabels = {
+      'strategy-vision': 'Strategy & Vision',
+      'okrs-goals': 'OKRs & Goals',
+      'board-decisions': 'Board Decisions',
+      'operating-plans': 'Operating Plans',
+      'other': 'Other Document',
+    };
+
+    for (const doc of context.strategyDocuments) {
+      const label = categoryLabels[doc.category] || doc.category;
+      // Truncate content to avoid excessive token usage (max ~2000 chars per doc)
+      const content = doc.content?.length > 2000
+        ? doc.content.substring(0, 2000) + '...[truncated]'
+        : doc.content;
+      lines.push(`\n[${label}: ${doc.title}]`);
+      lines.push(content || '(No content extracted)');
+    }
+
+    lines.push('\n--- END STRATEGY DOCUMENTS ---');
   }
 
   return lines.join('\n');

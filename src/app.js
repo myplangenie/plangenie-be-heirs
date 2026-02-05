@@ -89,6 +89,7 @@ app.use('/api/department-projects', require('./routes/departmentProject.routes')
 app.use('/api/products', require('./routes/product.routes'));
 app.use('/api/org-positions', require('./routes/orgPosition.routes'));
 app.use('/api/vision-goals', require('./routes/visionGoal.routes'));
+app.use('/api/okrs', require('./routes/okr.routes'));
 app.use('/api/competitors', require('./routes/competitor.routes'));
 app.use('/api/swot', require('./routes/swotEntry.routes'));
 // Individual field updates (replacing full answers object replacement)
@@ -105,6 +106,8 @@ app.use('/api/chat', require('./routes/chat.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
 // AI Agents
 app.use('/api/agents', require('./routes/agents.routes'));
+// Strategy Documents
+app.use('/api/strategy-documents', require('./routes/strategyDocument.routes'));
 // Workspaces (feature-flagged) - replaces Journeys
 const enableWorkspaces = String(process.env.FEATURE_WORKSPACES || process.env.FEATURE_JOURNEYS || '').toLowerCase() === 'true';
 if (enableWorkspaces) {

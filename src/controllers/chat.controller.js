@@ -189,7 +189,7 @@ function buildContextText(ob, stats, extras, wsFields = {}, financialBaseline = 
     typeof stats?.competitorsCount === 'number' && stats.competitorsCount > 0 && `Competitors: ${stats.competitorsCount}`,
     typeof stats?.swotCount === 'number' && stats.swotCount > 0 && `SWOT Entries: ${stats.swotCount}`,
     typeof stats?.oneYearGoalsCount === 'number' && stats.oneYearGoalsCount > 0 && `1-Year Goals: ${stats.oneYearGoalsCount}`,
-    typeof stats?.threeYearGoalsCount === 'number' && stats.threeYearGoalsCount > 0 && `3-Year Goals: ${stats.threeYearGoalsCount}`,
+    typeof stats?.threeYearGoalsCount === 'number' && stats.threeYearGoalsCount > 0 && `3-5 Year Goals: ${stats.threeYearGoalsCount}`,
     typeof stats?.collaboratorsCount === 'number' && `Collaborators: ${stats.collaboratorsCount}`,
   ].filter(Boolean);
   const profileText = profileLines.length ? `Context about the business:\n- ${profileLines.join('\n- ')}` : '';
@@ -200,7 +200,7 @@ function buildContextText(ob, stats, extras, wsFields = {}, financialBaseline = 
   if (a.purpose) vvParts.push(`Purpose: ${String(a.purpose).trim()}`);
   if (a.visionBhag) vvParts.push(`BHAG: ${String(a.visionBhag).trim()}`);
   if (a.vision1y) vvParts.push(`1-Year Goals: ${(String(a.vision1y).trim().split('\n').filter(Boolean).join('; '))}`);
-  if (a.vision3y) vvParts.push(`3-Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
+  if (a.vision3y) vvParts.push(`3-5 Year Goals: ${(String(a.vision3y).trim().split('\n').filter(Boolean).join('; '))}`);
   if (a.valuesCore) vvParts.push(`Core Values: ${String(a.valuesCore).trim()}`);
   if (a.cultureFeeling) vvParts.push(`Culture: ${String(a.cultureFeeling).trim()}`);
   const vvText = vvParts.length ? `\n\nVision & Values:\n- ${vvParts.join('\n- ')}` : '';
@@ -606,7 +606,7 @@ exports.respond = async (req, res) => {
           { type: 'function', function: { name: 'get_products', description: 'List products and services offered by the business.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_products_count', description: 'Get count of products/services.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_financial_snapshot', description: 'Get financial data including revenue, costs, cash, funding, margins.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
-          { type: 'function', function: { name: 'get_vision_and_goals', description: 'Get business vision, UBP (unique business proposition), purpose, and 1-year/3-year goals.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_vision_and_goals', description: 'Get business vision, UBP (unique business proposition), purpose, and 1-year/3-5 year goals.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_values_and_culture', description: 'Get core values, culture, and character traits.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_market_info', description: 'Get market information including ideal customer, partners, competitors.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_org_positions', description: 'Get organizational structure and positions.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 100 } }, additionalProperties: false } } },

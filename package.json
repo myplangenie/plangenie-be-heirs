@@ -24,6 +24,7 @@
     "html-to-docx": "^1.8.0",
     "ioredis": "^5.9.2",
     "jsonwebtoken": "^9.0.2",
+    "mammoth": "^1.11.0",
     "mongoose": "^8.6.1",
     "morgan": "^1.10.0",
     "node-cron": "^4.2.1",
@@ -32,7 +33,8 @@
     "puppeteer": "^23.7.1",
     "resend": "^4.0.0",
     "stripe": "^16.0.0",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"
