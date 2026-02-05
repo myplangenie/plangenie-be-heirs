@@ -16,6 +16,13 @@ const {
   clearCookieOptions,
 } = require('../config/cookies');
 
+// ── Test account constants ──
+const TEST_EMAIL = 'test@plangenie.com';
+const TEST_OTP = '123456';
+function isTestAccount(email) {
+  return String(email || '').toLowerCase().trim() === TEST_EMAIL;
+}
+
 // Helper to check workspace-specific onboarding completion
 async function getWorkspaceOnboardingStatus(userId, workspaceIdOrWid) {
   if (!workspaceIdOrWid) return false;
@@ -82,6 +89,23 @@ exports.register = async (req, res) => {
   const { firstName, lastName, companyName, fullName, email, password, collabToken } = req.body;
 
   const existing = await User.findOne({ email });
+
+  // ── Test account: signup always succeeds, resets flow flags but keeps data ──
+  if (isTestAccount(email) && existing) {
+    const otpHash = await bcrypt.hash(TEST_OTP, 10);
+    const vexp = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365); // 1 year
+    await User.findByIdAndUpdate(existing._id, {
+      isVerified: false,
+      onboardingDone: false,
+      verificationCode: otpHash,
+      verificationExpires: vexp,
+    });
+    // Reset workspace onboarding flag so the full flow runs again
+    await Onboarding.updateMany({ user: existing._id }, { onboardingDetailCompleted: false });
+    console.log(`[auth] Test account signup reset for ${email}`);
+    return res.status(201).json({ ok: true });
+  }
+
   if (existing) {
     return res.status(409).json({ message: 'Email already in use' });
   }
@@ -246,6 +270,16 @@ exports.login = async (req, res) => {
   const match = await user.comparePassword(password);
   if (!match) return res.status(401).json({ message: 'Invalid credentials' });
   if (!user.isVerified) {
+    // ── Test account: set known OTP, skip email ──
+    if (isTestAccount(email)) {
+      const otpHash = await bcrypt.hash(TEST_OTP, 10);
+      const vexp = new Date(Date.now() + 1000 * 60 * 60 * 24 * 365);
+      await User.findByIdAndUpdate(user._id, { verificationCode: otpHash, verificationExpires: vexp });
+      return res.status(403).json({
+        message: 'Please verify your email before signing in.',
+        details: { reason: 'unverified', resent: true, email: user.email },
+      });
+    }
     try {
       const otp = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
       const otpHash = await bcrypt.hash(otp, 10);
@@ -416,6 +450,16 @@ exports.verifyOtp = async (req, res) => {
     const user = await User.findOne({ email }).select('+verificationCode +verificationExpires');
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (user.isVerified) return res.json({ ok: true });
+
+    // ── Test account: always accept 123456 ──
+    if (isTestAccount(email) && String(code) === TEST_OTP) {
+      user.isVerified = true;
+      user.verificationCode = undefined;
+      user.verificationExpires = undefined;
+      await user.save();
+      return res.json({ ok: true });
+    }
+
     if (!user.verificationCode) return res.status(400).json({ message: 'No verification code set' });
     if (user.verificationExpires && user.verificationExpires < new Date()) {
       return res.status(400).json({ message: 'Code expired' });
@@ -445,6 +489,10 @@ exports.resendOtp = async (req, res) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase();
     if (!email) return res.status(400).json({ message: 'Email required' });
+
+    // ── Test account: skip email, OTP is always 123456 ──
+    if (isTestAccount(email)) return res.json({ ok: true });
+
     const user = await User.findOne({ email }).select('_id email isVerified firstName fullName');
     if (!user) return res.status(200).json({ ok: true }); // do not reveal existence
     if (user.isVerified) return res.status(200).json({ ok: true });
