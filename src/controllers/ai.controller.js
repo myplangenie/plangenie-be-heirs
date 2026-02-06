@@ -2655,13 +2655,13 @@ exports.suggestOkrs = async (req, res) => {
 
 Each OKR should have:
 - 1 clear, ambitious but achievable Objective
-- 2-4 measurable Key Results for that objective
+- Exactly 2 measurable Key Results for that objective
 
 Format your response as a JSON array:
 [
   {
     "objective": "The objective statement",
-    "keyResults": ["Key result 1", "Key result 2", "Key result 3"]
+    "keyResults": ["Key result 1", "Key result 2"]
   }
 ]
 
@@ -2955,6 +2955,7 @@ async function callOpenAIListPhrases({ type, input, contextText, n = 3, existing
     `Task: Generate exactly ${n} NEW and UNIQUE concise options for the ${type}.`,
     'Constraints:',
     '- Each option must be a short phrase (1–4 words), no sentences.',
+    '- Use sentence case: capitalize the first letter, rest lowercase (e.g., "Strong brand recognition" not "strong brand recognition" or "STRONG BRAND RECOGNITION").',
     '- Do NOT prefix with labels like "Goal:", "KPI:", "Strength:", "Weakness:", etc. Just provide the content directly.',
     '- Be creative and varied - do NOT repeat common/generic phrases.',
     '- Think of specific, actionable items relevant to THIS business.',
@@ -2979,7 +2980,12 @@ async function callOpenAIListPhrases({ type, input, contextText, n = 3, existing
     arr = text.split('\n').map((l)=>l.replace(/^[-*\d\.\)\s]+/, '').trim()).filter(Boolean);
   }
   const uniq = Array.from(new Set(arr.map((x)=>String(x).trim()))).filter(Boolean);
-  return uniq.slice(0, n);
+  // Ensure sentence case: first letter uppercase, rest lowercase
+  const formatted = uniq.map((s) => {
+    if (!s) return s;
+    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  });
+  return formatted.slice(0, n);
 }
 
 async function callOpenAIRewritePhrase({ type, text, contextText }) {

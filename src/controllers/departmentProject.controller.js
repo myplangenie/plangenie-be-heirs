@@ -123,6 +123,7 @@ exports.create = async (req, res, next) => {
       resources,
       dueWhen,
       cost,
+      priority,
       firstName,
       lastName,
       ownerId,
@@ -156,6 +157,7 @@ exports.create = async (req, res, next) => {
       resources: resources?.trim() || undefined,
       dueWhen: dueWhen?.trim() || undefined,
       cost: cost?.trim() || undefined,
+      priority: priority || undefined,
       firstName: firstName?.trim() || undefined,
       lastName: lastName?.trim() || undefined,
       ownerId: ownerId || undefined,
@@ -211,6 +213,7 @@ exports.update = async (req, res, next) => {
       resources,
       dueWhen,
       cost,
+      priority,
       firstName,
       lastName,
       ownerId,
@@ -228,6 +231,7 @@ exports.update = async (req, res, next) => {
     if (resources !== undefined) project.resources = resources?.trim() || undefined;
     if (dueWhen !== undefined) project.dueWhen = dueWhen?.trim() || undefined;
     if (cost !== undefined) project.cost = cost?.trim() || undefined;
+    if (priority !== undefined) project.priority = priority || undefined;
     if (firstName !== undefined) project.firstName = firstName?.trim() || undefined;
     if (lastName !== undefined) project.lastName = lastName?.trim() || undefined;
     if (ownerId !== undefined) project.ownerId = ownerId || undefined;
@@ -539,6 +543,7 @@ exports.bulkCreate = async (req, res, next) => {
         resources: p.resources?.trim() || undefined,
         dueWhen: p.dueWhen?.trim() || undefined,
         cost: p.cost?.trim() || undefined,
+        priority: p.priority || undefined,
         firstName: p.firstName?.trim() || undefined,
         lastName: p.lastName?.trim() || undefined,
         ownerId: p.ownerId || undefined,

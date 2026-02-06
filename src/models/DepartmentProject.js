@@ -26,6 +26,7 @@ const DepartmentProjectSchema = new mongoose.Schema({
   resources: { type: String },
   dueWhen: { type: String },
   cost: { type: String },
+  priority: { type: String, enum: ['high', 'medium', 'low', null] },
 
   // Owner assignment (person responsible)
   firstName: { type: String },

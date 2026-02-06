@@ -36,8 +36,15 @@ const FinancialBaselineSchema = new mongoose.Schema({
   // Cost Bucket 1: "Costs that happen because we do the work"
   // These scale with activity - more work means more cost
   workRelatedCosts: {
+    // New items-based format (allows multiple entries per category with descriptions)
+    items: [{
+      id: { type: String, required: true },
+      category: { type: String, required: true }, // contractors, materials, commissions, shipping, other
+      amount: { type: Number, default: 0 },
+      description: { type: String, default: '' },
+    }],
     total: { type: Number, default: 0 },
-    // Optional breakdown (user can provide just total or breakdown)
+    // Legacy breakdown fields (kept for backwards compatibility)
     contractors: { type: Number, default: 0 },
     materials: { type: Number, default: 0 },
     commissions: { type: Number, default: 0 },
@@ -49,8 +56,15 @@ const FinancialBaselineSchema = new mongoose.Schema({
   // Cost Bucket 2: "Costs we pay no matter what"
   // Fixed monthly costs regardless of revenue
   fixedCosts: {
+    // New items-based format (allows multiple entries per category with descriptions)
+    items: [{
+      id: { type: String, required: true },
+      category: { type: String, required: true }, // salaries, rent, software, insurance, utilities, marketing, other
+      amount: { type: Number, default: 0 },
+      description: { type: String, default: '' },
+    }],
     total: { type: Number, default: 0 },
-    // Optional breakdown
+    // Legacy breakdown fields (kept for backwards compatibility)
     salaries: { type: Number, default: 0 },
     rent: { type: Number, default: 0 },
     software: { type: Number, default: 0 },
