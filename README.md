@@ -142,3 +142,4 @@ Plans and Entitlements
   - Only active/trialing `Pro` subscriptions set `user.hasActiveSubscription = true` (unlocks Pro features).
   - Paid `Lite` subscriptions keep `hasActiveSubscription = false` so entitlements remain Lite.
   - Enforced via middleware in `src/middleware/plan.js` and config in `src/config/entitlements.js`.
+
