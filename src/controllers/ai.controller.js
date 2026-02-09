@@ -1537,15 +1537,36 @@ exports.suggestMarketCompetitors = async (req, res) => {
     // Ask AI to structure per-competitor better/worse statements
     const client = getOpenAI();
     const system = 'You are a competitive intelligence strategist who identifies actionable positioning opportunities. Analyze competitors through the lens of this specific business\'s strengths, products, and target market. Provide sharp, strategic insights - not surface-level observations. Return structured JSON only.';
-    const namesText = compNames.length ? ('Competitors to analyze: ' + compNames.join(', ')) : '';
+
     // Build avoidance text from previous competitor analysis
     let avoidCompetitorText = '';
+    let shouldFindNewCompetitors = false;
+    const previousCompetitorNames = [];
     if (Array.isArray(previousCompetitors) && previousCompetitors.length > 0) {
+      previousCompetitors.forEach((c) => {
+        if (c.name) previousCompetitorNames.push(c.name.toLowerCase().trim());
+      });
       const prevAnalysis = previousCompetitors.map((c) =>
         `${c.name}: theyDoBetter="${c.theyDoBetter}", weDoBetter="${c.weDoBetter}"`
       ).join('; ');
-      avoidCompetitorText = `IMPORTANT: Do NOT repeat these previous insights. Generate completely different analysis:\nPrevious: ${prevAnalysis}`;
+      avoidCompetitorText = `CRITICAL: The user already has these competitors saved. You MUST suggest DIFFERENT competitors:\nAlready saved: ${prevAnalysis}`;
+      // If saved competitors match the compNames from database, we need to find new ones
+      const savedNamesSet = new Set(previousCompetitorNames);
+      const dbNamesSet = new Set(compNames.map(n => n.toLowerCase().trim()));
+      if (compNames.length > 0 && [...dbNamesSet].every(n => savedNamesSet.has(n))) {
+        shouldFindNewCompetitors = true;
+      }
     }
+
+    // If user already has the same competitors saved, ask AI to find NEW competitors
+    let namesText = '';
+    if (shouldFindNewCompetitors || (previousCompetitors && previousCompetitors.length >= compNames.length)) {
+      namesText = `DO NOT analyze these already-saved competitors: ${previousCompetitorNames.join(', ')}. Instead, identify 2-3 DIFFERENT competitors in this market that haven't been analyzed yet.`;
+    } else if (compNames.length) {
+      namesText = 'Competitors to analyze: ' + compNames.join(', ');
+    }
+
+    const randomSeed = Date.now() + Math.random();
     const userPrompt = [
       contextText || '',
       namesText,
@@ -1553,7 +1574,7 @@ exports.suggestMarketCompetitors = async (req, res) => {
       'CRITICAL: Do NOT include any partners, suppliers, service providers, or collaborators mentioned in the context. Partners are NOT competitors.',
       'Task: For each competitor, provide a one-sentence "they do better" (their competitive advantage over us) and a one-sentence "we do better" (our competitive advantage over them).',
       avoidCompetitorText,
-      'Generate fresh, unique insights with different angles and perspectives.',
+      `Generate fresh, unique insights with different angles and perspectives. Variation seed: ${randomSeed}`,
       'Output format (strict JSON): [ { "name": string, "theyDoBetter": string, "weDoBetter": string } ]',
       'No extra commentary before or after the JSON.'
     ].filter(Boolean).join('\n');
@@ -1571,6 +1592,8 @@ exports.suggestMarketCompetitors = async (req, res) => {
       if (Array.isArray(parsed)) {
         competitors = parsed.map((it)=>({ name: String(it?.name||'').trim(), theyDoBetter: String(it?.theyDoBetter||'').trim(), weDoBetter: String(it?.weDoBetter||'').trim() }))
           .filter((it)=> it.name && it.theyDoBetter && it.weDoBetter)
+          // Filter out any competitors that were in previousCompetitors (by name, case-insensitive)
+          .filter((it) => !previousCompetitorNames.includes(it.name.toLowerCase().trim()))
           .slice(0,3);
       }
     } catch (_) {}
