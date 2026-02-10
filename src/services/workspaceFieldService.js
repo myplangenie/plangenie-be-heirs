@@ -83,7 +83,7 @@ async function getValuesCultureFields(workspaceId) {
 /**
  * Get market fields
  * @param {string} workspaceId - The workspace ID
- * @returns {Promise<Object>} - Object with market fields
+ * @returns {Promise<Object>} - Object with market fields (raw values for frontend)
  */
 async function getMarketFields(workspaceId) {
   return getSpecificFields(workspaceId, [
@@ -153,6 +153,59 @@ async function updateWorkspaceFields(workspaceId, updates) {
 }
 
 /**
+ * Parse targetMarket JSON to human-readable string
+ * @param {string} value - JSON string or legacy string
+ * @returns {string} - Human-readable customer type description
+ */
+function parseTargetMarketToReadable(value) {
+  if (!value) return '';
+  try {
+    const data = JSON.parse(value);
+    const parts = [];
+    if (Array.isArray(data.audienceTypes) && data.audienceTypes.length > 0) {
+      parts.push(`Audience: ${data.audienceTypes.join(', ')}`);
+    }
+    if (Array.isArray(data.businessSizes) && data.businessSizes.length > 0) {
+      parts.push(`Business sizes: ${data.businessSizes.join(', ')}`);
+    }
+    if (Array.isArray(data.orgTypes) && data.orgTypes.length > 0) {
+      parts.push(`Organization types: ${data.orgTypes.join(', ')}`);
+    }
+    if (Array.isArray(data.individualTypes) && data.individualTypes.length > 0) {
+      parts.push(`Individual types: ${data.individualTypes.join(', ')}`);
+    }
+    if (data.primaryAudience) {
+      parts.push(`Primary audience: ${data.primaryAudience}`);
+    }
+    return parts.length > 0 ? parts.join('. ') : value;
+  } catch {
+    return value; // Legacy format, return as-is
+  }
+}
+
+/**
+ * Parse targetCustomer JSON to human-readable string
+ * @param {string} value - JSON string or legacy string
+ * @returns {string} - Human-readable customer description
+ */
+function parseTargetCustomerToReadable(value) {
+  if (!value) return '';
+  try {
+    const data = JSON.parse(value);
+    const parts = [];
+    if (Array.isArray(data.environments) && data.environments.length > 0) {
+      parts.push(`Customer environment: ${data.environments.join(', ')}`);
+    }
+    if (data.description && data.description.trim()) {
+      parts.push(`Description: ${data.description.trim()}`);
+    }
+    return parts.length > 0 ? parts.join('. ') : value;
+  } catch {
+    return value; // Legacy format, return as-is
+  }
+}
+
+/**
  * Build a context object similar to what was previously built from Onboarding.answers
  * This is used by AI controllers and agents
  * @param {string} workspaceId - The workspace ID
@@ -160,6 +213,10 @@ async function updateWorkspaceFields(workspaceId, updates) {
  */
 async function buildContextFromWorkspace(workspaceId) {
   const fields = await getWorkspaceFields(workspaceId);
+
+  // Parse market fields to human-readable format for AI context
+  const targetMarketReadable = parseTargetMarketToReadable(fields.targetMarket);
+  const targetCustomerReadable = parseTargetCustomerToReadable(fields.targetCustomer);
 
   // Return in the same format that was used before (answers-like structure)
   return {
@@ -179,11 +236,14 @@ async function buildContextFromWorkspace(workspaceId) {
     valuesCoreKeywords: fields.valuesCoreKeywords || [],
     cultureFeeling: fields.cultureFeeling || '',
 
-    // Market
-    targetMarket: fields.targetMarket || '',
-    custType: fields.targetMarket || '', // alias
-    targetCustomer: fields.targetCustomer || '',
-    marketCustomer: fields.targetCustomer || '', // alias
+    // Market - use human-readable versions for AI context
+    targetMarket: targetMarketReadable,
+    custType: targetMarketReadable, // alias
+    targetCustomer: targetCustomerReadable,
+    marketCustomer: targetCustomerReadable, // alias
+    // Also store raw JSON for components that need it
+    targetMarketRaw: fields.targetMarket || '',
+    targetCustomerRaw: fields.targetCustomer || '',
     partners: fields.partners || '',
     partnersDesc: fields.partners || '', // alias
     marketPartners: fields.partners || '', // alias

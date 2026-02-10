@@ -1503,16 +1503,33 @@ exports.suggestMarketCompetitors = async (req, res) => {
     const wsFilter = getWorkspaceFilter(req);
     const ob = userId ? await Onboarding.findOne(wsFilter) : null;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    // Get workspace fields for competitor names and market info
+    // Get workspace fields for market info
     const wsFields = await getWorkspaceFields(req.workspace?._id);
-    // Build competitor names list from workspace fields
-    let compNames = Array.isArray(wsFields.competitorNames) ? wsFields.competitorNames.map((s)=>String(s||'').trim()).filter(Boolean).slice(0,3) : [];
-    // Try to enrich with URLs
+
+    // Fetch SAVED competitors from the Competitor model (these are the ones user has already accepted)
+    // Use .read('primary') to ensure we read from primary and not a stale replica
+    const savedCompetitors = await Competitor.find({
+      workspace: req.workspace?._id,
+      isDeleted: false,
+    }).sort({ order: 1 }).read('primary').lean();
+
+
+    // Build list of saved competitor names to avoid
+    const savedCompetitorNames = savedCompetitors.map(c => c.name?.toLowerCase().trim()).filter(Boolean);
+    const savedCompetitorAnalysis = savedCompetitors.map(c => ({
+      name: c.name,
+      theyDoBetter: c.advantage || '',
+      weDoBetter: c.weDoBetter || '',
+    }));
+
+    // Try to enrich saved competitors with URLs
     const linkMap = {};
     try {
-      for (const name of compNames) {
-        const r = await webSearch(name + ' official site', 1);
-        if (r && r[0] && r[0].url) linkMap[name] = r[0].url;
+      for (const comp of savedCompetitors.slice(0, 3)) {
+        if (comp.name) {
+          const r = await webSearch(comp.name + ' official site', 1);
+          if (r && r[0] && r[0].url) linkMap[comp.name] = r[0].url;
+        }
       }
     } catch (_) {}
     const bp = ob?.businessProfile || {};
@@ -1538,32 +1555,19 @@ exports.suggestMarketCompetitors = async (req, res) => {
     const client = getOpenAI();
     const system = 'You are a competitive intelligence strategist who identifies actionable positioning opportunities. Analyze competitors through the lens of this specific business\'s strengths, products, and target market. Provide sharp, strategic insights - not surface-level observations. Return structured JSON only.';
 
-    // Build avoidance text from previous competitor analysis
+    // Build avoidance text from SAVED competitors (from database)
     let avoidCompetitorText = '';
-    let shouldFindNewCompetitors = false;
-    const previousCompetitorNames = [];
-    if (Array.isArray(previousCompetitors) && previousCompetitors.length > 0) {
-      previousCompetitors.forEach((c) => {
-        if (c.name) previousCompetitorNames.push(c.name.toLowerCase().trim());
-      });
-      const prevAnalysis = previousCompetitors.map((c) =>
+    if (savedCompetitors.length > 0) {
+      const prevAnalysis = savedCompetitorAnalysis.map((c) =>
         `${c.name}: theyDoBetter="${c.theyDoBetter}", weDoBetter="${c.weDoBetter}"`
       ).join('; ');
-      avoidCompetitorText = `CRITICAL: The user already has these competitors saved. You MUST suggest DIFFERENT competitors:\nAlready saved: ${prevAnalysis}`;
-      // If saved competitors match the compNames from database, we need to find new ones
-      const savedNamesSet = new Set(previousCompetitorNames);
-      const dbNamesSet = new Set(compNames.map(n => n.toLowerCase().trim()));
-      if (compNames.length > 0 && [...dbNamesSet].every(n => savedNamesSet.has(n))) {
-        shouldFindNewCompetitors = true;
-      }
+      avoidCompetitorText = `CRITICAL: The user already has these competitors saved in their database. You MUST suggest COMPLETELY DIFFERENT competitors that are NOT in this list:\nAlready saved: ${prevAnalysis}`;
     }
 
-    // If user already has the same competitors saved, ask AI to find NEW competitors
+    // Always ask AI to find NEW competitors if there are saved ones
     let namesText = '';
-    if (shouldFindNewCompetitors || (previousCompetitors && previousCompetitors.length >= compNames.length)) {
-      namesText = `DO NOT analyze these already-saved competitors: ${previousCompetitorNames.join(', ')}. Instead, identify 2-3 DIFFERENT competitors in this market that haven't been analyzed yet.`;
-    } else if (compNames.length) {
-      namesText = 'Competitors to analyze: ' + compNames.join(', ');
+    if (savedCompetitors.length > 0) {
+      namesText = `DO NOT analyze these already-saved competitors: ${savedCompetitorNames.join(', ')}. Instead, identify 2-3 COMPLETELY DIFFERENT competitors in this market that haven't been analyzed yet. These must be real companies that compete in the same space.`;
     }
 
     const randomSeed = Date.now() + Math.random();
@@ -1590,10 +1594,11 @@ exports.suggestMarketCompetitors = async (req, res) => {
       const fence = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i); if (fence) text = fence[1].trim();
       const parsed = JSON.parse(text);
       if (Array.isArray(parsed)) {
-        competitors = parsed.map((it)=>({ name: String(it?.name||'').trim(), theyDoBetter: String(it?.theyDoBetter||'').trim(), weDoBetter: String(it?.weDoBetter||'').trim() }))
-          .filter((it)=> it.name && it.theyDoBetter && it.weDoBetter)
-          // Filter out any competitors that were in previousCompetitors (by name, case-insensitive)
-          .filter((it) => !previousCompetitorNames.includes(it.name.toLowerCase().trim()))
+        const allParsed = parsed.map((it)=>({ name: String(it?.name||'').trim(), theyDoBetter: String(it?.theyDoBetter||'').trim(), weDoBetter: String(it?.weDoBetter||'').trim() }))
+          .filter((it)=> it.name && it.theyDoBetter && it.weDoBetter);
+        competitors = allParsed
+          // Filter out any competitors that are already saved in the database (by name, case-insensitive)
+          .filter((it) => !savedCompetitorNames.includes(it.name.toLowerCase().trim()))
           .slice(0,3);
       }
     } catch (_) {}
