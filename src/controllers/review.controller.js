@@ -31,7 +31,29 @@ exports.list = async (req, res, next) => {
     const wid = String(req.params?.wid||'').trim();
     const ws = await Workspace.findOne({ user: userId, wid }).lean().exec();
     if (!ws) return res.status(404).json({ message: 'Workspace not found' });
-    const items = await ReviewSession.find({ user: userId, workspace: ws._id }).sort({ startedAt: -1 }).lean().exec();
+    let items = await ReviewSession.find({ user: userId, workspace: ws._id }).sort({ startedAt: -1 }).lean().exec();
+
+    // For collaborators, filter to only show reviews they're assigned to (as attendee)
+    if (req.user?.viewOnly && req.user?.viewerId) {
+      const viewer = await User.findById(req.user.viewerId).select('email firstName lastName fullName').lean().exec();
+      if (viewer) {
+        const viewerEmail = (viewer.email || '').toLowerCase().trim();
+        const viewerName = ((viewer.firstName || '') + ' ' + (viewer.lastName || '')).trim().toLowerCase() ||
+                          (viewer.fullName || '').toLowerCase().trim();
+
+        items = items.filter(review => {
+          const attendees = review.attendees || [];
+          return attendees.some(a => {
+            const attendeeEmail = (a.email || '').toLowerCase().trim();
+            const attendeeName = (a.name || '').toLowerCase().trim();
+            // Match by email or name
+            return (viewerEmail && attendeeEmail === viewerEmail) ||
+                   (viewerName && attendeeName === viewerName);
+          });
+        });
+      }
+    }
+
     return res.json({ items });
   } catch (err) { next(err); }
 };
@@ -81,6 +103,27 @@ exports.get = async (req, res, next) => {
     if (!ws) return res.status(404).json({ message: 'Workspace not found' });
     const doc = await ReviewSession.findOne({ user: userId, workspace: ws._id, rid }).lean().exec();
     if (!doc) return res.status(404).json({ message: 'Review not found' });
+
+    // For collaborators, only allow viewing reviews they're assigned to
+    if (req.user?.viewOnly && req.user?.viewerId) {
+      const viewer = await User.findById(req.user.viewerId).select('email firstName lastName fullName').lean().exec();
+      if (viewer) {
+        const viewerEmail = (viewer.email || '').toLowerCase().trim();
+        const viewerName = ((viewer.firstName || '') + ' ' + (viewer.lastName || '')).trim().toLowerCase() ||
+                          (viewer.fullName || '').toLowerCase().trim();
+        const attendees = doc.attendees || [];
+        const isAttendee = attendees.some(a => {
+          const attendeeEmail = (a.email || '').toLowerCase().trim();
+          const attendeeName = (a.name || '').toLowerCase().trim();
+          return (viewerEmail && attendeeEmail === viewerEmail) ||
+                 (viewerName && attendeeName === viewerName);
+        });
+        if (!isAttendee) {
+          return res.status(403).json({ message: 'You can only view reviews you are assigned to' });
+        }
+      }
+    }
+
     return res.json({ review: doc });
   } catch (err) { next(err); }
 };
@@ -96,6 +139,67 @@ exports.patch = async (req, res, next) => {
     const doc = await ReviewSession.findOne({ user: userId, workspace: ws._id, rid });
     if (!doc) return res.status(404).json({ message: 'Review not found' });
     const payload = req.body || {};
+
+    // For collaborators, only allow updating their own action items
+    if (req.user?.viewOnly && req.user?.viewerId) {
+      // First verify they're an attendee of this review
+      const viewer = await User.findById(req.user.viewerId).select('email firstName lastName fullName').lean().exec();
+      if (!viewer) return res.status(403).json({ message: 'Unauthorized' });
+
+      const viewerEmail = (viewer.email || '').toLowerCase().trim();
+      const viewerName = ((viewer.firstName || '') + ' ' + (viewer.lastName || '')).trim().toLowerCase() ||
+                        (viewer.fullName || '').toLowerCase().trim();
+      const attendees = doc.attendees || [];
+      const isAttendee = attendees.some(a => {
+        const attendeeEmail = (a.email || '').toLowerCase().trim();
+        const attendeeName = (a.name || '').toLowerCase().trim();
+        return (viewerEmail && attendeeEmail === viewerEmail) ||
+               (viewerName && attendeeName === viewerName);
+      });
+      if (!isAttendee) {
+        return res.status(403).json({ message: 'You can only edit reviews you are assigned to' });
+      }
+
+      // Collaborators can only update action items assigned to them
+      if (Array.isArray(payload.actionItems)) {
+        const existingItems = doc.actionItems || [];
+        const updatedItems = existingItems.map(existing => {
+          const existingOwner = (existing.owner || '').toLowerCase().trim();
+          // Check if this action item belongs to the collaborator
+          const isOwnItem = existingOwner === viewerName ||
+                           (viewerEmail && existingOwner === viewerEmail);
+
+          if (isOwnItem) {
+            // Find matching update in payload (match by text since we don't have IDs)
+            const update = payload.actionItems.find(ai =>
+              (ai.text || '').trim() === existing.text
+            );
+            if (update) {
+              // Only allow updating status, not text/owner/dueWhen
+              return {
+                ...existing,
+                status: ['Not started', 'In progress', 'Completed'].includes(update.status)
+                  ? update.status
+                  : existing.status
+              };
+            }
+          }
+          return existing;
+        });
+        doc.actionItems = updatedItems;
+      }
+
+      // Block other fields for collaborators
+      if (payload.notes !== undefined || payload.projects !== undefined ||
+          payload.attendees !== undefined || payload.status !== undefined) {
+        // Silently ignore these fields for collaborators rather than erroring
+      }
+
+      await doc.save();
+      return res.json({ review: doc });
+    }
+
+    // Full edit access for owners
     if (typeof payload.notes !== 'undefined') doc.notes = String(payload.notes || '');
     if (Array.isArray(payload.projects)) {
       doc.projects = payload.projects.map((p) => ({ index: Number(p?.index) || 0, title: String(p?.title || '').trim() })).filter((p) => p.title);

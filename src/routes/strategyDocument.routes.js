@@ -1,14 +1,16 @@
 const express = require('express');
 const { body, param } = require('express-validator');
 const auth = require('../middleware/auth');
+const viewAs = require('../middleware/viewAs');
 const workspaceContext = require('../middleware/workspace');
 const { requireViewer, requireContributor } = require('../middleware/workspaceRole');
 const ctrl = require('../controllers/strategyDocument.controller');
 
 const router = express.Router();
 
-// Apply auth and workspace context
+// Apply auth, viewAs (for collaborators), and workspace context
 router.use(auth(false));
+router.use(viewAs);
 router.use(workspaceContext);
 
 const validCategories = ['strategy-vision', 'okrs-goals', 'board-decisions', 'operating-plans', 'other'];

@@ -13,13 +13,15 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const viewAs = require('../middleware/viewAs');
 const workspaceContext = require('../middleware/workspace');
 const { requireViewer, requireContributor } = require('../middleware/workspaceRole');
 const agents = require('../agents');
 
-// Apply auth first, then workspace context to all agent routes
+// Apply auth first, then viewAs (for collaborators), then workspace context to all agent routes
 // Note: auth() must run before workspaceContext because workspace needs req.user.id
 router.use(auth());
+router.use(viewAs);
 router.use(workspaceContext);
 
 /**

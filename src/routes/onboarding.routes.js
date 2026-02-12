@@ -1,6 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const auth = require('../middleware/auth');
+const viewAs = require('../middleware/viewAs');
 const workspaceContext = require('../middleware/workspace');
 const ctrl = require('../controllers/onboarding.controller');
 const ai = require('../controllers/ai.controller');
@@ -10,8 +11,9 @@ const { requireAI } = require('../middleware/workspaceAI');
 
 const router = express.Router();
 
-// Apply auth first, then workspace context (workspace needs req.user.id)
+// Apply auth first, then viewAs (for collaborators), then workspace context
 router.use(auth(false));
+router.use(viewAs);
 router.use(workspaceContext);
 
 // Get current onboarding data

@@ -2,11 +2,13 @@ const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/financialBaseline.controller');
 const auth = require('../middleware/auth');
+const viewAs = require('../middleware/viewAs');
 const workspaceContext = require('../middleware/workspace');
 const { requireViewer, requireContributor } = require('../middleware/workspaceRole');
 
-// All routes require authentication and workspace resolution
+// All routes require authentication, viewAs (for collaborators), and workspace resolution
 router.use(auth());
+router.use(viewAs);
 router.use(workspaceContext);
 
 // GET /api/dashboard/financial-baseline

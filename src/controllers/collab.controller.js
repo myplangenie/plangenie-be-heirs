@@ -156,11 +156,23 @@ exports.viewables = async (req, res) => {
     const me = await User.findById(viewerId).lean().exec();
     if (!me) return res.status(401).json({ message: 'Unauthorized' });
     const email = (me.email || '').toLowerCase();
-  // Only consider explicit, id-based relationships (viewer/collaborator). Avoid email fallback for viewables.
-  const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: viewerId }, { collaborator: viewerId } ] }).lean().exec();
+    // Only consider explicit, id-based relationships (viewer/collaborator). Avoid email fallback for viewables.
+    const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: viewerId }, { collaborator: viewerId } ] }).lean().exec();
     const ownerIds = Array.from(new Set(rows.map((r) => String(r.owner))));
     if (ownerIds.length === 0) return res.json({ owners: [] });
     const owners = await User.find({ _id: { $in: ownerIds } }).lean().exec();
+
+    // Get default workspaces for all owners
+    const Workspace = require('../models/Workspace');
+    const workspaces = await Workspace.find({
+      user: { $in: ownerIds },
+      defaultWorkspace: true
+    }).select('user wid').lean().exec();
+    const ownerWorkspaceMap = {};
+    workspaces.forEach((ws) => {
+      ownerWorkspaceMap[String(ws.user)] = ws.wid;
+    });
+
     const out = owners.map((o) => {
       const slug = effectivePlan(o);
       return {
@@ -170,6 +182,7 @@ exports.viewables = async (req, res) => {
         companyName: o.companyName || '',
         plan: { slug, name: plans[slug]?.name || slug },
         hasActiveSubscription: !!o.hasActiveSubscription,
+        workspaceWid: ownerWorkspaceMap[String(o._id)] || null,
       };
     });
     return res.json({ owners: out });
@@ -439,6 +452,39 @@ exports.resend = async (req, res) => {
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ message: err?.message || 'Failed to resend invite' });
+  }
+};
+
+// GET /api/collab/invite/info?token=...
+// Public endpoint to get invite info (owner name, company name) for pre-filling signup
+exports.inviteInfo = async (req, res) => {
+  try {
+    const token = String((req.query && req.query.token) || '').trim();
+    if (!token) return res.status(400).json({ message: 'Missing token' });
+
+    const now = new Date();
+    const collab = await Collaboration.findOne({ acceptToken: token }).lean().exec();
+    if (!collab) return res.status(400).json({ message: 'Invalid or expired token' });
+    if (collab.tokenExpires && collab.tokenExpires < now) {
+      return res.status(400).json({ message: 'Token expired' });
+    }
+
+    // Get the owner's info
+    const owner = await User.findById(collab.owner).lean().exec();
+    if (!owner) return res.status(400).json({ message: 'Owner not found' });
+
+    const ownerName = (owner.firstName || owner.lastName)
+      ? `${owner.firstName || ''} ${owner.lastName || ''}`.trim()
+      : (owner.fullName || owner.email);
+
+    return res.json({
+      email: collab.email,
+      ownerName,
+      companyName: owner.companyName || '',
+      status: collab.status,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err?.message || 'Failed to get invite info' });
   }
 };
 

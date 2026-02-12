@@ -135,6 +135,10 @@ exports.register = async (req, res) => {
 
   // If collaborator invite is present, auto-verify and skip onboarding
   if (collab) {
+    // Get owner's default workspace
+    const ownerDefaultWs = await Workspace.findOne({ user: collab.owner, defaultWorkspace: true }).select('_id').lean().exec();
+    const ownerDefaultWorkspaceId = ownerDefaultWs?._id || null;
+
     const user = await User.create({
       firstName: firstName || '',
       lastName: lastName || '',
@@ -157,10 +161,9 @@ exports.register = async (req, res) => {
       await collab.save();
 
       // Also mark onboarding complete for the owner's workspace (collaborator views owner's data)
-      const owner = await User.findById(collab.owner).select('defaultWorkspace').lean().exec();
-      if (owner?.defaultWorkspace) {
+      if (ownerDefaultWorkspaceId) {
         await Onboarding.findOneAndUpdate(
-          { user: user._id, workspace: owner.defaultWorkspace },
+          { user: user._id, workspace: ownerDefaultWorkspaceId },
           { onboardingDetailCompleted: true },
           { upsert: true, new: true }
         );
