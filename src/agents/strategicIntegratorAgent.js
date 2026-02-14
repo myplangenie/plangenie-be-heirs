@@ -121,21 +121,39 @@ function assessExecutionReality(progressData, context) {
     };
   }
 
-  const overallProgress = progressData.overallProgress || 0;
-  const sections = progressData.sections || [];
+  // Read from correct fields: momentum.completionRate and stats
+  const overallProgress = progressData.momentum?.completionRate || progressData.overallProgress || 0;
+  const stats = progressData.stats || {};
+  const overdueCount = stats.overdueCount || 0;
+  const activeDeliverables = stats.activeDeliverables || 0;
+  const totalDeliverables = stats.totalDeliverables || 0;
 
-  // Check for sections that are lagging significantly
-  const laggingSections = sections.filter(s => s.percentage < 30);
-  const criticalSections = sections.filter(s => s.percentage < 15);
-
-  if (criticalSections.length >= 2 || overallProgress < 20) {
+  // Check execution health state if available
+  const healthState = progressData.executionHealth?.state;
+  if (healthState === 'compromised') {
     return {
       state: 'breaking',
       context: 'Execution capacity is insufficient for current commitments',
     };
   }
 
-  if (laggingSections.length >= 2 || overallProgress < 40) {
+  // If completion rate is high and no overdue items, execution is good
+  if (overallProgress >= 70 && overdueCount === 0) {
+    return {
+      state: 'executable',
+      context: 'Execution capacity matches current ambition',
+    };
+  }
+
+  // Check for significant issues
+  if (overdueCount > 5 || (activeDeliverables > 0 && overallProgress < 20)) {
+    return {
+      state: 'breaking',
+      context: 'Execution capacity is insufficient for current commitments',
+    };
+  }
+
+  if (overdueCount > 0 || overallProgress < 40) {
     return {
       state: 'strained',
       context: 'Execution is under pressure in multiple areas',

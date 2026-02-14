@@ -367,14 +367,23 @@ exports.getDecisionStrip = async (req, res, next) => {
     // 3. CoreProject was updated after cache was calculated
     // 4. DepartmentProject was updated after cache was calculated
     // 5. Cache is older than 1 hour (force refresh)
+    // 6. Cache was calculated on a different day (priorities are date-sensitive)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const cacheTime = cache?.calculatedAt ? new Date(cache.calculatedAt) : null;
     const obUpdatedTime = ob?.updatedAt ? new Date(ob.updatedAt) : null;
     const coreProjectUpdatedTime = latestCoreProject?.updatedAt ? new Date(latestCoreProject.updatedAt) : null;
     const deptProjectUpdatedTime = latestDeptProject?.updatedAt ? new Date(latestDeptProject.updatedAt) : null;
 
+    // Check if cache was calculated on a different day (date changed since last calculation)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const cacheDay = cacheTime ? new Date(cacheTime) : null;
+    if (cacheDay) cacheDay.setHours(0, 0, 0, 0);
+    const isDifferentDay = cacheDay && cacheDay.getTime() < today.getTime();
+
     const needsRecalc = !cache ||
       !cacheTime ||
+      isDifferentDay ||
       cacheTime < oneHourAgo ||
       (obUpdatedTime && obUpdatedTime > cacheTime) ||
       (coreProjectUpdatedTime && coreProjectUpdatedTime > cacheTime) ||
