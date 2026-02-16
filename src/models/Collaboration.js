@@ -17,10 +17,10 @@ const mongoose = require('mongoose');
     // Access control - determines what data collaborator can see
     accessType: {
       type: String,
-      enum: ['admin', 'department'],
+      enum: ['admin', 'limited', 'department'], // 'department' kept for backward compatibility
       default: 'admin',
     },
-    // If accessType is 'department', which departments can they access
+    // If accessType is 'limited' or 'department', which departments can they access (empty = all)
     departments: [{
       type: String,
       enum: [
@@ -32,6 +32,21 @@ const mongoose = require('mongoose');
         'partnerships',
         'technology',
         'communityImpact',
+      ],
+    }],
+    // If accessType is 'limited', which pages are restricted (collaborator cannot access these)
+    restrictedPages: [{
+      type: String,
+      enum: [
+        'core-projects',
+        'departments',
+        'action-plans',
+        'financial-clarity',
+        'strategy-canvas',
+        'plan',
+        'decisions',
+        'reviews',
+        'assumptions',
       ],
     }],
   },

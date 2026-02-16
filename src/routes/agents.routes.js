@@ -265,4 +265,191 @@ router.get('/summary', requireViewer, async (req, res) => {
   }
 });
 
+/**
+ * Execute Agent Action
+ * POST /api/agents/execute-action
+ * Executes an action recommended by an agent (mark complete, reschedule, etc.)
+ */
+router.post('/execute-action', requireContributor, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const workspaceId = req.workspace?._id;
+    const { action, source, newValue, itemTitle } = req.body;
+
+    if (!action || !source) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: action and source',
+      });
+    }
+
+    console.log('[Agent] execute-action - userId:', userId, 'action:', action, 'source:', source);
+
+    // Import models
+    const CoreProject = require('../models/CoreProject');
+    const DepartmentProject = require('../models/DepartmentProject');
+
+    // Determine project ID from source
+    const projectId = source.projectId || source.coreProjectId || source.deptProjectId;
+
+    if (!projectId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Unable to identify target item. Please refresh and try again.',
+      });
+    }
+
+    let result = { success: false, message: 'Unknown action' };
+
+    switch (action) {
+      case 'mark_complete': {
+        // Mark a deliverable as complete
+        const deliverableIndex = source.deliverableIndex;
+
+        if (typeof deliverableIndex !== 'number') {
+          return res.status(400).json({
+            success: false,
+            error: 'Missing deliverable index for mark_complete action',
+          });
+        }
+
+        // Determine if core or dept project
+        const isCoreProject = source.type === 'coreProjectDeliverable' || source.coreProjectId;
+        const Model = isCoreProject ? CoreProject : DepartmentProject;
+
+        const project = await Model.findOne({ _id: projectId, workspace: workspaceId });
+        if (!project) {
+          return res.status(404).json({
+            success: false,
+            error: 'Project not found',
+          });
+        }
+
+        if (!project.deliverables || !project.deliverables[deliverableIndex]) {
+          return res.status(404).json({
+            success: false,
+            error: 'Deliverable not found',
+          });
+        }
+
+        // Mark as complete
+        project.deliverables[deliverableIndex].done = true;
+        project.deliverables[deliverableIndex].completedAt = new Date();
+        await project.save();
+
+        result = {
+          success: true,
+          message: `Marked "${itemTitle || project.deliverables[deliverableIndex].description}" as complete`,
+        };
+        break;
+      }
+
+      case 'reschedule': {
+        // Reschedule a deliverable or project
+        const newDate = newValue;
+        if (!newDate) {
+          return res.status(400).json({
+            success: false,
+            error: 'Missing new date for reschedule action',
+          });
+        }
+
+        const deliverableIndex = source.deliverableIndex;
+        const isCoreProject = source.type === 'coreProjectDeliverable' || source.coreProjectId || source.type === 'coreProject';
+        const Model = isCoreProject ? CoreProject : DepartmentProject;
+
+        const project = await Model.findOne({ _id: projectId, workspace: workspaceId });
+        if (!project) {
+          return res.status(404).json({
+            success: false,
+            error: 'Project not found',
+          });
+        }
+
+        if (typeof deliverableIndex === 'number') {
+          // Reschedule deliverable
+          if (!project.deliverables || !project.deliverables[deliverableIndex]) {
+            return res.status(404).json({
+              success: false,
+              error: 'Deliverable not found',
+            });
+          }
+          project.deliverables[deliverableIndex].dueWhen = newDate;
+          await project.save();
+          result = {
+            success: true,
+            message: `Rescheduled "${itemTitle || project.deliverables[deliverableIndex].description}" to ${newDate}`,
+          };
+        } else {
+          // Reschedule project
+          project.dueWhen = newDate;
+          await project.save();
+          result = {
+            success: true,
+            message: `Rescheduled "${itemTitle || project.title}" to ${newDate}`,
+          };
+        }
+        break;
+      }
+
+      case 'assign_owner': {
+        // Assign an owner to a deliverable
+        const deliverableIndex = source.deliverableIndex;
+        const newOwner = newValue;
+
+        if (typeof deliverableIndex !== 'number' || !newOwner) {
+          return res.status(400).json({
+            success: false,
+            error: 'Missing deliverable index or owner for assign_owner action',
+          });
+        }
+
+        const isCoreProject = source.type === 'coreProjectDeliverable' || source.coreProjectId;
+        const Model = isCoreProject ? CoreProject : DepartmentProject;
+
+        const project = await Model.findOne({ _id: projectId, workspace: workspaceId });
+        if (!project) {
+          return res.status(404).json({
+            success: false,
+            error: 'Project not found',
+          });
+        }
+
+        if (!project.deliverables || !project.deliverables[deliverableIndex]) {
+          return res.status(404).json({
+            success: false,
+            error: 'Deliverable not found',
+          });
+        }
+
+        project.deliverables[deliverableIndex].owner = newOwner;
+        await project.save();
+
+        result = {
+          success: true,
+          message: `Assigned "${newOwner}" to "${itemTitle || project.deliverables[deliverableIndex].description}"`,
+        };
+        break;
+      }
+
+      default:
+        return res.status(400).json({
+          success: false,
+          error: `Unknown action: ${action}`,
+        });
+    }
+
+    // Invalidate agent caches after action
+    await agents.invalidateCache(userId);
+
+    res.json(result);
+  } catch (err) {
+    console.error('[Agent] Execute action error:', err.message);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Failed to execute action',
+    });
+  }
+});
+
 module.exports = router;

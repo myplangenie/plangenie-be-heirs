@@ -11,6 +11,7 @@ router.get('/invite/info', ctrl.inviteInfo);  // Public - no auth needed for sig
 router.delete('/invite', auth(true), requireFeature('multiUserTeam'), ctrl.revoke);
 router.patch('/access', auth(true), requireFeature('multiUserTeam'), ctrl.updateAccess);
 router.get('/viewables', auth(true), ctrl.viewables);
+router.get('/my-restrictions', auth(true), ctrl.myRestrictions);
 router.get('/collaborators', auth(true), requireFeature('multiUserTeam'), ctrl.collaborators);
 router.get('/accept', auth(false), ctrl.accept);
 router.post('/accept', auth(true), ctrl.acceptLogged);

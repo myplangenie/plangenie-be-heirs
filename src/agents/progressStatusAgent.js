@@ -103,17 +103,31 @@ function calculateDeliveryStats(context, timeHorizon = 'week') {
   const deptProjects = context.departmentProjects || [];
 
   const allDeliverables = [
-    ...coreProjects.flatMap(p => (p.deliverables || []).map(d => ({
+    ...coreProjects.flatMap((p, pIdx) => (p.deliverables || []).map((d, dIdx) => ({
       ...d,
       projectName: p.title || p.name,
       projectType: 'core',
       projectOwner: p.ownerName || p.ownerId || '',
+      source: {
+        type: 'coreProjectDeliverable',
+        projectId: p._id?.toString(),
+        coreProjectId: p._id?.toString(),
+        deliverableIndex: dIdx,
+        deliverableId: d._id?.toString(),
+      },
     }))),
-    ...deptProjects.flatMap(p => (p.deliverables || []).map(d => ({
+    ...deptProjects.flatMap((p, pIdx) => (p.deliverables || []).map((d, dIdx) => ({
       ...d,
       projectName: p.title || p.name,
       projectType: 'department',
       projectOwner: p.ownerName || p.ownerId || (p.firstName || p.lastName ? `${p.firstName || ''} ${p.lastName || ''}`.trim() : ''),
+      source: {
+        type: 'deptProjectDeliverable',
+        projectId: p._id?.toString(),
+        deptProjectId: p._id?.toString(),
+        deliverableIndex: dIdx,
+        deliverableId: d._id?.toString(),
+      },
     }))),
   ];
 
@@ -153,8 +167,28 @@ function calculateDependencyStats(context) {
   const deptProjects = context.departmentProjects || [];
 
   const allDeliverables = [
-    ...coreProjects.flatMap(p => (p.deliverables || []).map(d => ({ ...d, projectName: p.title || p.name }))),
-    ...deptProjects.flatMap(p => (p.deliverables || []).map(d => ({ ...d, projectName: p.title || p.name }))),
+    ...coreProjects.flatMap((p, pIdx) => (p.deliverables || []).map((d, dIdx) => ({
+      ...d,
+      projectName: p.title || p.name,
+      source: {
+        type: 'coreProjectDeliverable',
+        projectId: p._id?.toString(),
+        coreProjectId: p._id?.toString(),
+        deliverableIndex: dIdx,
+        deliverableId: d._id?.toString(),
+      },
+    }))),
+    ...deptProjects.flatMap((p, pIdx) => (p.deliverables || []).map((d, dIdx) => ({
+      ...d,
+      projectName: p.title || p.name,
+      source: {
+        type: 'deptProjectDeliverable',
+        projectId: p._id?.toString(),
+        deptProjectId: p._id?.toString(),
+        deliverableIndex: dIdx,
+        deliverableId: d._id?.toString(),
+      },
+    }))),
   ];
 
   // Find deliverables that are blocked by incomplete dependencies
@@ -265,6 +299,7 @@ function identifySlippageRisks(deliveryStats, dependencyStats, ownershipStats) {
         project: d.projectName,
         reason: 'Has unresolved dependencies',
         likelihood: 'high',
+        source: d.source || null,
       });
     }
   });
@@ -276,6 +311,7 @@ function identifySlippageRisks(deliveryStats, dependencyStats, ownershipStats) {
       project: 'Multiple',
       reason: `Owner is overloaded with ${count} active items`,
       likelihood: 'medium',
+      source: null, // No single source for aggregated items
     });
   });
 
@@ -286,6 +322,7 @@ function identifySlippageRisks(deliveryStats, dependencyStats, ownershipStats) {
       project: 'Multiple',
       reason: 'No clear ownership means no accountability',
       likelihood: 'high',
+      source: null, // No single source for aggregated items
     });
   }
 
@@ -305,6 +342,7 @@ function identifyBlockers(deliveryStats, dependencyStats, context) {
       type: 'dependency',
       description: `Waiting on dependencies to complete`,
       project: d.projectName,
+      source: d.source || null,
     });
   });
 
@@ -315,6 +353,7 @@ function identifyBlockers(deliveryStats, dependencyStats, context) {
       type: 'overdue',
       description: `Overdue and may be blocking downstream work`,
       project: d.projectName,
+      source: d.source || null,
     });
   });
 

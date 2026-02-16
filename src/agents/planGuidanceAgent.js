@@ -118,6 +118,23 @@ async function generateGuidance(userId, options = {}) {
                        timeHorizon === 'week' ? 'this week' :
                        'this month';
 
+  // Extract actual goals from context for the AI to reference
+  const actualGoals = [];
+  if (context.vision1y) {
+    // Split by common delimiters and take first few goals
+    const goals1y = context.vision1y.split(/[,;\n]/).map(g => g.trim()).filter(Boolean).slice(0, 3);
+    actualGoals.push(...goals1y.map(g => g.length > 80 ? g.substring(0, 80) + '...' : g));
+  }
+  if (context.vision3y && actualGoals.length < 4) {
+    const goals3y = context.vision3y.split(/[,;\n]/).map(g => g.trim()).filter(Boolean).slice(0, 2);
+    actualGoals.push(...goals3y.map(g => g.length > 80 ? g.substring(0, 80) + '...' : g));
+  }
+  // Fallback if no explicit goals
+  if (actualGoals.length === 0 && topPriority?.goal) {
+    actualGoals.push(topPriority.goal.length > 80 ? topPriority.goal.substring(0, 80) + '...' : topPriority.goal);
+  }
+  const goalsForPrompt = actualGoals.length > 0 ? actualGoals.slice(0, 3) : ['No explicit goals defined'];
+
   // Build prompt for AI reasoning
   const contextStr = formatContextForPrompt(context);
   const prompt = `You are the Priority Coach. Generate tile-based guidance for the "${horizonLabel}" time horizon.
@@ -147,7 +164,7 @@ Generate JSON response for tile-based UI. Each zone has specific content rules:
   "contextZone": {
     "strategicImpact": {
       "statement": "How this priority advances their goals (max 30 words)",
-      "linkedGoals": ["Goal 1", "Goal 2"]
+      "linkedGoals": ${JSON.stringify(goalsForPrompt)}
     },
     "dependencies": {
       "count": ${dependentItems.length},

@@ -46,6 +46,11 @@ const VALID_DEPARTMENTS = [
   'peopleHR', 'partnerships', 'technology', 'communityImpact',
 ];
 
+const VALID_RESTRICTED_PAGES = [
+  'core-projects', 'departments', 'action-plans', 'financial-clarity',
+  'strategy-canvas', 'plan', 'decisions', 'reviews', 'assumptions',
+];
+
 // POST /api/collab/invite { email, accessType?, departments? }
 exports.invite = async (req, res) => {
   try {
@@ -55,18 +60,19 @@ exports.invite = async (req, res) => {
     if (!isValidEmail(emailRaw)) return res.status(400).json({ message: 'Valid email is required' });
 
     // Access control fields
-    const accessType = req.body?.accessType || 'admin';
-    if (!['admin', 'department'].includes(accessType)) {
-      return res.status(400).json({ message: 'accessType must be "admin" or "department"' });
+    let accessType = req.body?.accessType || 'admin';
+    // Map 'department' to 'limited' for backward compatibility
+    if (accessType === 'department') accessType = 'limited';
+    if (!['admin', 'limited'].includes(accessType)) {
+      return res.status(400).json({ message: 'accessType must be "admin" or "limited"' });
     }
     let departments = req.body?.departments || [];
     if (!Array.isArray(departments)) departments = [];
     departments = departments.filter((d) => VALID_DEPARTMENTS.includes(d));
 
-    // If department access, must have at least one department
-    if (accessType === 'department' && departments.length === 0) {
-      return res.status(400).json({ message: 'At least one department required for department access' });
-    }
+    let restrictedPages = req.body?.restrictedPages || [];
+    if (!Array.isArray(restrictedPages)) restrictedPages = [];
+    restrictedPages = restrictedPages.filter((p) => VALID_RESTRICTED_PAGES.includes(p));
 
     // Check if email belongs to an existing user
     const existingUser = await User.findOne({ email: emailRaw }).select('_id isCollaborator onboardingDone').lean().exec();
@@ -91,6 +97,7 @@ exports.invite = async (req, res) => {
         status: 'pending',
         accessType,
         departments,
+        restrictedPages,
         // If existing collaborator-only user exists, link them immediately
         ...(existingUser ? { viewer: existingUser._id, collaborator: existingUser._id } : {}),
       });
@@ -98,6 +105,7 @@ exports.invite = async (req, res) => {
       // Update access settings if re-inviting
       collab.accessType = accessType;
       collab.departments = departments;
+      collab.restrictedPages = restrictedPages;
       // If existing collaborator-only user exists, ensure they're linked
       if (existingUser) {
         collab.viewer = collab.viewer || existingUser._id;
@@ -219,6 +227,9 @@ exports.collaborators = async (req, res) => {
     const list = rows.map((r) => {
       const v = r.viewer || null;
       const viewerName = v ? ((v.firstName || v.lastName) ? `${v.firstName || ''} ${v.lastName || ''}`.trim() : (v.fullName || v.email)) : '';
+      // Map legacy 'department' to 'limited' for frontend consistency
+      let accessType = r.accessType || 'admin';
+      if (accessType === 'department') accessType = 'limited';
       return {
         id: String(r._id),
         email: r.email,
@@ -226,8 +237,9 @@ exports.collaborators = async (req, res) => {
         invitedAt: r.invitedAt || r.createdAt || null,
         acceptedAt: r.acceptedAt || null,
         viewer: v ? { id: String(v._id || ''), name: viewerName, email: v.email || '' } : null,
-        accessType: r.accessType || 'admin',
+        accessType,
         departments: r.departments || [],
+        restrictedPages: r.restrictedPages || [],
       };
     });
     return res.json({ collaborators: list, page: p, limit: l, total });
@@ -488,7 +500,55 @@ exports.inviteInfo = async (req, res) => {
   }
 };
 
-// PATCH /api/collab/access { id, accessType, departments }
+// GET /api/collab/my-restrictions?ownerId=...
+// Returns the restrictions for the current authenticated user when viewing a specific owner's dashboard
+exports.myRestrictions = async (req, res) => {
+  try {
+    const viewerId = req.user?.id;
+    if (!viewerId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const ownerId = String(req.query?.ownerId || '').trim();
+    if (!ownerId) return res.status(400).json({ message: 'Missing ownerId' });
+
+    // Find the collaboration where this viewer is viewing the owner
+    const me = await User.findById(viewerId).lean().exec();
+    if (!me) return res.status(401).json({ message: 'Unauthorized' });
+    const email = (me.email || '').toLowerCase();
+
+    const collab = await Collaboration.findOne({
+      owner: ownerId,
+      status: 'accepted',
+      $or: [
+        { viewer: viewerId },
+        { collaborator: viewerId },
+        { email: email },
+      ],
+    }).lean().exec();
+
+    if (!collab) {
+      // No collaboration found - return admin access (no restrictions)
+      return res.json({
+        accessType: 'admin',
+        departments: [],
+        restrictedPages: [],
+      });
+    }
+
+    // Map legacy 'department' to 'limited'
+    let accessType = collab.accessType || 'admin';
+    if (accessType === 'department') accessType = 'limited';
+
+    return res.json({
+      accessType,
+      departments: collab.departments || [],
+      restrictedPages: collab.restrictedPages || [],
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err?.message || 'Failed to get restrictions' });
+  }
+};
+
+// PATCH /api/collab/access { id, accessType, departments, restrictedPages }
 exports.updateAccess = async (req, res) => {
   try {
     const ownerId = req.user?.id;
@@ -497,25 +557,27 @@ exports.updateAccess = async (req, res) => {
     const id = (req.body && req.body.id) ? String(req.body.id).trim() : '';
     if (!id) return res.status(400).json({ message: 'Missing collaboration id' });
 
-    const accessType = req.body?.accessType || 'admin';
-    if (!['admin', 'department'].includes(accessType)) {
-      return res.status(400).json({ message: 'accessType must be "admin" or "department"' });
+    let accessType = req.body?.accessType || 'admin';
+    // Map 'department' to 'limited' for backward compatibility
+    if (accessType === 'department') accessType = 'limited';
+    if (!['admin', 'limited'].includes(accessType)) {
+      return res.status(400).json({ message: 'accessType must be "admin" or "limited"' });
     }
 
     let departments = req.body?.departments || [];
     if (!Array.isArray(departments)) departments = [];
     departments = departments.filter((d) => VALID_DEPARTMENTS.includes(d));
 
-    // If department access, must have at least one department
-    if (accessType === 'department' && departments.length === 0) {
-      return res.status(400).json({ message: 'At least one department required for department access' });
-    }
+    let restrictedPages = req.body?.restrictedPages || [];
+    if (!Array.isArray(restrictedPages)) restrictedPages = [];
+    restrictedPages = restrictedPages.filter((p) => VALID_RESTRICTED_PAGES.includes(p));
 
     const collab = await Collaboration.findOne({ _id: id, owner: ownerId }).exec();
     if (!collab) return res.status(404).json({ message: 'Collaboration not found' });
 
     collab.accessType = accessType;
-    collab.departments = accessType === 'department' ? departments : [];
+    collab.departments = accessType === 'limited' ? departments : [];
+    collab.restrictedPages = accessType === 'limited' ? restrictedPages : [];
     await collab.save();
 
     return res.json({
@@ -524,6 +586,7 @@ exports.updateAccess = async (req, res) => {
         id: String(collab._id),
         accessType: collab.accessType,
         departments: collab.departments,
+        restrictedPages: collab.restrictedPages,
       },
     });
   } catch (err) {
