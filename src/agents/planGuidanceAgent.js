@@ -234,12 +234,13 @@ RULES:
           : 'No strategic impact to analyze.',
         linkedGoals: [],
       },
-      dependencies: data?.contextZone?.dependencies || {
+      dependencies: {
         count: dependentItems.length,
-        description: dependentItems.length > 0
+        description: data?.contextZone?.dependencies?.description || (dependentItems.length > 0
           ? `${dependentItems.length} items are waiting on this priority.`
-          : 'No downstream dependencies identified.',
-        items: dependentItems.slice(0, 3).map(i => i.title),
+          : 'No downstream dependencies identified.'),
+        // Always use actual dependent items, not AI placeholders
+        items: dependentItems.map(i => i.title),
       },
       riskExposure: data?.contextZone?.riskExposure || {
         statement: overdue.length > 0
