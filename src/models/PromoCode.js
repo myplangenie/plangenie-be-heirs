@@ -70,8 +70,7 @@ const promoCodeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Index for fast lookups
-promoCodeSchema.index({ code: 1 });
+// Index for fast lookups (code index is already created by unique: true)
 promoCodeSchema.index({ isActive: 1, expiresAt: 1 });
 
 // Check if promo code is valid and can be used
