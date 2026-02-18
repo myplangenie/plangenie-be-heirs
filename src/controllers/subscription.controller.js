@@ -359,6 +359,31 @@ exports.getMySubscription = async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     const sub = await Subscription.findOne({ user: user._id });
+
+    // Check for expired promo code subscriptions (no Stripe subscription ID)
+    // These don't get webhook updates, so we need to check expiry manually
+    if (sub && sub.status === 'active' && !sub.stripeSubscriptionId && sub.currentPeriodEnd) {
+      const now = new Date();
+      if (now > new Date(sub.currentPeriodEnd)) {
+        // Subscription has expired - update status
+        sub.status = 'expired';
+        await sub.save();
+
+        // Also update user's hasActiveSubscription flag
+        if (user.hasActiveSubscription) {
+          user.hasActiveSubscription = false;
+          await user.save();
+        }
+
+        await SubscriptionHistory.create({
+          user: user._id,
+          subscription: sub._id,
+          event: 'deactivated',
+          reason: 'promo_code_expired',
+        });
+      }
+    }
+
     res.json({
       user: { id: String(user._id), hasActiveSubscription: !!user.hasActiveSubscription },
       subscription: sub || null,

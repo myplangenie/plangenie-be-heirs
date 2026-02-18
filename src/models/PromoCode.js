@@ -108,6 +108,10 @@ promoCodeSchema.methods.recordRedemption = async function (userId) {
 
 // Static method to find and validate a promo code
 promoCodeSchema.statics.findAndValidate = async function (code, userId = null) {
+  if (!code || typeof code !== 'string') {
+    return { valid: false, reason: 'Code not found' };
+  }
+
   const promoCode = await this.findOne({
     code: code.toUpperCase().trim(),
   });
