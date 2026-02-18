@@ -23,6 +23,13 @@ router.get('/subscriptions', ctrl.subscriptions);
 
 router.get('/logs', ctrl.logs);
 
+// Promo codes management
+router.get('/promo-codes', ctrl.listPromoCodes);
+router.get('/promo-codes/:id', ctrl.getPromoCode);
+router.post('/promo-codes', ctrl.createPromoCode);
+router.patch('/promo-codes/:id', ctrl.updatePromoCode);
+router.delete('/promo-codes/:id', ctrl.deletePromoCode);
+
 // Test endpoint to manually trigger weekly digest
 router.post('/test-weekly-digest', async (req, res) => {
   try {

@@ -3,6 +3,7 @@ const Subscription = require('../models/Subscription');
 const SubscriptionHistory = require('../models/SubscriptionHistory');
 const User = require('../models/User');
 const Workspace = require('../models/Workspace');
+const PromoCode = require('../models/PromoCode');
 
 function requireEnv(name) {
   const v = process.env[name];
@@ -100,6 +101,57 @@ exports.createCheckoutSession = async (req, res) => {
       // Send user to billing return success which handles redirect to next
       const successUrl = `${appWebUrl}/billing/return?status=success`;
       return res.json({ url: successUrl });
+    }
+
+    // Check for database promo codes (free trials)
+    if (requestedPromo) {
+      const promoResult = await PromoCode.findAndValidate(requestedPromo, req.user.id);
+      if (promoResult.valid && promoResult.promoCode && promoResult.type === 'free_trial') {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        const promoCode = promoResult.promoCode;
+        const sub = await ensureSubscriptionForUser(user);
+
+        // Activate free trial subscription
+        sub.status = 'active';
+        sub.planType = promoCode.planType || 'Lite';
+        sub.amountCents = 0;
+        const now = new Date();
+        sub.currentPeriodStart = now;
+        sub.currentPeriodEnd = new Date(now.getTime() + promoCode.durationDays * 24 * 60 * 60 * 1000);
+        sub.renewalDate = sub.currentPeriodEnd;
+        await sub.save();
+
+        // Only Pro unlocks premium features
+        user.hasActiveSubscription = (sub.planType === 'Pro');
+        await user.save();
+
+        // Record redemption
+        await promoCode.recordRedemption(user._id);
+
+        await SubscriptionHistory.create({
+          user: user._id,
+          subscription: sub._id,
+          event: 'activated',
+          reason: 'promo_code_free_trial',
+          meta: {
+            promoCode: requestedPromo,
+            planType: promoCode.planType,
+            durationDays: promoCode.durationDays,
+          },
+        });
+
+        // Send user to billing return success
+        const successUrl = `${appWebUrl}/billing/return?status=success`;
+        return res.json({ url: successUrl });
+      } else if (promoResult.valid === false && promoResult.reason) {
+        // Database promo code found but invalid (expired, used, etc.)
+        // Only return error if it looks like a database code (not found means try Stripe)
+        if (promoResult.reason !== 'Code not found') {
+          return res.status(400).json({ message: promoResult.reason });
+        }
+      }
     }
 
     // Normal Stripe flow
@@ -236,7 +288,23 @@ exports.validatePromoCode = async (req, res) => {
       return res.json({ ok: true, code, percentOff: 100 });
     }
 
-    // Otherwise, validate against Stripe promotion codes
+    // Second: check database for promo codes (free trials, etc.)
+    const promoResult = await PromoCode.findAndValidate(code, req.user?.id);
+    if (promoResult.valid && promoResult.promoCode) {
+      return res.json({
+        ok: true,
+        code: promoResult.promoCode.code,
+        percentOff: promoResult.discountPercent || 100,
+        type: promoResult.type,
+        planType: promoResult.planType,
+        durationDays: promoResult.durationDays,
+      });
+    } else if (promoResult.reason && promoResult.reason !== 'Code not found') {
+      // Code found in DB but invalid
+      return res.status(400).json({ message: promoResult.reason });
+    }
+
+    // Third: validate against Stripe promotion codes
     const stripe = getStripe();
     const list = await stripe.promotionCodes.list({ code, active: true, limit: 1 });
     const pc = list?.data?.[0];
@@ -245,7 +313,7 @@ exports.validatePromoCode = async (req, res) => {
     if (!coupon || coupon.percent_off == null) {
       return res.status(400).json({ message: 'Promo code is invalid' });
     }
-    return res.json({ ok: true, code: pc.code, percentOff: coupon.percent_off });
+    return res.json({ ok: true, code: pc.code, percentOff: coupon.percent_off, type: 'stripe' });
   } catch (e) {
     console.error('validatePromoCode error', e);
     return res.status(400).json({ message: 'Promo code is invalid' });

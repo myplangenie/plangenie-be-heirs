@@ -16,6 +16,7 @@ const SwotEntry = require('../models/SwotEntry');
 const OrgPosition = require('../models/OrgPosition');
 const CoreProject = require('../models/CoreProject');
 const DepartmentProject = require('../models/DepartmentProject');
+const PromoCode = require('../models/PromoCode');
 const { getWorkspaceFields } = require('../services/workspaceFieldService');
 
 function toName(u) {
@@ -622,4 +623,222 @@ exports.logs = async (_req, res) => {
   const items = await SystemLog.find({}).sort({ time: -1 }).limit(200).lean().exec();
   const mapped = items.map((l) => ({ _id: String(l._id), time: l.time || l.createdAt, event: l.event, severity: l.severity, details: l.details }));
   return res.json({ items: mapped });
+};
+
+// ==================== PROMO CODES ====================
+
+// List all promo codes
+exports.listPromoCodes = async (_req, res) => {
+  try {
+    const items = await PromoCode.find({}).sort({ createdAt: -1 }).lean().exec();
+    const mapped = items.map((p) => ({
+      _id: String(p._id),
+      code: p.code,
+      type: p.type,
+      planType: p.planType,
+      durationDays: p.durationDays,
+      discountPercent: p.discountPercent,
+      usageLimit: p.usageLimit,
+      usageCount: p.usageCount,
+      expiresAt: p.expiresAt,
+      isActive: p.isActive,
+      description: p.description,
+      redemptionCount: p.redemptions?.length || 0,
+      createdAt: p.createdAt,
+    }));
+    return res.json({ items: mapped });
+  } catch (err) {
+    console.error('listPromoCodes error:', err);
+    return res.status(500).json({ message: 'Failed to list promo codes' });
+  }
+};
+
+// Get a single promo code with redemptions
+exports.getPromoCode = async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid id' });
+    }
+    const promoCode = await PromoCode.findById(id)
+      .populate('redemptions.user', 'email fullName firstName lastName')
+      .lean()
+      .exec();
+    if (!promoCode) {
+      return res.status(404).json({ message: 'Promo code not found' });
+    }
+    return res.json({
+      promoCode: {
+        ...promoCode,
+        _id: String(promoCode._id),
+        redemptions: (promoCode.redemptions || []).map((r) => ({
+          user: r.user ? {
+            _id: String(r.user._id),
+            email: r.user.email,
+            name: r.user.fullName || [r.user.firstName, r.user.lastName].filter(Boolean).join(' '),
+          } : null,
+          redeemedAt: r.redeemedAt,
+        })),
+      },
+    });
+  } catch (err) {
+    console.error('getPromoCode error:', err);
+    return res.status(500).json({ message: 'Failed to get promo code' });
+  }
+};
+
+// Create a new promo code
+exports.createPromoCode = async (req, res) => {
+  try {
+    const {
+      code,
+      type = 'free_trial',
+      planType = 'Lite',
+      durationDays = 14,
+      discountPercent = 100,
+      usageLimit = null,
+      expiresAt = null,
+      description = '',
+    } = req.body;
+
+    if (!code || !String(code).trim()) {
+      return res.status(400).json({ message: 'Code is required' });
+    }
+
+    const normalizedCode = String(code).trim().toUpperCase();
+
+    // Check if code already exists
+    const existing = await PromoCode.findOne({ code: normalizedCode });
+    if (existing) {
+      return res.status(400).json({ message: 'A promo code with this name already exists' });
+    }
+
+    const promoCode = await PromoCode.create({
+      code: normalizedCode,
+      type,
+      planType,
+      durationDays: Number(durationDays) || 14,
+      discountPercent: Number(discountPercent) || 100,
+      usageLimit: usageLimit ? Number(usageLimit) : null,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      description: String(description || '').trim(),
+      isActive: true,
+    });
+
+    await log('Promo code created', 'info', `Code: ${normalizedCode}`, {
+      promoCodeId: String(promoCode._id),
+      type,
+      planType,
+      durationDays,
+    });
+
+    return res.json({
+      ok: true,
+      promoCode: {
+        _id: String(promoCode._id),
+        code: promoCode.code,
+        type: promoCode.type,
+        planType: promoCode.planType,
+        durationDays: promoCode.durationDays,
+        discountPercent: promoCode.discountPercent,
+        usageLimit: promoCode.usageLimit,
+        usageCount: promoCode.usageCount,
+        expiresAt: promoCode.expiresAt,
+        isActive: promoCode.isActive,
+        description: promoCode.description,
+        createdAt: promoCode.createdAt,
+      },
+    });
+  } catch (err) {
+    console.error('createPromoCode error:', err);
+    return res.status(500).json({ message: 'Failed to create promo code' });
+  }
+};
+
+// Update a promo code
+exports.updatePromoCode = async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid id' });
+    }
+
+    const promoCode = await PromoCode.findById(id);
+    if (!promoCode) {
+      return res.status(404).json({ message: 'Promo code not found' });
+    }
+
+    const {
+      type,
+      planType,
+      durationDays,
+      discountPercent,
+      usageLimit,
+      expiresAt,
+      isActive,
+      description,
+    } = req.body;
+
+    if (type !== undefined) promoCode.type = type;
+    if (planType !== undefined) promoCode.planType = planType;
+    if (durationDays !== undefined) promoCode.durationDays = Number(durationDays) || 14;
+    if (discountPercent !== undefined) promoCode.discountPercent = Number(discountPercent) || 100;
+    if (usageLimit !== undefined) promoCode.usageLimit = usageLimit ? Number(usageLimit) : null;
+    if (expiresAt !== undefined) promoCode.expiresAt = expiresAt ? new Date(expiresAt) : null;
+    if (isActive !== undefined) promoCode.isActive = Boolean(isActive);
+    if (description !== undefined) promoCode.description = String(description || '').trim();
+
+    await promoCode.save();
+
+    await log('Promo code updated', 'info', `Code: ${promoCode.code}`, {
+      promoCodeId: String(promoCode._id),
+    });
+
+    return res.json({
+      ok: true,
+      promoCode: {
+        _id: String(promoCode._id),
+        code: promoCode.code,
+        type: promoCode.type,
+        planType: promoCode.planType,
+        durationDays: promoCode.durationDays,
+        discountPercent: promoCode.discountPercent,
+        usageLimit: promoCode.usageLimit,
+        usageCount: promoCode.usageCount,
+        expiresAt: promoCode.expiresAt,
+        isActive: promoCode.isActive,
+        description: promoCode.description,
+        createdAt: promoCode.createdAt,
+      },
+    });
+  } catch (err) {
+    console.error('updatePromoCode error:', err);
+    return res.status(500).json({ message: 'Failed to update promo code' });
+  }
+};
+
+// Delete a promo code
+exports.deletePromoCode = async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid id' });
+    }
+
+    const promoCode = await PromoCode.findById(id);
+    if (!promoCode) {
+      return res.status(404).json({ message: 'Promo code not found' });
+    }
+
+    await PromoCode.deleteOne({ _id: id });
+
+    await log('Promo code deleted', 'warning', `Code: ${promoCode.code}`, {
+      promoCodeId: id,
+    });
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('deletePromoCode error:', err);
+    return res.status(500).json({ message: 'Failed to delete promo code' });
+  }
 };
