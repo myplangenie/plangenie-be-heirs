@@ -2,7 +2,7 @@ const Collaboration = require('../models/Collaboration');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const crypto = require('crypto');
-const { effectivePlan, plans } = require('../config/entitlements');
+const { effectivePlan, plans, getLimit } = require('../config/entitlements');
 const { Resend } = require('resend');
 
 function isValidEmail(email) {
@@ -87,6 +87,23 @@ exports.invite = async (req, res) => {
         return res.status(400).json({ message: "This email belongs to an existing account holder and can't be added as a collaborator" });
       }
       // For collaborator-only accounts, we can proceed to create/update the collaboration
+    }
+
+    // Check collaborator limit for the user's plan
+    const ownerUser = await User.findById(userId).lean().exec();
+    const maxCollaborators = getLimit(ownerUser, 'maxCollaborators');
+    if (maxCollaborators > 0) {
+      // Count existing collaborators (exclude this email if already invited - allows re-inviting)
+      const existingCount = await Collaboration.countDocuments({
+        owner: userId,
+        email: { $ne: emailRaw },
+      });
+      if (existingCount >= maxCollaborators) {
+        return res.status(403).json({
+          message: `You've reached the collaborator limit (${maxCollaborators}). Upgrade to Pro to add more.`,
+          code: 'COLLABORATOR_LIMIT_REACHED',
+        });
+      }
     }
 
     let collab = await Collaboration.findOne({ owner: userId, email: emailRaw });

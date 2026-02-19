@@ -15,7 +15,7 @@ const plans = {
       orgChartImage: false,
       planEdit: false,
       departmentPlans: false,
-      multiUserTeam: false,
+      multiUserTeam: true,
       assumptionScenarios: false,
     },
     limits: {
@@ -24,6 +24,7 @@ const plans = {
       maxWorkspaces: 1,
       maxGoals: 3,
       maxCoreProjects: 3,
+      maxCollaborators: 2,
       reviewsPerMonth: 2,
       decisionsPerMonth: 10,
     },
@@ -49,6 +50,7 @@ const plans = {
       maxWorkspaces: 1000,
       maxGoals: 1000,
       maxCoreProjects: 1000,
+      maxCollaborators: 0, // 0 = unlimited
       reviewsPerMonth: 100000,
       decisionsPerMonth: 100000,
     },
