@@ -21,20 +21,42 @@ async function sendInviteEmail({ to, ownerName, acceptUrl }) {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
-    const subject = `${ownerName || 'A PlanGenie user'} invited you to view their dashboard`;
+    const subject = `${ownerName || 'A Plan Genie user'} invited you to collaborate`;
     const html = `
-      <div style="font-family:Arial,Helvetica,sans-serif; line-height:1.5">
-        <h2>PlanGenie Collaboration Invite</h2>
-        <p>${ownerName || 'A PlanGenie user'} has invited you to view their PlanGenie dashboard (read-only).</p>
-        <p>Click the button below to accept the invitation.</p>
-        <p style="margin:24px 0">
-          <a href="${acceptUrl}" style="display:inline-block; background:#111827; color:#fff; padding:10px 16px; text-decoration:none; border-radius:6px">Accept Invitation</a>
-        </p>
-        <p>If the button doesn't work, copy and paste this link into your browser:</p>
-        <p style="word-break:break-all"><a href="${acceptUrl}">${acceptUrl}</a></p>
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #F8FAFC;">
+        <div style="background-color: #FFFFFF; border-radius: 12px; padding: 32px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <img src="https://logos.plangenie.com/logo-white.7ee85271.png" alt="Plan Genie" style="height: 20px;" />
+          </div>
+          <h2 style="color: #1D4374; font-size: 20px; font-weight: 600; margin: 0 0 16px 0; text-align: center;">Collaboration Invite</h2>
+          <p style="color: #4B5563; font-size: 15px; line-height: 1.6;">
+            <strong>${ownerName || 'A Plan Genie user'}</strong> has invited you to view their Plan Genie dashboard.
+          </p>
+          <p style="color: #4B5563; font-size: 15px; line-height: 1.6;">
+            As a collaborator, you'll be able to view their strategic plans, projects, and progress.
+          </p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${acceptUrl}" style="display: inline-block; background-color: #1D4374; color: #FFFFFF; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Accept Invitation</a>
+          </div>
+          <p style="color: #6B7280; font-size: 13px; line-height: 1.6;">
+            If the button doesn't work, copy and paste this link into your browser:
+          </p>
+          <p style="word-break: break-all; color: #1D4374; font-size: 13px;">
+            <a href="${acceptUrl}" style="color: #1D4374;">${acceptUrl}</a>
+          </p>
+          <p style="color: #6B7280; font-size: 13px; margin-top: 24px;">
+            This invitation expires in 7 days.
+          </p>
+        </div>
+        <div style="text-align: center; margin-top: 24px;">
+          <p style="color: #9CA3AF; font-size: 12px; line-height: 1.6;">
+            Plan Genie Inc. · Vancouver, Canada<br />
+            You're receiving this because someone invited you to collaborate on Plan Genie.
+          </p>
+        </div>
       </div>
     `;
-    const text = `${ownerName || 'A PlanGenie user'} invited you to view their dashboard (read-only).\nAccept: ${acceptUrl}`;
+    const text = `${ownerName || 'A Plan Genie user'} invited you to view their dashboard.\n\nAs a collaborator, you'll be able to view their strategic plans, projects, and progress.\n\nAccept the invitation: ${acceptUrl}\n\nThis invitation expires in 7 days.\n\n---\nPlan Genie Inc. · Vancouver, Canada`;
     await resend.emails.send({ from, to, subject, html, text });
   } catch (err) {
     console.error('[email] Failed to send collab invite:', err?.message || err);

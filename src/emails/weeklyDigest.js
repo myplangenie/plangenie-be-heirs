@@ -6,7 +6,7 @@
 const PRIMARY_COLOR = '#1D4374';
 const ACCENT_COLOR = '#F59E0B';
 const BG_COLOR = '#F8FAFC';
-const LOGO_URL = 'https://logos.plangenie.com/logo.png';
+const LOGO_URL = 'https://logos.plangenie.com/logo-white.7ee85271.png';
 
 /**
  * Generate the weekly digest email HTML
@@ -105,7 +105,7 @@ function generateWeeklyDigest(data) {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <img src="${LOGO_URL}" alt="Plan Genie" style="height: 40px; width: auto; display: block;" />
+                    <img src="${LOGO_URL}" alt="Plan Genie" style="height: 20px; width: auto; display: block;" />
                     <p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.8); font-size: 14px;">
                       Weekly Progress Update
                     </p>
@@ -172,16 +172,16 @@ function generateWeeklyDigest(data) {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <p style="margin: 0; color: #9CA3AF; font-size: 12px; line-height: 1.5;">
-                      You're receiving this because you have weekly digest notifications enabled.
-                      <br>
-                      <a href="${dashboardUrl}/settings" style="color: ${PRIMARY_COLOR}; text-decoration: none;">Manage notification preferences</a>
+                    <p style="margin: 0; color: #9CA3AF; font-size: 11px; line-height: 1.6;">
+                      Plan Genie Inc. · Vancouver, Canada<br>
+                      You're receiving this because you signed up for Plan Genie.<br>
+                      <a href="${dashboardUrl}/settings?tab=notifications" style="color: #6B7280; text-decoration: underline;">Manage email preferences</a> or <a href="${dashboardUrl}/settings?tab=notifications" style="color: #6B7280; text-decoration: underline;">unsubscribe</a>
                     </p>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding-top: 16px;">
-                    <p style="margin: 0; color: #9CA3AF; font-size: 12px;">
+                  <td style="padding-top: 12px;">
+                    <p style="margin: 0; color: #9CA3AF; font-size: 11px;">
                       &copy; ${new Date().getFullYear()} Plan Genie. All rights reserved.
                     </p>
                   </td>
@@ -222,8 +222,11 @@ ${dueThisWeek.length > 5 ? `...and ${dueThisWeek.length - 5} more` : ''}
 View your dashboard: ${dashboardUrl}
 
 ---
-You're receiving this because you have weekly digest notifications enabled.
-Manage preferences: ${dashboardUrl}/settings
+Plan Genie Inc. · Vancouver, Canada
+You're receiving this because you signed up for Plan Genie.
+Manage email preferences or unsubscribe: ${dashboardUrl}/settings?tab=notifications
+
+© ${new Date().getFullYear()} Plan Genie. All rights reserved.
   `.trim();
 
   return { html, text, subject: subjectLine };

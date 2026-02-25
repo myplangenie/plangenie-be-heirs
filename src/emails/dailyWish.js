@@ -6,7 +6,7 @@
 const PRIMARY_COLOR = '#1D4374';
 const ACCENT_COLOR = '#F59E0B';
 const BG_COLOR = '#F8FAFC';
-const LOGO_URL = 'https://logos.plangenie.com/logo.png';
+const LOGO_URL = 'https://logos.plangenie.com/logo-white.7ee85271.png';
 
 // Category colors and icons
 const CATEGORY_STYLES = {
@@ -29,10 +29,11 @@ const CATEGORY_STYLES = {
  * @param {string} data.message - AI-generated recommendation message
  * @param {string} data.category - Category of the recommendation
  * @param {string} data.dashboardUrl - URL to the dashboard
+ * @param {string} data.unsubscribeUrl - URL to unsubscribe from emails
  * @returns {Object} { html, text, subject }
  */
 function generateDailyWish(data) {
-  const { userName, businessName, title, message, category = 'general', dashboardUrl } = data;
+  const { userName, businessName, title, message, category = 'general', dashboardUrl, unsubscribeUrl } = data;
 
   const firstName = userName?.split(' ')[0] || 'there';
   const categoryStyle = CATEGORY_STYLES[category] || CATEGORY_STYLES.general;
@@ -65,9 +66,9 @@ function generateDailyWish(data) {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <img src="${LOGO_URL}" alt="Plan Genie" style="height: 40px; width: auto; display: block;" />
+                    <img src="${LOGO_URL}" alt="Plan Genie" style="height: 20px; width: auto; display: block;" />
                     <p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.8); font-size: 14px;">
-                      Your Daily Wish
+                      Your Weekly Recommendation
                     </p>
                   </td>
                   <td align="right">
@@ -158,13 +159,22 @@ function generateDailyWish(data) {
                 <tr>
                   <td>
                     <p style="margin: 0; color: #9CA3AF; font-size: 12px; line-height: 1.5;">
-                      Your daily wish is personalized based on your business profile and goals.
+                      Your weekly recommendation is personalized based on your business profile and goals.
                     </p>
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding-top: 16px;">
-                    <p style="margin: 0; color: #9CA3AF; font-size: 12px;">
+                  <td style="padding-top: 12px;">
+                    <p style="margin: 0; color: #9CA3AF; font-size: 11px; line-height: 1.6;">
+                      Plan Genie Inc. · Vancouver, Canada<br>
+                      You're receiving this because you signed up for Plan Genie.<br>
+                      <a href="${unsubscribeUrl || dashboardUrl + '/settings'}" style="color: #6B7280; text-decoration: underline;">Manage email preferences</a> or <a href="${unsubscribeUrl || dashboardUrl + '/settings'}" style="color: #6B7280; text-decoration: underline;">unsubscribe</a>
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-top: 12px;">
+                    <p style="margin: 0; color: #9CA3AF; font-size: 11px;">
                       &copy; ${new Date().getFullYear()} Plan Genie. All rights reserved.
                     </p>
                   </td>
@@ -183,7 +193,7 @@ function generateDailyWish(data) {
 
   // Plain text version
   const text = `
-PLAN GENIE - YOUR DAILY WISH
+PLAN GENIE - YOUR WEEKLY RECOMMENDATION
 ${today}
 
 Good day, ${firstName}!
@@ -201,11 +211,15 @@ Open your dashboard: ${dashboardUrl}
 "Small consistent actions lead to remarkable results."
 
 ---
-Your daily wish is personalized based on your business profile and goals.
+Plan Genie Inc. · Vancouver, Canada
+Your weekly recommendation is personalized based on your business profile and goals.
+
+Manage email preferences: ${unsubscribeUrl || dashboardUrl + '/settings'}
+
 © ${new Date().getFullYear()} Plan Genie. All rights reserved.
   `.trim();
 
-  const subject = `✨ Daily Wish: ${title}`;
+  const subject = `Weekly Tip: ${title}`;  // Removed emoji - can trigger spam filters
 
   return { html, text, subject };
 }

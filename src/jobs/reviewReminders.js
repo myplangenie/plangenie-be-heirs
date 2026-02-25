@@ -190,13 +190,18 @@ async function sendReminderToUser(user, resend, fromAddress, dashboardUrl) {
       upcomingDeliverables,
     });
 
-    // Send email
+    // Send email with List-Unsubscribe header for better deliverability
+    const unsubscribeUrl = `${reviewUrl.replace('/reviews', '/settings')}?tab=notifications`;
     const result = await resend.emails.send({
       from: fromAddress,
       to: user.email,
       subject,
       html,
       text,
+      headers: {
+        'List-Unsubscribe': `<${unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
     });
 
     if (result?.error) {
@@ -259,12 +264,18 @@ async function sendReminderToAttendee(attendee, review, ownerName, resend, fromA
       actionItems: attendeeActionItems,
     });
 
+    // Send with List-Unsubscribe header for better deliverability
+    const attendeeUnsubscribeUrl = `${reviewUrl.replace(/\/reviews.*/, '/settings')}?tab=notifications`;
     const result = await resend.emails.send({
       from: fromAddress,
       to: attendee.email,
       subject,
       html,
       text,
+      headers: {
+        'List-Unsubscribe': `<${attendeeUnsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
     });
 
     if (result?.error) {

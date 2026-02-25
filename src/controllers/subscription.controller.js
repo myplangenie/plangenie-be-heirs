@@ -435,12 +435,16 @@ exports.getBillingSummary = async (req, res) => {
     const purchased = subscription?.workspaceSlots?.purchased || 0;
     const total = subscription?.workspaceSlots?.total || 1;
 
+    // Determine if this is a promo subscription (no Stripe subscription ID means they didn't go through Stripe checkout)
+    const isPromo = subscription?.status === 'active' && !subscription?.stripeSubscriptionId;
+
     res.json({
       plan: {
         type: subscription?.planType || 'Free',
         status: subscription?.status || 'none',
         currentPeriodEnd: subscription?.currentPeriodEnd || null,
         cancelAtPeriodEnd: subscription?.cancelAtPeriodEnd || false,
+        isPromo, // true if active subscription without Stripe (promo/bypass code)
       },
       workspaceSlots: {
         included,

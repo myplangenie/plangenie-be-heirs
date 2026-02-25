@@ -133,8 +133,8 @@ async function sendWishToUser(user, resend, fromAddress, dashboardUrl) {
       return { sent: false, reason: 'no_workspace' };
     }
 
-    // Check notification frequency preference
-    const frequency = workspace.notificationPreferences?.emailFrequency?.dailyWish || 'daily';
+    // Check notification frequency preference (default to weekly)
+    const frequency = workspace.notificationPreferences?.emailFrequency?.dailyWish || 'weekly';
     if (!shouldSendByFrequency(frequency)) {
       return { sent: false, reason: 'frequency_skip' };
     }
@@ -176,6 +176,7 @@ async function sendWishToUser(user, resend, fromAddress, dashboardUrl) {
 
     // Generate email content
     const userName = user.firstName || user.fullName || user.email.split('@')[0];
+    const unsubscribeUrl = `${dashboardUrl}/settings?tab=notifications`;
     const { html, text, subject } = generateDailyWish({
       userName,
       businessName,
@@ -183,15 +184,20 @@ async function sendWishToUser(user, resend, fromAddress, dashboardUrl) {
       message,
       category,
       dashboardUrl,
+      unsubscribeUrl,
     });
 
-    // Send email
+    // Send email with List-Unsubscribe header for better deliverability
     const result = await resend.emails.send({
       from: fromAddress,
       to: user.email,
       subject,
       html,
       text,
+      headers: {
+        'List-Unsubscribe': `<${unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
     });
 
     if (result?.error) {

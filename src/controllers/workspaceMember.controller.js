@@ -167,24 +167,45 @@ async function sendInviteEmail(member, workspace, invitedByUserId) {
     const appUrl = process.env.FRONTEND_URL || 'https://app.plangenie.ai';
     const inviteUrl = `${appUrl}/workspace-invite?token=${member.inviteToken}`;
 
+    const roleLabel = member.role.charAt(0).toUpperCase() + member.role.slice(1);
+
     await resend.emails.send({
       from,
       to: member.email,
       subject: `You've been invited to join ${workspace.name} on Plan Genie`,
       html: `
-        <p>Hi,</p>
-        <p><strong>${inviterName}</strong> has invited you to join <strong>${workspace.name}</strong> on Plan Genie as a <strong>${member.role}</strong>.</p>
-        <p>Click the button below to accept the invitation:</p>
-        <p style="margin: 24px 0;">
-          <a href="${inviteUrl}" style="background-color: #1D4374; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-            Accept Invitation
-          </a>
-        </p>
-        <p>Or copy and paste this link: ${inviteUrl}</p>
-        <p>This invitation expires in 7 days.</p>
-        <p>Best,<br>The Plan Genie Team</p>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #F8FAFC;">
+          <div style="background-color: #FFFFFF; border-radius: 12px; padding: 32px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+            <div style="text-align: center; margin-bottom: 24px;">
+              <img src="https://logos.plangenie.com/logo-white.7ee85271.png" alt="Plan Genie" style="height: 20px;" />
+            </div>
+            <h2 style="color: #1D4374; font-size: 20px; font-weight: 600; margin: 0 0 16px 0; text-align: center;">Workspace Invitation</h2>
+            <p style="color: #4B5563; font-size: 15px; line-height: 1.6;">Hi,</p>
+            <p style="color: #4B5563; font-size: 15px; line-height: 1.6;">
+              <strong>${inviterName}</strong> has invited you to join <strong>${workspace.name}</strong> on Plan Genie as a <strong>${roleLabel}</strong>.
+            </p>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${inviteUrl}" style="display: inline-block; background-color: #1D4374; color: #FFFFFF; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Accept Invitation</a>
+            </div>
+            <p style="color: #6B7280; font-size: 13px; line-height: 1.6;">
+              Or copy and paste this link into your browser:
+            </p>
+            <p style="word-break: break-all; color: #1D4374; font-size: 13px;">
+              <a href="${inviteUrl}" style="color: #1D4374;">${inviteUrl}</a>
+            </p>
+            <p style="color: #6B7280; font-size: 13px; margin-top: 24px;">
+              This invitation expires in 7 days.
+            </p>
+          </div>
+          <div style="text-align: center; margin-top: 24px;">
+            <p style="color: #9CA3AF; font-size: 12px; line-height: 1.6;">
+              Plan Genie Inc. · Vancouver, Canada<br />
+              You're receiving this because someone invited you to join a workspace on Plan Genie.
+            </p>
+          </div>
+        </div>
       `,
-      text: `${inviterName} has invited you to join ${workspace.name} on Plan Genie as a ${member.role}. Accept the invitation: ${inviteUrl}`,
+      text: `Hi,\n\n${inviterName} has invited you to join ${workspace.name} on Plan Genie as a ${roleLabel}.\n\nAccept the invitation: ${inviteUrl}\n\nThis invitation expires in 7 days.\n\n---\nPlan Genie Inc. · Vancouver, Canada`,
     });
   } catch (err) {
     console.error('[inviteMember] Failed to send invite email:', err?.message || err);

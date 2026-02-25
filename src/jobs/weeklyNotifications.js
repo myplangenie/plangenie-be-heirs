@@ -167,13 +167,18 @@ async function sendDigestToUser(user, resend, fromAddress, dashboardUrl) {
       dashboardUrl,
     });
 
-    // Send email
+    // Send email with List-Unsubscribe header for better deliverability
+    const unsubscribeUrl = `${dashboardUrl}/settings?tab=notifications`;
     const result = await resend.emails.send({
       from: fromAddress,
       to: user.email,
-      subject: `📅 ${subject}`,
+      subject,  // Removed emoji - can trigger spam filters
       html,
       text,
+      headers: {
+        'List-Unsubscribe': `<${unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
     });
 
     if (result?.error) {
