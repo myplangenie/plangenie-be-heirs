@@ -108,6 +108,8 @@ app.use('/api/admin', require('./routes/admin.routes'));
 app.use('/api/agents', require('./routes/agents.routes'));
 // Strategy Documents
 app.use('/api/strategy-documents', require('./routes/strategyDocument.routes'));
+// Integration Requests
+app.use('/api/integration-requests', require('./routes/integrationRequest.routes'));
 // Workspaces (feature-flagged) - replaces Journeys
 const enableWorkspaces = String(process.env.FEATURE_WORKSPACES || process.env.FEATURE_JOURNEYS || '').toLowerCase() === 'true';
 if (enableWorkspaces) {
