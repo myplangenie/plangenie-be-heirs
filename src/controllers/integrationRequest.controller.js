@@ -183,6 +183,88 @@ exports.create = async (req, res, next) => {
 };
 
 /**
+ * Contact expert - send email directly to integration support
+ */
+exports.contactExpert = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ message: errors.array()[0].msg, errors: errors.array() });
+    }
+
+    const userId = req.user?.id;
+    const { message } = req.body;
+
+    const user = await User.findById(userId).lean();
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
+    const expertEmail = 'chike@plangenie.com';
+    const subject = `Integration Support Request from ${user.email}`;
+
+    const html = `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #F8FAFC;">
+        <div style="background-color: #FFFFFF; border-radius: 12px; padding: 32px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <img src="https://logos.plangenie.com/logo-white.7ee85271.png" alt="Plan Genie" style="height: 20px;" />
+          </div>
+          <h2 style="color: #1D4374; font-size: 20px; font-weight: 600; margin: 0 0 16px 0; text-align: center;">Integration Support Request</h2>
+
+          <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <tr>
+              <td style="padding: 8px 0; color: #6B7280; font-size: 14px; border-bottom: 1px solid #E5E7EB;">From</td>
+              <td style="padding: 8px 0; color: #1F2937; font-size: 14px; border-bottom: 1px solid #E5E7EB; text-align: right;">${user.email}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6B7280; font-size: 14px; border-bottom: 1px solid #E5E7EB;">Name</td>
+              <td style="padding: 8px 0; color: #1F2937; font-size: 14px; border-bottom: 1px solid #E5E7EB; text-align: right;">${user.fullName || user.firstName || 'N/A'}</td>
+            </tr>
+          </table>
+
+          <div style="margin-top: 24px; padding: 16px; background-color: #F9FAFB; border-radius: 8px;">
+            <p style="color: #6B7280; font-size: 12px; margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.5px;">Message</p>
+            <p style="color: #1F2937; font-size: 14px; margin: 0; white-space: pre-wrap;">${message}</p>
+          </div>
+        </div>
+        <div style="text-align: center; margin-top: 24px;">
+          <p style="color: #9CA3AF; font-size: 12px; line-height: 1.6;">
+            Plan Genie Inc. · Vancouver, Canada
+          </p>
+        </div>
+      </div>
+    `;
+
+    const text = `Integration Support Request
+
+From: ${user.email}
+Name: ${user.fullName || user.firstName || 'N/A'}
+
+Message:
+${message}
+
+---
+Plan Genie Inc. · Vancouver, Canada`;
+
+    await resend.emails.send({
+      from,
+      to: expertEmail,
+      replyTo: user.email,
+      subject,
+      html,
+      text
+    });
+
+    return res.json({ ok: true, message: 'Message sent successfully' });
+  } catch (err) {
+    console.error('[email] Failed to send expert contact email:', err?.message || err);
+    return res.status(500).json({ message: 'Failed to send message. Please try again.' });
+  }
+};
+
+/**
  * Cancel an integration request (soft delete by setting status to 'cancelled')
  */
 exports.cancel = async (req, res, next) => {

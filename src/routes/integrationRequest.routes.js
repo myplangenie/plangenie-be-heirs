@@ -51,6 +51,18 @@ router.post(
 );
 
 /**
+ * @route   POST /api/integration-requests/contact-expert
+ * @desc    Send message to integration expert
+ * @access  Viewer+
+ */
+router.post(
+  '/contact-expert',
+  requireViewer,
+  [body('message').notEmpty().trim().withMessage('Message is required')],
+  ctrl.contactExpert
+);
+
+/**
  * @route   DELETE /api/integration-requests/:id
  * @desc    Cancel an integration request
  * @access  Contributor+
