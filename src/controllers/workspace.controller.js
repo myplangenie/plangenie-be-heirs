@@ -942,7 +942,7 @@ exports.getNotificationPreferences = async (req, res, next) => {
       },
       emailFrequency: {
         digest: ws.notificationPreferences?.emailFrequency?.digest || 'weekly',
-        dailyWish: ws.notificationPreferences?.emailFrequency?.dailyWish || 'daily',
+        dailyWish: ws.notificationPreferences?.emailFrequency?.dailyWish || 'weekly',
         reviewReminders: ws.notificationPreferences?.emailFrequency?.reviewReminders || 'weekly',
         deadlineAlerts: ws.notificationPreferences?.emailFrequency?.deadlineAlerts || 'daily',
         teamActivity: ws.notificationPreferences?.emailFrequency?.teamActivity || 'weekly',
@@ -1047,7 +1047,7 @@ exports.updateNotificationPreferences = async (req, res, next) => {
       },
       emailFrequency: {
         digest: ws.notificationPreferences?.emailFrequency?.digest || 'weekly',
-        dailyWish: ws.notificationPreferences?.emailFrequency?.dailyWish || 'daily',
+        dailyWish: ws.notificationPreferences?.emailFrequency?.dailyWish || 'weekly',
         reviewReminders: ws.notificationPreferences?.emailFrequency?.reviewReminders || 'weekly',
         deadlineAlerts: ws.notificationPreferences?.emailFrequency?.deadlineAlerts || 'daily',
         teamActivity: ws.notificationPreferences?.emailFrequency?.teamActivity || 'weekly',

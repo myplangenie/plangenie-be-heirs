@@ -77,6 +77,8 @@ exports.create = async (req, res, next) => {
     }
 
     const order = await OrgPosition.getNextOrder(wsFilter.workspace);
+    const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
+    const normalizedDept = department ? normalizeDepartmentKey(department) : '';
 
     const positionData = addWorkspaceToDoc({
       user: userId,
@@ -84,7 +86,7 @@ exports.create = async (req, res, next) => {
       role: role?.trim() || undefined,
       name: name?.trim() || undefined,
       email: email?.trim()?.toLowerCase() || '',
-      department: department?.trim() || undefined,
+      department: normalizedDept || undefined,
       parentId: parentId || null,
       order,
     }, req);
@@ -130,7 +132,10 @@ exports.update = async (req, res, next) => {
     if (role !== undefined) pos.role = role?.trim() || undefined;
     if (name !== undefined) pos.name = name?.trim() || undefined;
     if (email !== undefined) pos.email = email?.trim()?.toLowerCase() || '';
-    if (department !== undefined) pos.department = department?.trim() || undefined;
+    if (department !== undefined) {
+      const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
+      pos.department = department ? normalizeDepartmentKey(department) : undefined;
+    }
     if (parentId !== undefined) pos.parentId = parentId || null;
     if (order !== undefined) pos.order = order;
 
@@ -246,13 +251,14 @@ exports.bulkCreate = async (req, res, next) => {
 
     const startOrder = 0;
 
+    const { normalizeDepartmentKey: _normDept } = require('../utils/departmentNormalize');
     const positionDocs = positions.map((p, index) =>
       addWorkspaceToDoc({
         user: userId,
         position: (p.position || '').trim(),
         role: p.role?.trim() || undefined,
         name: p.name?.trim() || undefined,
-        department: p.department?.trim() || undefined,
+        department: p.department ? _normDept(p.department) : undefined,
         legacyParentId: p.parentId || undefined, // Store legacy ID for later mapping
         order: startOrder + index,
       }, req)

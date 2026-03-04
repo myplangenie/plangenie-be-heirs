@@ -28,8 +28,15 @@ const CoreProjectSchema = new mongoose.Schema({
   ownerId: { type: String },
   ownerName: { type: String },
 
+  // Executive sponsor and responsible lead (explicit fields)
+  executiveSponsorName: { type: String },
+  responsibleLeadName: { type: String },
+
   // Relationships
-  linkedGoals: [{ type: Number }], // Indices of linked 1-year goals
+  linkedGoals: [{ type: Number }], // Indices of linked 1-year goals (legacy)
+  // Link to a single Core Key Result (system rule)
+  linkedCoreOKR: { type: mongoose.Schema.Types.ObjectId, ref: 'OKR' },
+  linkedCoreKrId: { type: mongoose.Schema.Types.ObjectId },
   departments: [{ type: String }], // Department keys this project relates to
   relatedProjects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CoreProject' }],
 

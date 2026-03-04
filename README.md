@@ -131,8 +131,16 @@ Notes
     - Lite: `STRIPE_PRICE_ID_LITE_MONTH` and `STRIPE_PRICE_ID_LITE_YEAR`.
   - Configure your Stripe webhook to POST to `/api/subscriptions/webhook`.
    - `APP_WEB_URL` is used for success/cancel URLs and billing portal return URL.
-   - Feature flags:
-     - `FEATURE_JOURNEYS` (default: off) — when not set to `true`, all Journeys-related endpoints (Journeys, This Week, Assumptions, Reviews, Decisions under `/api/journeys`) are stubbed to return safe empty payloads so the frontend does not error.
+- Feature flags:
+  - `FEATURE_JOURNEYS` (default: off) — when not set to `true`, all Journeys-related endpoints (Journeys, This Week, Assumptions, Reviews, Decisions under `/api/journeys`) are stubbed to return safe empty payloads so the frontend does not error.
+
+OKRs and Goals (System Rules)
+- Strategic hierarchy: Vision → 3–5 Year Goals → 1 Year Goals → Core OKRs → Department OKRs → Projects.
+- Goals are directional; progress is automatically computed from Core OKRs (no manual status/progress updates).
+- Core OKRs are derived from 1‑Year Goals and must have 2–4 Key Results. Core KR metrics are canonical (revenue, margin, churn, growth, adoption, cost) and must include a defined OKR cycle (startAt/endAt). OKR progress is computed strictly from KR metric values.
+- Department OKRs must anchor to a single Core Key Result, not to a Core Objective. Each Department KR must be tagged as one of: driver | enablement | operational, and must not duplicate canonical Core metrics.
+- Metric ownership rule: only Core owns canonical business metrics; departments define driver metrics (e.g., conversion rate, pipeline volume, activation, retention, cost efficiency).
+- Projects track execution only. Each Core Project links to exactly one Core Key Result; each Department Project links to one Department Key Result. Project work updates KR metric fields; KR metrics compute OKR progress; OKRs compute Goal progress. There are no manual status fields for OKRs or Goals.
 
 Plans and Entitlements
 - Plan slugs: `lite` and `pro`.
@@ -142,4 +150,3 @@ Plans and Entitlements
   - Only active/trialing `Pro` subscriptions set `user.hasActiveSubscription = true` (unlocks Pro features).
   - Paid `Lite` subscriptions keep `hasActiveSubscription = false` so entitlements remain Lite.
   - Enforced via middleware in `src/middleware/plan.js` and config in `src/config/entitlements.js`.
-

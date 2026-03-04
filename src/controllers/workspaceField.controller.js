@@ -19,6 +19,9 @@ const ALLOWED_FIELDS = [
   'valuesCore',
   'valuesCoreKeywords',
   'cultureFeeling',
+  // OKR / Fiscal cycle
+  'fiscalYearStartMonth',
+  'okrRollThresholdDays',
   // Market
   'targetMarket',
   'targetCustomer',

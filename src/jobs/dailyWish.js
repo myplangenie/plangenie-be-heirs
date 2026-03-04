@@ -11,6 +11,7 @@ const Onboarding = require('../models/Onboarding');
 const DailyWish = require('../models/DailyWish');
 const { buildAgentContext, callOpenAIJSON } = require('../agents/base');
 const { generateDailyWish } = require('../emails/dailyWish');
+const entitlements = require('../config/entitlements');
 
 let isRunning = false;
 
@@ -125,6 +126,10 @@ Return JSON with this structure:
  */
 async function sendWishToUser(user, resend, fromAddress, dashboardUrl) {
   try {
+    // Pro only: skip users without an active Pro subscription
+    if (!user?.hasActiveSubscription || entitlements.effectivePlan(user) !== 'pro') {
+      return { sent: false, reason: 'not_pro' };
+    }
     const todayDate = getTodayDateET();
 
     // Get user's default workspace with notification preferences
@@ -292,8 +297,9 @@ async function runJob() {
       isVerified: true,
       status: 'active',
       isCollaborator: { $ne: true },
+      hasActiveSubscription: true, // Pro-only recipients
     })
-      .select('_id email firstName fullName')
+      .select('_id email firstName fullName hasActiveSubscription')
       .lean();
 
     console.log(`[dailyWish] Processing ${users.length} users in batches of ${BATCH_SIZE}...`);

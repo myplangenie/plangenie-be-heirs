@@ -39,9 +39,29 @@ exports.list = async (req, res, next) => {
 
     const userId = req.user?.id;
     const workspaceId = getWorkspaceId(req) || 'default';
+    const isLimitedCollab = !!req.user?.viewerId && String(req.user?.accessType || '').toLowerCase() === 'limited';
+    const allowedDepts = Array.isArray(req.user?.allowedDepartments) ? req.user.allowedDepartments : [];
 
-    // Return grouped by department (with caching)
+    // Return grouped by department
     if (grouped === 'true') {
+      // For limited collaborators, bypass owner-scoped cache and filter by departments
+      if (isLimitedCollab) {
+        if (!allowedDepts.length) return res.json({ projects: {} });
+        const rows = await DepartmentProject.find({
+          ...wsFilter,
+          isDeleted: false,
+          departmentKey: { $in: allowedDepts },
+        }).sort({ departmentKey: 1, order: 1 }).lean();
+        const groupedMap = {};
+        for (const p of rows) {
+          const k = p.departmentKey || 'other';
+          if (!groupedMap[k]) groupedMap[k] = [];
+          groupedMap[k].push(p);
+        }
+        return res.json({ projects: groupedMap });
+      }
+
+      // Owner/admin: use cache
       const cacheKey = cache.CACHE_KEYS.userDeptProjects(userId, workspaceId);
       const projects = await cache.getOrSet(
         cacheKey,
@@ -55,6 +75,12 @@ exports.list = async (req, res, next) => {
     const query = { ...wsFilter, isDeleted: false };
     if (department) {
       query.departmentKey = department;
+    }
+    if (isLimitedCollab) {
+      // Filter results to allowed departments only
+      query.departmentKey = query.departmentKey
+        ? query.departmentKey
+        : { $in: allowedDepts.length ? allowedDepts : ['__none__'] };
     }
 
     const projects = await DepartmentProject.find(query)
@@ -87,6 +113,17 @@ exports.get = async (req, res, next) => {
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
+
+    // Enforce department scope for limited collaborators
+    try {
+      const isLimitedCollab = !!req.user?.viewerId && String(req.user?.accessType || '').toLowerCase() === 'limited';
+      if (isLimitedCollab) {
+        const allowedDepts = Array.isArray(req.user?.allowedDepartments) ? req.user.allowedDepartments : [];
+        if (!allowedDepts.includes(String(project.departmentKey || ''))) {
+          return res.status(404).json({ message: 'Project not found' });
+        }
+      }
+    } catch (_) {}
 
     return res.json({ project });
   } catch (err) {
@@ -129,6 +166,8 @@ exports.create = async (req, res, next) => {
       ownerId,
       linkedCoreProject,
       linkedGoal,
+      linkedDeptOKR,
+      linkedDeptKrId,
       deliverables,
     } = req.body;
 
@@ -148,6 +187,19 @@ exports.create = async (req, res, next) => {
       }
     }
 
+    // Enforce linkage to a Department KR (system rule)
+    if (!linkedDeptOKR || !linkedDeptKrId) {
+      return res.status(400).json({ message: 'Department Project must link to one Department Key Result' });
+    }
+    const OKR = require('../models/OKR');
+    const okr = await OKR.findOne({ _id: linkedDeptOKR, ...wsFilter, okrType: 'department', isDeleted: false }).lean();
+    if (!okr) return res.status(400).json({ message: 'linkedDeptOKR must reference a Department OKR in this workspace' });
+    if (String(okr.departmentKey || '') !== String(departmentKey || '')) {
+      return res.status(400).json({ message: 'Department Project must link to a Department OKR in the same department' });
+    }
+    const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(linkedDeptKrId));
+    if (!krExists) return res.status(400).json({ message: 'linkedDeptKrId must reference a Key Result within the linked Department OKR' });
+
     const projectData = addWorkspaceToDoc({
       user: userId,
       departmentKey: departmentKey.trim(),
@@ -163,6 +215,8 @@ exports.create = async (req, res, next) => {
       ownerId: ownerId || undefined,
       linkedCoreProject: linkedCoreProject || undefined,
       linkedGoal: typeof linkedGoal === 'number' ? linkedGoal : undefined,
+      linkedDeptOKR,
+      linkedDeptKrId,
       deliverables: Array.isArray(deliverables)
         ? deliverables.map(d => ({
             text: d.text?.trim() || '',
@@ -219,6 +273,8 @@ exports.update = async (req, res, next) => {
       ownerId,
       linkedCoreProject,
       linkedGoal,
+      linkedDeptOKR,
+      linkedDeptKrId,
       deliverables,
       order,
     } = req.body;
@@ -237,6 +293,19 @@ exports.update = async (req, res, next) => {
     if (ownerId !== undefined) project.ownerId = ownerId || undefined;
     if (linkedCoreProject !== undefined) project.linkedCoreProject = linkedCoreProject || undefined;
     if (linkedGoal !== undefined) project.linkedGoal = typeof linkedGoal === 'number' ? linkedGoal : undefined;
+    if (linkedDeptOKR !== undefined) project.linkedDeptOKR = linkedDeptOKR || undefined;
+    if (linkedDeptKrId !== undefined) project.linkedDeptKrId = linkedDeptKrId || undefined;
+
+    if (linkedDeptOKR || linkedDeptKrId) {
+      const OKR = require('../models/OKR');
+      const okr = await OKR.findOne({ _id: project.linkedDeptOKR, ...wsFilter, okrType: 'department', isDeleted: false }).lean();
+      if (!okr) return res.status(400).json({ message: 'linkedDeptOKR must reference a Department OKR in this workspace' });
+      if (String(okr.departmentKey || '') !== String(project.departmentKey || '')) {
+        return res.status(400).json({ message: 'Department Project must link to a Department OKR in the same department' });
+      }
+      const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(project.linkedDeptKrId));
+      if (!krExists) return res.status(400).json({ message: 'linkedDeptKrId must reference a Key Result within the linked Department OKR' });
+    }
     if (order !== undefined) project.order = order;
 
     // Replace deliverables if provided

@@ -1,5 +1,11 @@
 const OKR = require('../models/OKR');
 const { getWorkspaceFilter, addWorkspaceToDoc } = require('../utils/workspaceQuery');
+const {
+  CANONICAL_METRICS,
+  isCanonicalMetricKey,
+  computeKrProgress,
+  computeOkrProgress,
+} = require('../services/okrService');
 
 /**
  * Get all OKRs for the current workspace
@@ -14,9 +20,29 @@ exports.list = async (req, res, next) => {
       query.timeframe = timeframe;
     }
 
-    const okrs = await OKR.find(query)
+    const raw = await OKR.find(query)
       .sort({ order: 1 })
       .lean();
+
+    // Department-scoped filtering for limited collaborators
+    let filtered = raw;
+    try {
+      const isLimitedCollab = !!req.user?.viewerId && String(req.user?.accessType || '').toLowerCase() === 'limited';
+      const allowedDepts = Array.isArray(req.user?.allowedDepartments) ? req.user.allowedDepartments : [];
+      if (isLimitedCollab) {
+        const deptOkrs = raw.filter((o) => o.okrType === 'department' && allowedDepts.includes(String(o.departmentKey || '')));
+        const allowedCoreIds = new Set(deptOkrs.map((d) => String(d.anchorCoreOKR || '')).filter(Boolean));
+        const coreOkrs = raw.filter((o) => o.okrType === 'core' && allowedCoreIds.has(String(o._id)));
+        filtered = [...coreOkrs, ...deptOkrs];
+      }
+    } catch (_) {}
+
+    // Attach computed progress and KR progress
+    const okrs = filtered.map((o) => ({
+      ...o,
+      computedProgress: computeOkrProgress(o),
+      keyResults: (o.keyResults || []).map((kr) => ({ ...kr, computedProgress: computeKrProgress(kr) })),
+    }));
 
     return res.json({ okrs });
   } catch (err) {
@@ -41,8 +67,36 @@ exports.get = async (req, res, next) => {
     if (!okr) {
       return res.status(404).json({ message: 'OKR not found' });
     }
-
-    return res.json({ okr });
+    // Enforce department scope for limited collaborators
+    try {
+      const isLimitedCollab = !!req.user?.viewerId && String(req.user?.accessType || '').toLowerCase() === 'limited';
+      if (isLimitedCollab) {
+        const allowedDepts = Array.isArray(req.user?.allowedDepartments) ? req.user.allowedDepartments : [];
+        if (okr.okrType === 'department') {
+          if (!allowedDepts.includes(String(okr.departmentKey || ''))) {
+            return res.status(404).json({ message: 'OKR not found' });
+          }
+        } else if (okr.okrType === 'core') {
+          const exists = await OKR.exists({
+            workspace: wsFilter.workspace,
+            isDeleted: false,
+            okrType: 'department',
+            departmentKey: { $in: allowedDepts },
+            anchorCoreOKR: okr._id,
+          });
+          if (!exists) {
+            return res.status(404).json({ message: 'OKR not found' });
+          }
+        }
+      }
+    } catch (_) {}
+    return res.json({
+      okr: {
+        ...okr,
+        computedProgress: computeOkrProgress(okr),
+        keyResults: (okr.keyResults || []).map((kr) => ({ ...kr, computedProgress: computeKrProgress(kr) })),
+      },
+    });
   } catch (err) {
     next(err);
   }
@@ -56,7 +110,7 @@ exports.create = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
 
-    const { objective, keyResults, notes, status, timeframe } = req.body;
+    const { objective, keyResults, notes, timeframe, okrType, departmentKey, derivedFromGoals, anchorCoreOKR, anchorCoreKrId } = req.body;
 
     if (!objective || !objective.trim()) {
       return res.status(400).json({ message: 'Objective is required' });
@@ -64,29 +118,86 @@ exports.create = async (req, res, next) => {
 
     const order = await OKR.getNextOrder(wsFilter.workspace);
 
-    // Process key results
-    const processedKRs = Array.isArray(keyResults)
-      ? keyResults.map(kr => ({
-          text: typeof kr === 'string' ? kr.trim() : kr.text?.trim(),
-          progress: kr.progress || 0,
-          status: kr.status || 'not_started',
-        })).filter(kr => kr.text)
-      : [];
+    // Normalize type
+    const type = String(okrType || 'core').toLowerCase() === 'department' ? 'department' : 'core';
 
-    const okrData = addWorkspaceToDoc({
+    // Validate KRs structure
+    const inputKrs = Array.isArray(keyResults) ? keyResults : [];
+    if (type === 'core' && (inputKrs.length < 2 || inputKrs.length > 4)) {
+      return res.status(400).json({ message: 'Core OKRs must have 2 to 4 key results' });
+    }
+
+    const processedKRs = inputKrs.map((kr) => {
+      const text = typeof kr === 'string' ? kr.trim() : String(kr.text || '').trim();
+      const metric = String(kr.metric || '').trim().toLowerCase();
+      const unit = kr.unit ? String(kr.unit).trim() : undefined;
+      const direction = (kr.direction === 'decrease') ? 'decrease' : 'increase';
+      const baseline = Number(kr.baseline ?? 0);
+      const target = Number(kr.target ?? 0);
+      const current = Number(kr.current ?? baseline);
+      const startAt = kr.startAt ? new Date(kr.startAt) : undefined;
+      const endAt = kr.endAt ? new Date(kr.endAt) : undefined;
+      const linkTag = kr.linkTag || null;
+      const canonicalMetric = type === 'core' && isCanonicalMetricKey(metric);
+
+      if (!text) return null;
+
+      if (type === 'core') {
+        if (!metric || !isCanonicalMetricKey(metric)) {
+          throw Object.assign(new Error('Core KR metric must be a canonical company metric'), { statusCode: 400 });
+        }
+        if (!startAt || !endAt) {
+          throw Object.assign(new Error('Core KR must define startAt and endAt for the OKR cycle'), { statusCode: 400 });
+        }
+      }
+
+      if (type === 'department') {
+        // Departments must not duplicate canonical metrics
+        if (metric && isCanonicalMetricKey(metric)) {
+          throw Object.assign(new Error('Department KR must not duplicate canonical core metrics'), { statusCode: 400 });
+        }
+        if (!['driver', 'enablement', 'operational'].includes(String(linkTag || ''))) {
+          throw Object.assign(new Error('Department KR must have linkTag: driver | enablement | operational'), { statusCode: 400 });
+        }
+      }
+
+      return { text, metric, unit, direction, baseline, target, current, startAt, endAt, linkTag, canonicalMetric };
+    }).filter(Boolean);
+
+    // Validate derivations/anchors
+    const doc = addWorkspaceToDoc({
       user: userId,
+      okrType: type,
+      departmentKey: type === 'department' ? (departmentKey || undefined) : undefined,
       objective: objective.trim(),
       keyResults: processedKRs,
       notes: notes?.trim() || undefined,
-      status: status || 'not_started',
+      // status is computed by consumers; do not accept manual status
       timeframe: timeframe || '1y',
       order,
     }, req);
 
-    const okr = await OKR.create(okrData);
+    if (type === 'core') {
+      const derived = Array.isArray(derivedFromGoals) ? derivedFromGoals.filter(Boolean) : [];
+      if (derived.length === 0) {
+        return res.status(400).json({ message: 'Core OKR must be derived from at least one 1-year goal' });
+      }
+      doc.derivedFromGoals = derived;
+    } else {
+      if (!departmentKey) {
+        return res.status(400).json({ message: 'Department OKR must include departmentKey' });
+      }
+      if (!anchorCoreOKR || !anchorCoreKrId) {
+        return res.status(400).json({ message: 'Department OKR must anchor to one Core Key Result' });
+      }
+      doc.anchorCoreOKR = anchorCoreOKR;
+      doc.anchorCoreKrId = anchorCoreKrId;
+    }
 
+    const okr = await OKR.create(doc);
     return res.status(201).json({ okr, message: 'OKR created' });
   } catch (err) {
+    if (err && err.statusCode) return res.status(err.statusCode).json({ message: err.message });
     next(err);
   }
 };
@@ -109,28 +220,75 @@ exports.update = async (req, res, next) => {
       return res.status(404).json({ message: 'OKR not found' });
     }
 
-    const { objective, keyResults, notes, status, timeframe, order } = req.body;
+    const { objective, keyResults, notes, timeframe, order, departmentKey, derivedFromGoals, anchorCoreOKR, anchorCoreKrId } = req.body;
 
     if (objective !== undefined) okr.objective = objective.trim();
     if (notes !== undefined) okr.notes = notes?.trim() || undefined;
-    if (status !== undefined) okr.status = status;
     if (timeframe !== undefined) okr.timeframe = timeframe;
     if (order !== undefined) okr.order = order;
 
+    if (okr.okrType === 'department' && typeof departmentKey !== 'undefined') {
+      okr.departmentKey = String(departmentKey || '').trim() || okr.departmentKey;
+    }
+    if (okr.okrType === 'core' && Array.isArray(derivedFromGoals)) {
+      if (derivedFromGoals.length === 0) return res.status(400).json({ message: 'Core OKR must be derived from at least one 1-year goal' });
+      okr.derivedFromGoals = derivedFromGoals;
+    }
+    if (okr.okrType === 'department') {
+      if (anchorCoreOKR) okr.anchorCoreOKR = anchorCoreOKR;
+      if (anchorCoreKrId) okr.anchorCoreKrId = anchorCoreKrId;
+      if (!okr.anchorCoreOKR || !okr.anchorCoreKrId) {
+        return res.status(400).json({ message: 'Department OKR must anchor to one Core Key Result' });
+      }
+    }
+
     if (keyResults !== undefined) {
-      okr.keyResults = Array.isArray(keyResults)
-        ? keyResults.map(kr => ({
-            text: typeof kr === 'string' ? kr.trim() : kr.text?.trim(),
-            progress: kr.progress || 0,
-            status: kr.status || 'not_started',
-          })).filter(kr => kr.text)
-        : [];
+      const inputKrs = Array.isArray(keyResults) ? keyResults : [];
+      if (okr.okrType === 'core' && (inputKrs.length < 2 || inputKrs.length > 4)) {
+        return res.status(400).json({ message: 'Core OKRs must have 2 to 4 key results' });
+      }
+      okr.keyResults = inputKrs.map((kr) => {
+        const text = typeof kr === 'string' ? kr.trim() : String(kr.text || '').trim();
+        const metric = String(kr.metric || '').trim().toLowerCase();
+        const unit = kr.unit ? String(kr.unit).trim() : undefined;
+        const direction = (kr.direction === 'decrease') ? 'decrease' : 'increase';
+        const baseline = Number(kr.baseline ?? 0);
+        const target = Number(kr.target ?? 0);
+        const current = Number(kr.current ?? baseline);
+        const startAt = kr.startAt ? new Date(kr.startAt) : undefined;
+        const endAt = kr.endAt ? new Date(kr.endAt) : undefined;
+        const linkTag = kr.linkTag || null;
+        const canonicalMetric = okr.okrType === 'core' && isCanonicalMetricKey(metric);
+
+        if (!text) return null;
+
+        if (okr.okrType === 'core') {
+          if (!metric || !isCanonicalMetricKey(metric)) {
+            throw Object.assign(new Error('Core KR metric must be a canonical company metric'), { statusCode: 400 });
+          }
+          if (!startAt || !endAt) {
+            throw Object.assign(new Error('Core KR must define startAt and endAt for the OKR cycle'), { statusCode: 400 });
+          }
+        }
+
+        if (okr.okrType === 'department') {
+          if (metric && isCanonicalMetricKey(metric)) {
+            throw Object.assign(new Error('Department KR must not duplicate canonical core metrics'), { statusCode: 400 });
+          }
+          if (!['driver', 'enablement', 'operational'].includes(String(linkTag || ''))) {
+            throw Object.assign(new Error('Department KR must have linkTag: driver | enablement | operational'), { statusCode: 400 });
+          }
+        }
+
+        return { text, metric, unit, direction, baseline, target, current, startAt, endAt, linkTag, canonicalMetric };
+      }).filter(Boolean);
     }
 
     await okr.save();
 
     return res.json({ okr, message: 'OKR updated' });
   } catch (err) {
+    if (err && err.statusCode) return res.status(err.statusCode).json({ message: err.message });
     next(err);
   }
 };
@@ -256,6 +414,42 @@ exports.bulkCreate = async (req, res, next) => {
       count: created.length,
       message: `${created.length} OKRs created`,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Update metric fields for a specific Key Result
+ */
+exports.updateKrMetrics = async (req, res, next) => {
+  try {
+    const { id, krId } = req.params;
+    const wsFilter = getWorkspaceFilter(req);
+
+    const okr = await OKR.findOne({ _id: id, ...wsFilter, isDeleted: false });
+    if (!okr) return res.status(404).json({ message: 'OKR not found' });
+
+    const kr = okr.keyResults.id(krId);
+    if (!kr) return res.status(404).json({ message: 'Key Result not found' });
+
+    // Update metric fields only; no manual progress/status
+    const { current, baseline, target, unit, direction, startAt, endAt } = req.body;
+    if (typeof current !== 'undefined') kr.current = Number(current);
+    if (typeof baseline !== 'undefined') kr.baseline = Number(baseline);
+    if (typeof target !== 'undefined') kr.target = Number(target);
+    if (typeof unit !== 'undefined') kr.unit = String(unit || '').trim();
+    if (typeof direction !== 'undefined') kr.direction = (direction === 'decrease') ? 'decrease' : 'increase';
+    if (typeof startAt !== 'undefined') kr.startAt = startAt ? new Date(startAt) : undefined;
+    if (typeof endAt !== 'undefined') kr.endAt = endAt ? new Date(endAt) : undefined;
+
+    await okr.save();
+
+    // Return updated with computed progress fields
+    const result = okr.toObject();
+    result.computedProgress = computeOkrProgress(result);
+    result.keyResults = (result.keyResults || []).map((k) => ({ ...k, computedProgress: computeKrProgress(k) }));
+    return res.json({ okr: result });
   } catch (err) {
     next(err);
   }

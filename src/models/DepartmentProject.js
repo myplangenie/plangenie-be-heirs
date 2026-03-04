@@ -36,6 +36,9 @@ const DepartmentProjectSchema = new mongoose.Schema({
   // Relationships
   linkedCoreProject: { type: mongoose.Schema.Types.ObjectId, ref: 'CoreProject' },
   linkedGoal: { type: Number }, // Index of linked 1-year goal
+  // Link to a single Department Key Result (system rule)
+  linkedDeptOKR: { type: mongoose.Schema.Types.ObjectId, ref: 'OKR' },
+  linkedDeptKrId: { type: mongoose.Schema.Types.ObjectId },
 
   // Deliverables (sub-documents with their own IDs)
   deliverables: [DeliverableSchema],

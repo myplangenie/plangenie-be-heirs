@@ -48,12 +48,38 @@ router.post(
   requireContributor,
   [
     body('objective').notEmpty().trim().withMessage('Objective is required'),
+    body('okrType').optional().isIn(['core','department']),
+    body('departmentKey').optional().isString().trim(),
+    body('derivedFromGoals').optional().isArray(),
+    body('anchorCoreOKR').optional().isMongoId(),
+    body('anchorCoreKrId').optional().isMongoId(),
     body('keyResults').optional().isArray(),
     body('notes').optional().trim(),
-    body('status').optional().isIn(['not_started', 'in_progress', 'completed', 'deferred']),
     body('timeframe').optional().isIn(['1y', '3-5y', 'quarterly', 'other']),
   ],
   ctrl.create
+);
+
+/**
+ * @route   PATCH /api/okrs/:id/key-results/:krId/metrics
+ * @desc    Update key result metric fields (current/baseline/target/unit/dates)
+ * @access  Contributor+
+ */
+router.patch(
+  '/:id/key-results/:krId/metrics',
+  requireContributor,
+  [
+    param('id').isMongoId().withMessage('Invalid OKR ID'),
+    param('krId').isMongoId().withMessage('Invalid KR ID'),
+    body('current').optional().isNumeric(),
+    body('baseline').optional().isNumeric(),
+    body('target').optional().isNumeric(),
+    body('unit').optional().isString().trim(),
+    body('direction').optional().isIn(['increase','decrease']),
+    body('startAt').optional().isISO8601(),
+    body('endAt').optional().isISO8601(),
+  ],
+  ctrl.updateKrMetrics
 );
 
 /**
@@ -81,9 +107,13 @@ router.patch(
   [
     param('id').isMongoId().withMessage('Invalid OKR ID'),
     body('objective').optional().trim(),
+    body('okrType').optional().isIn(['core','department']),
+    body('departmentKey').optional().isString().trim(),
+    body('derivedFromGoals').optional().isArray(),
+    body('anchorCoreOKR').optional().isMongoId(),
+    body('anchorCoreKrId').optional().isMongoId(),
     body('keyResults').optional().isArray(),
     body('notes').optional().trim(),
-    body('status').optional().isIn(['not_started', 'in_progress', 'completed', 'deferred']),
     body('timeframe').optional().isIn(['1y', '3-5y', 'quarterly', 'other']),
     body('order').optional().isInt({ min: 0 }),
   ],

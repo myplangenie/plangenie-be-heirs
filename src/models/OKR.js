@@ -8,22 +8,28 @@ const mongoose = require('mongoose');
  */
 
 const KeyResultSchema = new mongoose.Schema({
-  text: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  progress: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 100,
-  },
-  status: {
-    type: String,
-    enum: ['not_started', 'in_progress', 'completed', 'deferred'],
-    default: 'not_started',
-  },
+  // Human-readable name of the KR
+  text: { type: String, required: true, trim: true },
+
+  // Metric tracking fields (source of truth)
+  metric: { type: String, trim: true }, // e.g., 'revenue', 'margin', 'churn', 'growth', 'adoption', 'cost', or custom for departments
+  unit: { type: String, trim: true }, // e.g., 'USD', '%', 'users'
+  direction: { type: String, enum: ['increase', 'decrease'], default: 'increase' },
+  baseline: { type: Number, default: 0 },
+  target: { type: Number, default: 0 },
+  current: { type: Number, default: 0 },
+  startAt: { type: Date },
+  endAt: { type: Date },
+
+  // Tagging for department KRs
+  linkTag: { type: String, enum: ['driver', 'enablement', 'operational', null], default: null },
+
+  // Ownership flag: true for canonical company metrics on Core KRs
+  canonicalMetric: { type: Boolean, default: false },
+
+  // Deprecated manual status/progress fields (ignored by controllers; retained for backward compatibility)
+  progress: { type: Number, default: 0, min: 0, max: 100 },
+  status: { type: String, enum: ['not_started', 'in_progress', 'completed', 'deferred'], default: 'not_started' },
 }, { _id: true });
 
 const OKRSchema = new mongoose.Schema({
@@ -39,6 +45,15 @@ const OKRSchema = new mongoose.Schema({
     required: true,
     index: true,
   },
+  // OKR classification
+  okrType: {
+    type: String,
+    enum: ['core', 'department'],
+    default: 'core',
+    index: true,
+  },
+  // Department ownership for department OKRs
+  departmentKey: { type: String, trim: true, index: true },
   // The Objective
   objective: {
     type: String,
@@ -50,6 +65,13 @@ const OKRSchema = new mongoose.Schema({
     type: [KeyResultSchema],
     default: [],
   },
+  // Core OKRs may be derived from 1-year goals
+  derivedFromGoals: [{ type: mongoose.Schema.Types.ObjectId, ref: 'VisionGoal', index: true }],
+
+  // Department OKRs must anchor to a single Core Key Result (contextual influence only)
+  anchorCoreOKR: { type: mongoose.Schema.Types.ObjectId, ref: 'OKR', index: true },
+  anchorCoreKrId: { type: mongoose.Schema.Types.ObjectId },
+
   // Optional notes
   notes: {
     type: String,
@@ -85,6 +107,7 @@ const OKRSchema = new mongoose.Schema({
 // Compound indexes
 OKRSchema.index({ workspace: 1, isDeleted: 1, order: 1 });
 OKRSchema.index({ user: 1, workspace: 1 });
+OKRSchema.index({ okrType: 1, departmentKey: 1 });
 
 // Soft delete method
 OKRSchema.methods.softDelete = function() {

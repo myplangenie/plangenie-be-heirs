@@ -1,5 +1,6 @@
 const VisionGoal = require('../models/VisionGoal');
 const { getWorkspaceFilter, addWorkspaceToDoc } = require('../utils/workspaceQuery');
+const { computeGoalProgress } = require('../services/okrService');
 
 /**
  * Get all vision goals for the current workspace
@@ -15,9 +16,15 @@ exports.list = async (req, res, next) => {
       query.goalType = type;
     }
 
-    const goals = await VisionGoal.find(query)
+    const raw = await VisionGoal.find(query)
       .sort({ goalType: 1, order: 1 })
       .lean();
+
+    // Attach computed progress for 1-year goals; 3-year goals compute from their 1-year children on the client
+    const goals = await Promise.all(raw.map(async (g) => {
+      const progress = g.goalType === '1y' ? await computeGoalProgress(g._id, wsFilter.workspace) : 0;
+      return { ...g, computedProgress: progress };
+    }));
 
     return res.json({ goals });
   } catch (err) {
@@ -61,7 +68,8 @@ exports.get = async (req, res, next) => {
       return res.status(404).json({ message: 'Goal not found' });
     }
 
-    return res.json({ goal });
+    const progress = goal.goalType === '1y' ? await computeGoalProgress(goal._id, wsFilter.workspace) : 0;
+    return res.json({ goal: { ...goal, computedProgress: progress } });
   } catch (err) {
     next(err);
   }
@@ -75,7 +83,7 @@ exports.create = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
 
-    const { goalType, text, notes, status } = req.body;
+    const { goalType, text, notes } = req.body;
 
     if (!goalType || !['1y', '3y'].includes(goalType)) {
       return res.status(400).json({ message: 'Valid goalType (1y or 3y) is required' });
@@ -92,7 +100,7 @@ exports.create = async (req, res, next) => {
       goalType,
       text: text.trim(),
       notes: notes?.trim() || undefined,
-      status: status || 'not_started',
+      // status is no longer user-settable; progress derives from Core OKRs
       order,
     }, req);
 
@@ -122,11 +130,11 @@ exports.update = async (req, res, next) => {
       return res.status(404).json({ message: 'Goal not found' });
     }
 
-    const { text, notes, status, order } = req.body;
+    const { text, notes, order } = req.body;
 
     if (text !== undefined) goal.text = text.trim();
     if (notes !== undefined) goal.notes = notes?.trim() || undefined;
-    if (status !== undefined) goal.status = status;
+    // status updates are ignored; progress is computed automatically
     if (order !== undefined) goal.order = order;
 
     await goal.save();

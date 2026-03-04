@@ -2654,7 +2654,7 @@ exports.rewriteVisionBhag = async (req, res) => {
 // OKRs (Objectives and Key Results) generation
 exports.suggestOkrs = async (req, res) => {
   try {
-    const { count = 3, existingObjectives = [] } = req.body || {};
+    const { count = 3, existingObjectives = [], context: clientContext } = req.body || {};
     const userId = req.user?.id;
     const workspaceId = req.workspace?._id;
 
@@ -2678,36 +2678,162 @@ exports.suggestOkrs = async (req, res) => {
       }
     }
 
-    const contextText = [baseCtx, okrDocsContext].filter(Boolean).join('\n');
+    // Additional inline context from client (e.g., department + anchor core KR)
+    let inlineCtx = '';
+    if (clientContext) {
+      try {
+        const c = clientContext || {};
+        const parts = [];
+        if (c.mode) parts.push(`Mode: ${c.mode}`);
+        if (c.departmentLabel || c.departmentKey) parts.push(`Department: ${c.departmentLabel || ''} ${c.departmentKey ? `(${c.departmentKey})` : ''}`.trim());
+        if (c.anchorCoreOKR?.objective) parts.push(`Core Objective: "${c.anchorCoreOKR.objective}"`);
+        if (c.anchorCoreKR?.text) {
+          const krMeta = [c.anchorCoreKR.metric ? `metric=${c.anchorCoreKR.metric}` : '', c.anchorCoreKR.unit ? `unit=${c.anchorCoreKR.unit}` : '', c.anchorCoreKR.direction ? `direction=${c.anchorCoreKR.direction}` : ''].filter(Boolean).join(', ');
+          parts.push(`Core Key Result: "${c.anchorCoreKR.text}"${krMeta ? ` (${krMeta})` : ''}`);
+        }
+        if (c.instructions) parts.push(`Additional Instructions: ${c.instructions}`);
+        if (parts.length) inlineCtx = `\n\n--- CLIENT CONTEXT ---\n${parts.join('\n')}\n--- END CLIENT CONTEXT ---`;
+      } catch {}
+    }
 
-    const prompt = `Based on the business context provided (especially the 1-Year Goals and 3-5 Year Goals), generate ${count} professional OKRs (Objectives and Key Results).
+    // Optional anchor candidates for Department OKRs
+    let anchorCandidatesText = '';
+    if (clientContext?.anchorCandidates && Array.isArray(clientContext.anchorCandidates) && clientContext.anchorCandidates.length) {
+      try {
+        const blocks = clientContext.anchorCandidates.map((o) => {
+          const header = `- ${o.id}: ${o.objective}`;
+          const krs = Array.isArray(o.keyResults) ? o.keyResults.map((k) => `    * KR ${k.id}: ${k.text}${k.metric ? ` (metric=${k.metric}${k.unit ? `, unit=${k.unit}` : ''}${k.direction ? `, direction=${k.direction}` : ''})` : ''}`).join('\n') : '';
+          return `${header}${krs ? `\n${krs}` : ''}`;
+        }).join('\n');
+        anchorCandidatesText = `\n\n--- CORE OKR ANCHOR CANDIDATES ---\n${blocks}\n--- END CANDIDATES ---`;
+      } catch {}
+    }
+
+    // Determine fiscal-aware cadence windows for date normalization and prompt context
+    const ws = req.workspace || {};
+    const fieldsMap = ws?.fields && typeof ws.fields.get === 'function' ? ws.fields : null;
+    const fiscalStartMonthRaw = fieldsMap ? fieldsMap.get('fiscalYearStartMonth') : null;
+    // Expect 1..12; default to 1 (January)
+    const fiscalStartMonth = Math.min(12, Math.max(1, parseInt(fiscalStartMonthRaw || '1', 10) || 1));
+    const rollThresholdDaysRaw = fieldsMap ? fieldsMap.get('okrRollThresholdDays') : null;
+    const rollThresholdDays = Math.min(31, Math.max(0, parseInt(rollThresholdDaysRaw || '10', 10) || 10));
+
+    function getAnnualWindow(now) {
+      const startMonthIdx = fiscalStartMonth - 1; // 0-based
+      let year = now.getFullYear();
+      const fyStart = new Date(year, startMonthIdx, 1);
+      if (now < fyStart) {
+        year = year - 1;
+      }
+      const start = new Date(year, startMonthIdx, 1);
+      const end = new Date(start);
+      end.setFullYear(start.getFullYear() + 1);
+      end.setDate(end.getDate() - 1);
+      return { start, end };
+    }
+
+    function addMonths(date, months) {
+      const d = new Date(date);
+      const m = d.getMonth() + months;
+      const y = d.getFullYear() + Math.floor(m / 12);
+      const nm = (m % 12 + 12) % 12;
+      const res = new Date(y, nm, 1);
+      // end is next month - 1 day
+      res.setDate(1);
+      return res;
+    }
+
+    function getQuarterWindow(now) {
+      const startMonthIdx = fiscalStartMonth - 1;
+      const nowMonth = now.getMonth();
+      // Months since fiscal start in [0..11]
+      let diff = nowMonth - startMonthIdx;
+      if (diff < 0) diff += 12;
+      const qIndex = Math.floor(diff / 3); // 0..3
+      let qStartYear = now.getFullYear();
+      const qStartMonth = (startMonthIdx + qIndex * 3) % 12;
+      // If qStartMonth > nowMonth in the same calendar year, qStartYear may be previous year
+      if (qStartMonth > nowMonth) qStartYear -= 1;
+      const start = new Date(qStartYear, qStartMonth, 1);
+      // Quarter end = start + 3 months - 1 day
+      const nextQStart = new Date(start);
+      nextQStart.setMonth(start.getMonth() + 3, 1);
+      const end = new Date(nextQStart);
+      end.setDate(0); // last day of previous month
+
+      // Roll to next quarter if we are within threshold days of quarter end
+      const msPerDay = 24 * 60 * 60 * 1000;
+      const daysLeft = Math.ceil((end.getTime() - now.getTime()) / msPerDay);
+      if (daysLeft >= 0 && daysLeft <= rollThresholdDays) {
+        const nextStart = new Date(start);
+        nextStart.setMonth(start.getMonth() + 3, 1);
+        const nextEnd = new Date(nextStart);
+        nextEnd.setMonth(nextStart.getMonth() + 3, 0);
+        return { start: nextStart, end: nextEnd };
+      }
+      return { start, end };
+    }
+
+    const now = new Date();
+    const annual = getAnnualWindow(now);
+    const quarterly = getQuarterWindow(now);
+
+    const contextText = [
+      baseCtx,
+      okrDocsContext,
+      inlineCtx,
+      anchorCandidatesText,
+      `\n\n--- OKR CYCLE WINDOWS ---\nCore (annual): ${annual.start.toISOString().slice(0,10)} to ${annual.end.toISOString().slice(0,10)}\nDepartment (quarterly): ${quarterly.start.toISOString().slice(0,10)} to ${quarterly.end.toISOString().slice(0,10)}\n--- END WINDOWS ---`
+    ].filter(Boolean).join('\n');
+
+    // Optional goals catalog
+    let goalsCatalogText = '';
+    const goalsCatalog = clientContext?.goalsCatalog || clientContext?.visionGoals1y || [];
+    if (Array.isArray(goalsCatalog) && goalsCatalog.length) {
+      const lines = goalsCatalog.map((g) => `- ${g.id}: ${g.text}`).join('\n');
+      goalsCatalogText = `\n\n--- GOAL CATALOG (1-YEAR) ---\n${lines}\n--- END GOAL CATALOG ---`;
+    }
+
+    const prompt = `Based on the business context provided${clientContext?.mode ? ` for ${clientContext.mode}` : ''}, generate ${count} professional OKRs (Objectives and Key Results).
 
 Each OKR should have:
 - 1 clear, ambitious but achievable Objective
-- Exactly 2 measurable Key Results for that objective
+- 2 to 4 measurable Key Results for that objective
 
-Format your response as a JSON array:
+Return a JSON array with this exact shape (include both arrays). For Department OKRs, if anchor candidates are provided (see context), choose the single best Core OKR + Core KR anchor and include their IDs:
 [
   {
     "objective": "The objective statement",
-    "keyResults": ["Key result 1", "Key result 2"]
+    "keyResults": ["KR 1 (text only)", "KR 2 (text only)", "KR 3 (optional)", "KR 4 (optional)"],
+    "keyResultsDetailed": [
+      { "text": "KR 1", "tag": "driver|enablement|operational|null", "metric": "revenue|margin|churn|growth|adoption|cost|driver-metric", "unit": "USD|%|users|...", "direction": "increase|decrease", "baseline": 0, "target": 100, "startAt": "YYYY-MM-DD", "endAt": "YYYY-MM-DD" },
+      { "text": "KR 2", "tag": "driver|enablement|operational|null", "metric": "...", "unit": "...", "direction": "increase|decrease", "baseline": 0, "target": 100, "startAt": "YYYY-MM-DD", "endAt": "YYYY-MM-DD" }
+    ],
+    "derivedFromGoals": ["<goalId from GOAL CATALOG>", "<goalId>" ],
+    "anchorCoreOKR": "<coreOkrId>",
+    "anchorCoreKrId": "<coreKrId>"
   }
 ]
 
 Guidelines:
-- Objectives should be qualitative and inspirational
-- Key Results should be quantitative and measurable (use numbers, percentages, dates)
-- Align OKRs with the stated 1-year and 3-5 year goals
-- If OKR reference documents are provided, use them as additional context for realistic targets
-- Keep objectives concise (1 sentence)
-- Make key results specific and time-bound where possible
+- Objectives should be qualitative and inspirational.
+- Key Results should be quantitative and measurable (use numbers, percentages, dates).
+- Align OKRs with the stated 1-year and 3-5 year goals.
+- If OKR reference documents are provided, use them for realistic targets.
+- Keep objectives concise (1 sentence); KRs specific and time-bound where possible.
+- For CORE OKRs: keyResultsDetailed.metric must be a canonical metric (one of: revenue, margin, churn, growth, adoption, cost). Set tag to null.
+- For DEPARTMENT OKRs: tag must be one of driver, enablement, or operational. Metrics must be driver metrics that influence the anchor Core KR (e.g., conversion rate, pipeline volume, activation rate, retention rate, cost efficiency), and must NOT duplicate canonical core metrics.
+- If anchor candidates are provided and no explicit anchor is given, choose the single best matching Core KR from the candidates and include its IDs in anchorCoreOKR and anchorCoreKrId.
+- Set unit and direction when meaningful; baseline/target should be numeric if present.
+- Set startAt and endAt aligned to the OKR cycle (e.g., quarterly or annual cadence) using ISO format.
+- If a GOAL CATALOG is provided below, populate derivedFromGoals with the IDs of the 1‑Year Goals this OKR directly derives from (choose the most relevant 1–2).
 - IMPORTANT: Each generated OKR must be completely different from any previously generated or existing ones listed below${existingObjectives.length > 0 ? `\n\nDo NOT repeat or rephrase any of these existing objectives:\n${existingObjectives.map((o, i) => `${i + 1}. ${o}`).join('\n')}` : ''}`;
 
     const openai = getOpenAI();
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: `You are a strategic planning expert specializing in OKR frameworks. Generate professional, actionable OKRs based on the business context.\n\n${contextText}` },
+        { role: 'system', content: `You are a strategic planning expert specializing in OKR frameworks. Generate professional, actionable OKRs based on the business context.\n\n${contextText}${goalsCatalogText}` },
         { role: 'user', content: prompt },
       ],
       temperature: 0.7,
@@ -2723,6 +2849,71 @@ Guidelines:
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         okrs = JSON.parse(jsonMatch[0]);
+        // Normalize each OKR to include keyResults (strings) and keyResultsDetailed (objects)
+        okrs = okrs.map((o) => {
+          let objective = String(o?.objective || '').trim();
+          let krTextArray = Array.isArray(o?.keyResults) ? o.keyResults : [];
+          // Support cases where model returns objects directly in keyResults
+          if (krTextArray.length && typeof krTextArray[0] === 'object') {
+            // Extract text and also treat it as detailed rows
+            const detailed = krTextArray.map((x) => ({
+              text: String(x?.text || x?.kr || x?.value || ''),
+              tag: x?.tag ?? null,
+              metric: x?.metric ?? null,
+              unit: x?.unit ?? null,
+              direction: x?.direction ?? null,
+              baseline: (x?.baseline === undefined ? null : x?.baseline),
+              target: (x?.target === undefined ? null : x?.target),
+            }));
+            krTextArray = detailed.map(d => d.text).filter(Boolean);
+            return { objective, keyResults: krTextArray, keyResultsDetailed: detailed };
+          }
+          const detailed = Array.isArray(o?.keyResultsDetailed) ? o.keyResultsDetailed.map((x) => ({
+            text: String(x?.text || ''),
+            tag: x?.tag ?? null,
+            metric: x?.metric ?? null,
+            unit: x?.unit ?? null,
+            direction: x?.direction ?? null,
+            baseline: (x?.baseline === undefined ? null : x?.baseline),
+            target: (x?.target === undefined ? null : x?.target),
+            startAt: x?.startAt || null,
+            endAt: x?.endAt || null,
+          })) : krTextArray.map((t) => ({ text: String(t || ''), tag: null, metric: null, unit: null, direction: null, baseline: null, target: null }));
+          // Ensure 2-4 items
+          const keyResults = krTextArray.filter((s) => typeof s === 'string' && s.trim()).slice(0, 4);
+          // Trim derivedFromGoals to most relevant 1–2
+          const derivedFromGoals = Array.isArray(o?.derivedFromGoals) ? o.derivedFromGoals.filter(Boolean).slice(0, 2) : [];
+          // Normalize dates to follow 1-year cadence if missing/too short
+          const now = new Date();
+          const q = Math.floor(now.getMonth() / 3); // 0-based quarter index
+          const startOfQuarter = new Date(now.getFullYear(), q * 3, 1);
+          const endOfOneYear = new Date(startOfQuarter);
+          endOfOneYear.setFullYear(startOfQuarter.getFullYear() + 1);
+          endOfOneYear.setDate(endOfOneYear.getDate() - 1);
+          const minSpanMs = 90 * 24 * 60 * 60 * 1000; // ~90 days
+          const normalizedDetailed = detailed.slice(0,4).map((d) => {
+            // Pick target window based on mode: core-okr => annual; department-okr => quarterly
+            const win = (clientContext?.mode === 'department-okr') ? quarterly : annual;
+            let startAt = d.startAt ? new Date(d.startAt) : win.start;
+            let endAt = d.endAt ? new Date(d.endAt) : win.end;
+            if (isNaN(startAt.getTime())) startAt = startOfQuarter;
+            if (isNaN(endAt.getTime())) endAt = endOfOneYear;
+            // Clamp to window bounds
+            if (startAt < win.start) startAt = win.start;
+            if (endAt > win.end) endAt = win.end;
+            // Ensure minimum span of ~90 days for sanity
+            if ((endAt.getTime() - startAt.getTime()) < minSpanMs) {
+              startAt = win.start;
+              endAt = win.end;
+            }
+            const iso = (d) => d.toISOString().slice(0,10);
+            return { ...d, startAt: iso(startAt), endAt: iso(endAt) };
+          });
+          // Anchor selection (optional for department-okr)
+          const anchorCoreOKR = (typeof o?.anchorCoreOKR === 'string') ? o.anchorCoreOKR : null;
+          const anchorCoreKrId = (typeof o?.anchorCoreKrId === 'string') ? o.anchorCoreKrId : null;
+          return { objective, keyResults, keyResultsDetailed: normalizedDetailed, derivedFromGoals, ...(anchorCoreOKR && anchorCoreKrId ? { anchorCoreOKR, anchorCoreKrId } : {}) };
+        });
       }
     } catch (parseErr) {
       console.warn('[suggestOkrs] Failed to parse OKR JSON:', parseErr.message);

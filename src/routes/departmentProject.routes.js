@@ -64,6 +64,8 @@ router.post(
     body('ownerId').optional(),
     body('linkedCoreProject').optional().isMongoId(),
     body('linkedGoal').optional().isInt(),
+    body('linkedDeptOKR').isMongoId().withMessage('linkedDeptOKR (Department OKR id) is required'),
+    body('linkedDeptKrId').isMongoId().withMessage('linkedDeptKrId (Department KR id) is required'),
     body('deliverables').optional().isArray(),
   ],
   ctrl.create
@@ -107,6 +109,8 @@ router.patch(
     body('ownerId').optional(),
     body('linkedCoreProject').optional(),
     body('linkedGoal').optional(),
+    body('linkedDeptOKR').optional().isMongoId(),
+    body('linkedDeptKrId').optional().isMongoId(),
     body('deliverables').optional().isArray(),
     body('order').optional().isInt({ min: 0 }),
   ],

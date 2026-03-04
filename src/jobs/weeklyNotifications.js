@@ -10,6 +10,7 @@ const Workspace = require('../models/Workspace');
 const Onboarding = require('../models/Onboarding');
 const scoringService = require('../services/scoringService');
 const { generateWeeklyDigest } = require('../emails/weeklyDigest');
+const entitlements = require('../config/entitlements');
 
 let isRunning = false;
 
@@ -105,6 +106,10 @@ function formatDueDate(dueWhen) {
  */
 async function sendDigestToUser(user, resend, fromAddress, dashboardUrl) {
   try {
+    // Pro only: skip users without an active Pro subscription
+    if (!user?.hasActiveSubscription || entitlements.effectivePlan(user) !== 'pro') {
+      return { sent: false, reason: 'not_pro' };
+    }
     // Get user's default workspace with notification preferences
     const workspace = await Workspace.findOne({ user: user._id, defaultWorkspace: true }).lean();
     if (!workspace) {
@@ -220,7 +225,7 @@ async function processBatch(users, resend, fromAddress, dashboardUrl) {
       if (r.sent) {
         sent++;
         console.log(`[weeklyNotifications] Sent to ${users[index].email}: ${r.overdueCount} overdue, ${r.dueThisWeekCount} due this week`);
-      } else if (r.reason === 'no_items' || r.reason === 'no_workspace' || r.reason === 'frequency_skip' || r.reason === 'disabled') {
+      } else if (r.reason === 'no_items' || r.reason === 'no_workspace' || r.reason === 'frequency_skip' || r.reason === 'disabled' || r.reason === 'not_pro') {
         skipped++;
       } else {
         errors++;
@@ -263,14 +268,15 @@ async function runJob() {
     const fromAddress = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
     const dashboardUrl = process.env.DASHBOARD_URL || 'https://www.plangenie.com/dashboard';
 
-    // Get users with weekly digest enabled (exclude collaborators - they view owner's data)
+    // Get Pro users with weekly digest enabled (exclude collaborators - they view owner's data)
     const users = await User.find({
       isVerified: true,
       status: 'active',
       isCollaborator: { $ne: true }, // Exclude collaborators
+      hasActiveSubscription: true, // Pro-only recipients
       'notifications.weeklyDigest': { $ne: false }, // Default is true
     })
-      .select('_id email firstName fullName notifications')
+      .select('_id email firstName fullName notifications hasActiveSubscription')
       .lean();
 
     console.log(`[weeklyNotifications] Processing ${users.length} users in batches of ${BATCH_SIZE}...`);

@@ -20,7 +20,7 @@ const AgentCacheSchema = new mongoose.Schema(
     response: { type: mongoose.Schema.Types.Mixed, required: true },
     // Metadata
     generatedAt: { type: Date, default: Date.now },
-    expiresAt: { type: Date, required: true, index: true },
+    expiresAt: { type: Date, required: true },
     // Performance tracking
     generationTimeMs: { type: Number },
   },

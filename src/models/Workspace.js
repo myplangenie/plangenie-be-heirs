@@ -44,7 +44,7 @@ const WorkspaceSchema = new mongoose.Schema(
       // Email frequency settings (daily, weekly, monthly, never)
       emailFrequency: {
         digest: { type: String, enum: ['daily', 'weekly', 'monthly', 'never'], default: 'weekly' },
-        dailyWish: { type: String, enum: ['daily', 'weekly', 'monthly', 'never'], default: 'daily' },
+        dailyWish: { type: String, enum: ['daily', 'weekly', 'monthly', 'never'], default: 'weekly' },
         reviewReminders: { type: String, enum: ['daily', 'weekly', 'monthly', 'never'], default: 'weekly' },
         deadlineAlerts: { type: String, enum: ['daily', 'weekly', 'monthly', 'never'], default: 'daily' },
         teamActivity: { type: String, enum: ['daily', 'weekly', 'monthly', 'never'], default: 'weekly' },
