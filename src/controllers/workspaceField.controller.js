@@ -22,6 +22,7 @@ const ALLOWED_FIELDS = [
   // OKR / Fiscal cycle
   'fiscalYearStartMonth',
   'okrRollThresholdDays',
+  'okrOnboardingIntent',
   // Market
   'targetMarket',
   'targetCustomer',
