@@ -143,8 +143,8 @@ exports.create = async (req, res, next) => {
       if (!text) return null;
 
       if (type === 'core') {
-        if (!metric || !isCanonicalMetricKey(metric)) {
-          throw Object.assign(new Error('Core KR metric must be a canonical company metric'), { statusCode: 400 });
+        if (!metric) {
+          throw Object.assign(new Error('Core KR metric is required'), { statusCode: 400 });
         }
         if (!startAt || !endAt) {
           throw Object.assign(new Error('Core KR must define startAt and endAt for the OKR cycle'), { statusCode: 400 });
@@ -263,8 +263,8 @@ exports.update = async (req, res, next) => {
         if (!text) return null;
 
         if (okr.okrType === 'core') {
-          if (!metric || !isCanonicalMetricKey(metric)) {
-            throw Object.assign(new Error('Core KR metric must be a canonical company metric'), { statusCode: 400 });
+          if (!metric) {
+            throw Object.assign(new Error('Core KR metric is required'), { statusCode: 400 });
           }
           if (!startAt || !endAt) {
             throw Object.assign(new Error('Core KR must define startAt and endAt for the OKR cycle'), { statusCode: 400 });
@@ -434,7 +434,8 @@ exports.updateKrMetrics = async (req, res, next) => {
     if (!kr) return res.status(404).json({ message: 'Key Result not found' });
 
     // Update metric fields only; no manual progress/status
-    const { current, baseline, target, unit, direction, startAt, endAt } = req.body;
+    const { metric, current, baseline, target, unit, direction, startAt, endAt } = req.body;
+    if (typeof metric !== 'undefined') kr.metric = String(metric || '').trim().toLowerCase() || kr.metric;
     if (typeof current !== 'undefined') kr.current = Number(current);
     if (typeof baseline !== 'undefined') kr.baseline = Number(baseline);
     if (typeof target !== 'undefined') kr.target = Number(target);
