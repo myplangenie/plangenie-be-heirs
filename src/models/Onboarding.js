@@ -6,6 +6,8 @@ const UserProfileSchema = new mongoose.Schema(
     // Relax validation to allow a broader set of roles
     role: { type: String, trim: true },
     roleOther: { type: String, trim: true },
+    jobTitle: { type: String, trim: true },
+    jobTitleOther: { type: String, trim: true },
     builtPlanBefore: { type: Boolean },
     // Relax planningGoal to allow expanded options
     planningGoal: { type: String, trim: true },

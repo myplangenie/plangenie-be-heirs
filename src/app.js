@@ -126,13 +126,16 @@ if (enableWorkspaces) {
 }
 
 // Initialize weekly notification job (runs every Friday at 9 AM Eastern / 14:00 UTC)
-require('./jobs/weeklyNotifications').init();
+// require('./jobs/weeklyNotifications').init();
 
 // Initialize daily wish job (runs daily at 12 noon Eastern / 17:00 UTC)
 require('./jobs/dailyWish').init();
 
 // Initialize review reminders job (runs daily at 8 AM Eastern / 13:00 UTC)
 require('./jobs/reviewReminders').init();
+
+// Initialize account deletion job (runs daily at 03:00 server time)
+try { require('./jobs/accountDeletion').schedule(); } catch (_) {}
 
 // Error handler
 app.use(errorHandler);

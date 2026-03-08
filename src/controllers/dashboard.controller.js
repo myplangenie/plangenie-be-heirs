@@ -3946,7 +3946,18 @@ exports.updateProfile = async (req, res, next) => {
       update.firstName = parts[0] || '';
       update.lastName = parts.slice(1).join(' ');
     }
-    if (typeof email === 'string') update.email = email; // optional, may be disabled in UI
+    if (typeof email === 'string') {
+      const normalized = String(email || '').trim().toLowerCase();
+      // Only attempt change if different from current email
+      const current = (await User.findById(userId).select('email')).email;
+      if (normalized && normalized !== String(current || '').toLowerCase()) {
+        const exists = await User.findOne({ email: normalized }).select('_id').lean();
+        if (exists && String(exists._id) !== String(userId)) {
+          return res.status(409).json({ message: 'That email is already in use' });
+        }
+        update.email = normalized;
+      }
+    }
     if (typeof jobTitle === 'string') update.jobTitle = jobTitle;
     if (typeof phone === 'string') update.phone = phone;
     const user = await User.findByIdAndUpdate(userId, update, { new: true }).lean();

@@ -458,51 +458,9 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
   }
 }
 
-// Simple web search helper (SERPAPI or Bing). Returns [{ title, url }]
+// Simple web search helper disabled: return empty results (no external lookups)
 async function webSearch(query, num = 5) {
-  const out = [];
-  try {
-    if (process.env.SERPAPI_API_KEY) {
-      const url = new URL('https://serpapi.com/search.json');
-      url.searchParams.set('engine', 'google');
-      url.searchParams.set('q', query);
-      url.searchParams.set('num', String(num));
-      url.searchParams.set('api_key', process.env.SERPAPI_API_KEY);
-      const r = await fetch(url, { method: 'GET' });
-      const j = await r.json();
-      const org = j.organic_results || [];
-      for (const it of org) {
-        const title = (it.title || '').trim();
-        const link = (it.link || '').trim();
-        if (!title || !link) continue;
-        if (/top|best|vs|compare|review|blog|news|wikipedia/i.test(title)) continue;
-        out.push({ title: title.replace(/\s*[|\-].*$/, '').trim(), url: link });
-      }
-    } else if (process.env.BING_SUBSCRIPTION_KEY) {
-      const r = await fetch('https://api.bing.microsoft.com/v7.0/search?q=' + encodeURIComponent(query), {
-        headers: { 'Ocp-Apim-Subscription-Key': process.env.BING_SUBSCRIPTION_KEY },
-      });
-      const j = await r.json();
-      const web = j.webPages?.value || [];
-      for (const it of web) {
-        const title = (it.name || '').trim();
-        const link = (it.url || '').trim();
-        if (!title || !link) continue;
-        if (/top|best|vs|compare|review|blog|news|wikipedia/i.test(title)) continue;
-        out.push({ title: title.replace(/\s*[|\-].*$/, '').trim(), url: link });
-      }
-    }
-  } catch (_) {}
-  // unique by url
-  const seen = new Set();
-  const uniq = [];
-  for (const it of out) {
-    if (seen.has(it.url)) continue;
-    seen.add(it.url);
-    uniq.push(it);
-    if (uniq.length >= num) break;
-  }
-  return uniq;
+  return [];
 }
 async function callOpenAI({ type, input, contextText }) {
   const client = getOpenAI();
@@ -1389,9 +1347,8 @@ exports.suggestMarketCustomer = async (req, res) => {
   const ob = userId ? await Onboarding.findOne(wsFilter) : null;
     const contextText = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
     const suggestions = await callOpenAIList({ type: 'Target market and ideal customer profile summary', input, contextText, n: 3 });
-    const bp = ob?.businessProfile || {};
-    const q = [bp.industry || '', bp.businessName || '', bp.city || '', bp.country || '', 'ideal customer profile'].filter(Boolean).join(' ');
-    const links = await webSearch(q, 3);
+    // External web search disabled
+    const links = [];
     return res.json({ suggestion: suggestions[0] || '', suggestions, links });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1423,35 +1380,21 @@ exports.suggestMarketPartners = async (req, res) => {
     const { input, nonce } = req.body || {};
     const userId = req.user?.id;
     const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-    const wsFilter = getWorkspaceFilter(req);
-  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
-    const bp = ob?.businessProfile || {};
-    // Web search for potential partner platforms/distributors relevant to the industry/location
-    const query = [
-      bp.industry || '',
-      'partner platforms distributors channel partners',
-      [bp.city, bp.country].filter(Boolean).join(', '),
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .trim() || 'industry partner platforms';
-    const links = await webSearch(query, 6);
-    const refs = (links || []).map((l) => `- ${l.title} (${l.url})`).join('\n');
-
-    // Ask AI to propose 2–3 concrete partners with a one-line rationale
+    // External web search disabled: no links
+    const links = [];
+    // Ask AI to propose 2–3 partner categories with a one-line rationale
     const client = getOpenAI();
-    const system = 'You are a strategic partnerships expert who identifies high-leverage distribution and collaboration opportunities. Analyze this specific business context to recommend partners that create genuine strategic value - not generic suggestions. Return structured JSON only.';
+    const system = 'You are a strategic partnerships expert who identifies high-leverage distribution and collaboration opportunities. Analyze this specific business context to recommend partner TYPES (categories), not specific companies. Return structured JSON only.';
     const userPrompt = [
       baseCtx || '',
-      refs ? ('Recent web results (titles):\n' + refs) : '',
-      'Task: Propose 2–3 specific partner platforms or distributors relevant to the business context.',
+      'Task: Propose 2–3 partner categories relevant to the business context. Examples: Accelerator Programs, Local Distributors, Industry Associations, Marketplace Platforms, Specialist Agencies.',
+      'IMPORTANT: Do NOT include specific company names, brands, or URLs. Use generic category labels only.',
       'Generate fresh, unique suggestions different from any previous responses.',
       'For EACH, include:',
-      '- name: the platform/company name',
-      '- url: a plausible official URL if clearly implied by results (optional)',
-      '- note: one sentence on how to partner or what they offer',
-      'Output format (strict JSON): [{ "name": string, "url"?: string, "note": string }]',
-      'No extra text before/after the JSON.',
+      '- name: category label (e.g., Accelerator Programs)',
+      '- note: one sentence on how partnering with this category helps',
+      'Output format (strict JSON): [{ "name": string, "note": string }]',
+      'No URLs. No extra text before/after the JSON.',
       nonce ? `(Request ID: ${nonce})` : '',
     ].filter(Boolean).join('\n');
     let partners = [];
@@ -1465,11 +1408,11 @@ exports.suggestMarketPartners = async (req, res) => {
       let text = (resp.choices?.[0]?.message?.content || '').trim();
       const fence = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i); if (fence) text = fence[1].trim();
       const parsed = JSON.parse(text);
-      if (Array.isArray(parsed)) partners = parsed.map((p) => ({ name: String(p?.name || '').trim(), url: p?.url ? String(p.url) : undefined, note: String(p?.note || '').trim() })).filter((p) => p.name && p.note).slice(0,3);
+      if (Array.isArray(parsed)) partners = parsed.map((p) => ({ name: String(p?.name || '').trim(), note: String(p?.note || '').trim() })).filter((p) => p.name && p.note).slice(0,3);
     } catch (_) {}
 
     // Also keep simple sentence suggestions for backward-compatibility
-    const suggestions = await callOpenAIList({ type: 'Go-to-market partners and channels plan', input, contextText: baseCtx, n: 3, nonce });
+    const suggestions = await callOpenAIList({ type: 'Go-to-market partners and channels plan (generic categories only, no brand names)', input, contextText: baseCtx, n: 3, nonce });
     return res.json({ suggestion: suggestions[0] || '', suggestions, links, partners });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1521,39 +1464,11 @@ exports.suggestMarketCompetitors = async (req, res) => {
       theyDoBetter: c.advantage || '',
       weDoBetter: c.weDoBetter || '',
     }));
-
-    // Try to enrich saved competitors with URLs
-    const linkMap = {};
-    try {
-      for (const comp of savedCompetitors.slice(0, 3)) {
-        if (comp.name) {
-          const r = await webSearch(comp.name + ' official site', 1);
-          if (r && r[0] && r[0].url) linkMap[comp.name] = r[0].url;
-        }
-      }
-    } catch (_) {}
-    const bp = ob?.businessProfile || {};
-    const q1 = [bp.businessName || '', 'competitors', bp.industry || '', [bp.city, bp.country].filter(Boolean).join(', ')].filter(Boolean).join(' ');
-    const q2 = [bp.industry || '', wsFields.marketCustomer || wsFields.targetCustomer || '', 'market competitors'].filter(Boolean).join(' ');
-    const seen = new Map();
+    // External web search disabled: no links
     const links = [];
-    for (const q of [q1, q2]) {
-      if (!q || q.replace(/\s+/g, '').length < 3) continue;
-      try {
-        const r = await webSearch(q, 3);
-        for (const it of r) {
-          const key = it.url || it.title;
-          if (!key || seen.has(key)) continue;
-          seen.set(key, true);
-          links.push(it);
-          if (links.length >= 5) break;
-        }
-      } catch (_) {}
-      if (links.length >= 5) break;
-    }
     // Ask AI to structure per-competitor better/worse statements
     const client = getOpenAI();
-    const system = 'You are a competitive intelligence strategist who identifies actionable positioning opportunities. Analyze competitors through the lens of this specific business\'s strengths, products, and target market. Provide sharp, strategic insights - not surface-level observations. Return structured JSON only.';
+    const system = 'You are a competitive intelligence strategist who identifies actionable positioning opportunities. Analyze competitor archetypes through the lens of this business. Do NOT use specific company names; return generic competitor categories. Return structured JSON only.';
 
     // Build avoidance text from SAVED competitors (from database)
     let avoidCompetitorText = '';
@@ -1561,22 +1476,22 @@ exports.suggestMarketCompetitors = async (req, res) => {
       const prevAnalysis = savedCompetitorAnalysis.map((c) =>
         `${c.name}: theyDoBetter="${c.theyDoBetter}", weDoBetter="${c.weDoBetter}"`
       ).join('; ');
-      avoidCompetitorText = `CRITICAL: The user already has these competitors saved in their database. You MUST suggest COMPLETELY DIFFERENT competitors that are NOT in this list:\nAlready saved: ${prevAnalysis}`;
+      avoidCompetitorText = `CRITICAL: The user already has these competitors saved. Suggest COMPLETELY DIFFERENT competitor CATEGORIES (not brands) that are NOT in this list:\nAlready saved: ${prevAnalysis}`;
     }
 
     // Always ask AI to find NEW competitors if there are saved ones
     let namesText = '';
     if (savedCompetitors.length > 0) {
-      namesText = `DO NOT analyze these already-saved competitors: ${savedCompetitorNames.join(', ')}. Instead, identify 2-3 COMPLETELY DIFFERENT competitors in this market that haven't been analyzed yet. These must be real companies that compete in the same space.`;
+      namesText = `Do NOT analyze these already-saved entries. Identify 2-3 COMPLETELY DIFFERENT competitor archetypes in this market (no brand names).`;
     }
 
     const randomSeed = Date.now() + Math.random();
     const userPrompt = [
       contextText || '',
       namesText,
-      'IMPORTANT: This is a COMPETITOR analysis only. Competitors are businesses that compete with us for the same customers.',
-      'CRITICAL: Do NOT include any partners, suppliers, service providers, or collaborators mentioned in the context. Partners are NOT competitors.',
-      'Task: For each competitor, provide a one-sentence "they do better" (their competitive advantage over us) and a one-sentence "we do better" (our competitive advantage over them).',
+      'IMPORTANT: This is a COMPETITOR analysis only. Define 2–3 competitor categories that compete for the same customers (e.g., Low-cost Market Entrants, Enterprise Software Suites, Regional Boutique Agencies).',
+      'CRITICAL: Do NOT use any specific company/brand names or URLs. Use category labels only.',
+      'Task: For each competitor category, provide one sentence for "they do better" (their advantage vs us) and one sentence for "we do better" (our advantage vs them).',
       avoidCompetitorText,
       `Generate fresh, unique insights with different angles and perspectives. Variation seed: ${randomSeed}`,
       'Output format (strict JSON): [ { "name": string, "theyDoBetter": string, "weDoBetter": string } ]',
@@ -1602,11 +1517,9 @@ exports.suggestMarketCompetitors = async (req, res) => {
           .slice(0,3);
       }
     } catch (_) {}
-    // Add any enriched links first
-    Object.entries(linkMap).forEach(([name,url])=>{ links.push({ title: name, url }); });
     // Build avoidance text for suggestions
     const avoidSuggestionsArr = Array.isArray(previousSuggestions) ? previousSuggestions.filter(Boolean) : [];
-    const suggestions = await callOpenAIList({ type: 'Competitive differentiation notes', input, contextText, n: 3, nonce, avoid: avoidSuggestionsArr });
+    const suggestions = await callOpenAIList({ type: 'Competitive differentiation notes (generic categories only, no brand names)', input, contextText, n: 3, nonce, avoid: avoidSuggestionsArr });
     return res.json({ suggestion: suggestions[0] || '', suggestions, links, competitors });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {
@@ -1660,51 +1573,18 @@ exports.suggestCompetitorNames = async (req, res) => {
   try {
     const { input } = req.body || {};
     const userId = req.user?.id;
-    const wsFilter = getWorkspaceFilter(req);
-  const ob = userId ? await Onboarding.findOne(wsFilter) : null;
     const baseCtx = userId ? await buildCoreProjectContextForUser(userId, req.workspace?._id) : '';
-
-    const bp = ob?.businessProfile || {};
-    const q = [
-      'competitors',
-      bp.industry || '',
-      [bp.city, bp.country].filter(Boolean).join(', '),
-    ]
-      .filter(Boolean)
-      .join(' ')
-      .trim() || 'top competitors';
-
-    const results = await webSearch(q, 6);
-    const titles = (results || []).map((r) => String(r?.title || ''));
-    // Try to naively extract likely company names from titles (avoid list/directory pages)
-    const isListy = (t) => /\b(list|directory|companies|top|best|guide|nitda|licensed|pdf)\b/i.test(t);
-    const cleaned = titles
-      .map((t) => t.replace(/\s*[|\-–].*$/, '').trim())
-      .filter((t) => t && !isListy(t));
-    let suggestions = Array.from(new Set(cleaned)).slice(0, 3);
-    let source = 'search';
-
-    // If we don't have 2–3 solid candidates from search titles, use AI to infer names from context + search results
-    if (suggestions.length < 2) {
-      const contextText = [
-        baseCtx,
-        (results && results.length)
-          ? ('Recent search results (titles):\n' + results.map((r) => `- ${r.title} (${r.url})`).join('\n'))
-          : '',
-      ]
-        .filter(Boolean)
-        .join('\n\n');
-      const aiList = await callOpenAIList({
-        type: 'top 2–3 competitor company names (no URLs, no descriptors)',
-        input,
-        contextText,
-        n: 3,
-      });
-      suggestions = (aiList || []).filter(Boolean).slice(0, 3);
-      source = (results && results.length) ? 'search+ai' : 'ai';
-    }
-
-    const links = (results || []).slice(0, 3);
+    // Produce competitor archetypes/categories (no brand names)
+    const contextText = [baseCtx, 'IMPORTANT: Return competitor categories, not specific companies. Examples: Low-cost Entrants, Enterprise Suites, Regional Specialists.'].join('\n');
+    const aiList = await callOpenAIList({
+      type: 'top 2–3 competitor categories (no brand names)',
+      input,
+      contextText,
+      n: 3,
+    });
+    const suggestions = (aiList || []).filter(Boolean).slice(0, 3);
+    const source = 'ai';
+    const links = [];
     return res.json({ suggestion: suggestions[0] || '', suggestions, source, links });
   } catch (err) {
     if (err && err.code === 'NO_API_KEY') {

@@ -27,6 +27,8 @@ router.post(
     body('fullName').optional().isString().trim(),
     body('role').optional().isString().trim(),
     body('roleOther').optional().isString().trim(),
+    body('jobTitle').optional().isString().trim(),
+    body('jobTitleOther').optional().isString().trim(),
     body('builtPlanBefore').optional(),
     body('planningGoal').optional().isString().trim(),
     body('planningGoalOther').optional().isString().trim(),

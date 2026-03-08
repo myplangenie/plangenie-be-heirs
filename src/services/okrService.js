@@ -1,4 +1,8 @@
 const OKR = require('../models/OKR');
+const VisionGoal = require('../models/VisionGoal');
+const CoreProject = require('../models/CoreProject');
+const DepartmentProject = require('../models/DepartmentProject');
+const { getSpecificFields } = require('../services/workspaceFieldService');
 
 // Canonical core metric keys
 const CANONICAL_METRICS = new Set(['revenue', 'margin', 'churn', 'growth', 'adoption', 'cost']);
@@ -36,19 +40,67 @@ function computeOkrProgress(okr) {
   return clamp(sum / values.length);
 }
 
-// Compute progress for a 1-year goal from Core OKRs derived from it
+// Helper: compute project progress as percent done deliverables
+function computeProjectProgress(project) {
+  const delivs = Array.isArray(project?.deliverables) ? project.deliverables : [];
+  if (delivs.length === 0) return 0;
+  const done = delivs.filter(d => d && d.done).length;
+  return clamp((done / delivs.length) * 100);
+}
+
+async function computeGoalProgressFromOkrs(goalId, workspaceId) {
+  const okrs = await OKR.find({
+    workspace: workspaceId,
+    isDeleted: false,
+    okrType: 'core',
+    derivedFromGoals: goalId,
+  }).lean();
+  if (!okrs.length) return 0;
+  const values = okrs.map(computeOkrProgress);
+  const sum = values.reduce((a, b) => a + b, 0);
+  return clamp(sum / values.length);
+}
+
+async function computeGoalProgressFromProjects(goalId, workspaceId) {
+  // Identify the index of this 1‑year goal among ordered 1y goals (legacy project link uses indices)
+  const goals = await VisionGoal.find({ workspace: workspaceId, goalType: '1y', isDeleted: false })
+    .sort({ order: 1 })
+    .select('_id')
+    .lean();
+  const idx = goals.findIndex(g => String(g._id) === String(goalId));
+  if (idx < 0) return 0;
+
+  // Fetch core projects linked to this goal index
+  const core = await CoreProject.find({ workspace: workspaceId, isDeleted: false, linkedGoals: idx })
+    .select('deliverables linkedGoals')
+    .lean();
+  // Fetch department projects linked via linkedGoal index
+  const dept = await DepartmentProject.find({ workspace: workspaceId, isDeleted: false, linkedGoal: idx })
+    .select('deliverables linkedGoal')
+    .lean();
+
+  const all = [...core, ...dept];
+  if (!all.length) return 0;
+  const values = all.map(computeProjectProgress);
+  const sum = values.reduce((a, b) => a + b, 0);
+  return clamp(sum / values.length);
+}
+
+// Compute progress for a 1-year goal from either OKRs or Projects, based on workspace preference
 async function computeGoalProgress(goalId, workspaceId) {
   try {
-    const okrs = await OKR.find({
-      workspace: workspaceId,
-      isDeleted: false,
-      okrType: 'core',
-      derivedFromGoals: goalId,
-    }).lean();
-    if (!okrs.length) return 0;
-    const values = okrs.map(computeOkrProgress);
-    const sum = values.reduce((a, b) => a + b, 0);
-    return clamp(sum / values.length);
+    let mode = 'okrs';
+    try {
+      const fields = await getSpecificFields(workspaceId, ['goalTrackingMode']);
+      if (fields && typeof fields.goalTrackingMode === 'string') {
+        mode = String(fields.goalTrackingMode).toLowerCase() === 'projects' ? 'projects' : 'okrs';
+      }
+    } catch { /* default to okrs */ }
+
+    if (mode === 'projects') {
+      return await computeGoalProgressFromProjects(goalId, workspaceId);
+    }
+    return await computeGoalProgressFromOkrs(goalId, workspaceId);
   } catch (_) {
     return 0;
   }
@@ -65,4 +117,3 @@ module.exports = {
   computeOkrProgress,
   computeGoalProgress,
 };
-

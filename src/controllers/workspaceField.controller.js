@@ -22,6 +22,8 @@ const ALLOWED_FIELDS = [
   // OKR / Fiscal cycle
   'fiscalYearStartMonth',
   'okrRollThresholdDays',
+  // Goal tracking preference
+  'goalTrackingMode', // 'projects' | 'okrs'
   'okrOnboardingIntent',
   // Market
   'targetMarket',

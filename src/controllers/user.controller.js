@@ -2,6 +2,8 @@ const { PutObjectCommand } = require('@aws-sdk/client-s3');
 const crypto = require('crypto');
 const User = require('../models/User');
 const { getR2Client } = require('../config/r2');
+const bcrypt = require('bcryptjs');
+const { Resend } = require('resend');
 
 function parseDataUrl(dataUrl) {
   // data:[<mediatype>][;base64],<data>
@@ -89,5 +91,146 @@ exports.uploadAvatar = async (req, res) => {
     return res.json({ ok: true, url, user: user.toSafeJSON() });
   } catch (err) {
     return res.status(500).json({ message: 'Upload failed' });
+  }
+};
+
+// Schedule account deletion after a grace period (default 30 days)
+exports.requestDeletion = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const now = new Date();
+    const graceDays = Number(process.env.ACCOUNT_DELETION_GRACE_DAYS || 30);
+    const scheduled = new Date(now.getTime() + graceDays * 24 * 60 * 60 * 1000);
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { deletionRequestedAt: now, deletionScheduledFor: scheduled },
+      { new: true }
+    ).lean();
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    return res.json({ ok: true, deletionRequestedAt: user.deletionRequestedAt, deletionScheduledFor: user.deletionScheduledFor });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to schedule account deletion' });
+  }
+};
+
+// Cancel scheduled account deletion
+exports.cancelDeletion = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { deletionRequestedAt: null, deletionScheduledFor: null },
+      { new: true }
+    ).lean();
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to cancel account deletion' });
+  }
+};
+
+// Request email change: send OTP to current email
+exports.requestEmailChange = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const newEmailRaw = String(req.body?.newEmail || '').trim().toLowerCase();
+    if (!newEmailRaw) return res.status(400).json({ message: 'New email is required' });
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmailRaw)) return res.status(400).json({ message: 'Please enter a valid email address' });
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // No-op if same as current
+    if (String(user.email || '').toLowerCase() === newEmailRaw) {
+      return res.json({ ok: true, noop: true });
+    }
+
+    // Friendly duplicate email error
+    const exists = await User.findOne({ email: newEmailRaw }).select('_id').lean();
+    if (exists && String(exists._id) !== String(userId)) {
+      return res.status(409).json({ message: 'That email is already in use' });
+    }
+
+    // Generate OTP
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otpHash = await bcrypt.hash(otp, 10);
+    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    user.emailChangeNew = newEmailRaw;
+    user.emailChangeCode = otpHash;
+    user.emailChangeExpires = expires;
+    await user.save();
+
+    // Send OTP to current email
+    try {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color:#1D4374;">Confirm Your Email Change</h2>
+          <p>We received a request to change your account email to <strong>${newEmailRaw}</strong>.</p>
+          <p>Enter this verification code to confirm:</p>
+          <div style="font-size: 28px; font-weight: bold; letter-spacing: 6px; background:#F3F4F6; padding:12px; text-align:center; border-radius:8px; color:#1D4374;">${otp}</div>
+          <p style="color:#6B7280; font-size: 13px;">This code expires in 15 minutes.</p>
+        </div>`;
+      await resend.emails.send({ from, to: user.email, subject: 'Confirm your email change', html, text: `Your code is ${otp}. It expires in 15 minutes.` });
+    } catch (mailErr) {
+      console.error('[email-change] Failed to send OTP email:', mailErr?.message || mailErr);
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to initiate email change' });
+  }
+};
+
+// Confirm email change with OTP
+exports.confirmEmailChange = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const code = String(req.body?.code || '').trim();
+    if (!code) return res.status(400).json({ message: 'Verification code is required' });
+
+    const user = await User.findById(userId).select('+emailChangeCode +emailChangeExpires +emailChangeNew');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user.emailChangeCode || !user.emailChangeExpires || !user.emailChangeNew) {
+      return res.status(400).json({ message: 'No email change pending' });
+    }
+    if (user.emailChangeExpires < new Date()) {
+      // Clear pending
+      user.emailChangeCode = undefined;
+      user.emailChangeExpires = undefined;
+      user.emailChangeNew = undefined;
+      await user.save();
+      return res.status(400).json({ message: 'Code expired. Please request a new code.' });
+    }
+    const ok = await bcrypt.compare(code, user.emailChangeCode);
+    if (!ok) return res.status(400).json({ message: 'Invalid verification code' });
+
+    // Final duplicate check (race condition protection)
+    const newEmail = String(user.emailChangeNew).toLowerCase();
+    const exists = await User.findOne({ email: newEmail }).select('_id').lean();
+    if (exists && String(exists._id) !== String(userId)) {
+      return res.status(409).json({ message: 'That email is already in use' });
+    }
+
+    user.email = newEmail;
+    user.emailChangeCode = undefined;
+    user.emailChangeExpires = undefined;
+    user.emailChangeNew = undefined;
+    await user.save();
+    return res.json({ ok: true, email: user.email });
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to confirm email change' });
   }
 };

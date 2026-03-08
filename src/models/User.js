@@ -15,6 +15,11 @@ const UserSchema = new mongoose.Schema(
     verificationCode: { type: String, select: false },
     verificationExpires: { type: Date, select: false },
 
+    // Email change verification (OTP to current email)
+    emailChangeNew: { type: String, select: false },
+    emailChangeCode: { type: String, select: false },
+    emailChangeExpires: { type: Date, select: false },
+
     // Onboarding: user profile (relaxed to allow broader options)
     role: { type: String, trim: true, default: undefined },
     builtPlanBefore: { type: Boolean, default: undefined },
@@ -51,6 +56,10 @@ const UserSchema = new mongoose.Schema(
       weeklyDigest: { type: Boolean, default: true },
       lastWeeklyDigestSent: { type: Date, default: null },
     },
+
+    // Account deletion scheduling
+    deletionRequestedAt: { type: Date, default: null },
+    deletionScheduledFor: { type: Date, default: null },
   },
   { timestamps: true }
 );

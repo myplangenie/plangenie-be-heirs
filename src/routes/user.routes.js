@@ -21,5 +21,12 @@ router.post(
   ctrl.completeTour
 );
 
-module.exports = router;
+// Account deletion request (schedule deletion after grace period)
+router.post('/delete', auth(true), ctrl.requestDeletion);
+router.post('/delete/cancel', auth(true), ctrl.cancelDeletion);
 
+// Email change with OTP
+router.post('/email-change/request', auth(true), [body('newEmail').isEmail().withMessage('Valid newEmail is required')], ctrl.requestEmailChange);
+router.post('/email-change/confirm', auth(true), [body('code').isString().isLength({ min: 4 }).withMessage('Code is required')], ctrl.confirmEmailChange);
+
+module.exports = router;

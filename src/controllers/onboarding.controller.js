@@ -66,6 +66,12 @@ exports.get = async (req, res) => {
   if (!out.businessProfile.businessName && user && user.companyName) {
     out.businessProfile.businessName = user.companyName;
   }
+  // If jobTitle missing in onboarding userProfile, fall back to user's jobTitle
+  if (out.userProfile) {
+    if (!out.userProfile.jobTitle && user && user.jobTitle) {
+      out.userProfile.jobTitle = user.jobTitle;
+    }
+  }
   // Backward-compat: map legacy 'personal' to 'organization' in responses
   if (out.userProfile && out.userProfile.planningFor === 'personal') {
     out.userProfile.planningFor = 'organization';
@@ -78,7 +84,7 @@ exports.saveUserProfile = async (req, res) => {
   if (!errors.isEmpty()) {
     return res.status(400).json({ message: 'Invalid input', details: errors.array() });
   }
-  const { fullName, role, roleOther, builtPlanBefore, planningGoal, planningGoalOther, includePersonalPlanning } = req.body;
+  const { fullName, role, roleOther, jobTitle, jobTitleOther, builtPlanBefore, planningGoal, planningGoalOther, includePersonalPlanning } = req.body;
   // Normalize legacy client values
   const planningForRaw = req.body.planningFor;
   const planningFor = planningForRaw === 'personal' ? 'organization' : planningForRaw;
@@ -92,6 +98,8 @@ exports.saveUserProfile = async (req, res) => {
           fullName,
           role,
           roleOther,
+          jobTitle,
+          jobTitleOther,
           builtPlanBefore: ynToBool(builtPlanBefore),
           planningGoal,
           planningGoalOther,
@@ -109,6 +117,8 @@ exports.saveUserProfile = async (req, res) => {
   if (Object.prototype.hasOwnProperty.call(req.body, 'fullName')) up.fullName = fullName;
   if (Object.prototype.hasOwnProperty.call(req.body, 'role')) up.role = role;
   if (Object.prototype.hasOwnProperty.call(req.body, 'roleOther')) up.roleOther = roleOther;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'jobTitle')) up.jobTitle = jobTitle;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'jobTitleOther')) up.jobTitleOther = jobTitleOther;
   if (Object.prototype.hasOwnProperty.call(req.body, 'builtPlanBefore')) up.builtPlanBefore = ynToBool(builtPlanBefore);
   if (Object.prototype.hasOwnProperty.call(req.body, 'planningGoal')) up.planningGoal = planningGoal;
   if (Object.prototype.hasOwnProperty.call(req.body, 'planningGoalOther')) up.planningGoalOther = planningGoalOther;
@@ -120,9 +130,10 @@ exports.saveUserProfile = async (req, res) => {
   if (ob.workspace) touchWorkspace(ob.workspace);
 
   // Optionally sync fullName onto User
-  if (fullName) {
-    await User.findByIdAndUpdate(userId, { fullName });
-  }
+  const userPatch = {};
+  if (fullName) userPatch.fullName = fullName;
+  if (jobTitle) userPatch.jobTitle = jobTitle === 'other' ? (jobTitleOther || '') : jobTitle;
+  if (Object.keys(userPatch).length) await User.findByIdAndUpdate(userId, userPatch);
 
   return res.json({ onboarding: ob });
 };
