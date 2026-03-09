@@ -1339,9 +1339,11 @@ exports.respond = async (req, res) => {
               if (!coreOkr) return { error: `Core OKR "${args.linkedCoreOKR}" not found. Use get_okrs to list available Core OKRs.` };
               const krExists = (coreOkr.keyResults || []).some((kr) => String(kr._id) === String(args.linkedCoreKrId));
               if (!krExists) return { error: `Key Result "${args.linkedCoreKrId}" not found in that OKR. Use get_okrs to list key result IDs.` };
-              // Enforce 3-project cap per objective
-              const existingCount = await CoreProject.countDocuments({ workspace: wsFilter.workspace, isDeleted: false, linkedCoreOKR: args.linkedCoreOKR });
-              if (existingCount >= 3) return { error: 'Each Core Objective can have at most 3 Core Projects. This objective already has 3.' };
+              // Enforce 3-project cap per objective for Lite users only
+              if (!cpOwner?.hasActiveSubscription) {
+                const existingCount = await CoreProject.countDocuments({ workspace: wsFilter.workspace, isDeleted: false, linkedCoreOKR: args.linkedCoreOKR });
+                if (existingCount >= 3) return { error: 'Each Core Objective can have at most 3 Core Projects on the free plan.' };
+              }
               const project = new CoreProject({
                 workspace: wsFilter.workspace,
                 user: wsFilter.user,
@@ -1464,10 +1466,13 @@ exports.respond = async (req, res) => {
                     const relinkedOkr = await OKR.findOne({ _id: newOkrId, workspace: wsFilter.workspace, okrType: 'core', isDeleted: { $ne: true } }).lean();
                     if (!relinkedOkr) return { error: `Core OKR "${newOkrId}" not found.` };
                     if (newKrId && !(relinkedOkr.keyResults || []).some((kr) => String(kr._id) === String(newKrId))) return { error: `Key Result "${newKrId}" not found in that OKR.` };
-                    // Re-check 3-project cap if switching OKR
+                    // Re-check 3-project cap if switching OKR (Lite users only)
                     if (args.linkedCoreOKR && String(args.linkedCoreOKR) !== String(project.linkedCoreOKR)) {
-                      const capCount = await CoreProject.countDocuments({ workspace: wsFilter.workspace, isDeleted: false, linkedCoreOKR: args.linkedCoreOKR, _id: { $ne: project._id } });
-                      if (capCount >= 3) return { error: 'That Core Objective already has 3 Core Projects.' };
+                      const updateOwner = await User.findById(wsFilter.user).lean();
+                      if (!updateOwner?.hasActiveSubscription) {
+                        const capCount = await CoreProject.countDocuments({ workspace: wsFilter.workspace, isDeleted: false, linkedCoreOKR: args.linkedCoreOKR, _id: { $ne: project._id } });
+                        if (capCount >= 3) return { error: 'That Core Objective already has 3 Core Projects on the free plan.' };
+                      }
                     }
                   }
                   if (args.linkedCoreOKR !== undefined) project.linkedCoreOKR = args.linkedCoreOKR || undefined;

@@ -271,16 +271,20 @@ exports.update = async (req, res, next) => {
         : [];
     }
 
-    // If linkedCoreOKR is set, ensure per-objective cap of 3
+    // If linkedCoreOKR is set, enforce per-objective cap of 3 for Lite users only
     if (project.linkedCoreOKR) {
-      const count = await CoreProject.countDocuments({
-        ...wsFilter,
-        isDeleted: false,
-        linkedCoreOKR: project.linkedCoreOKR,
-        _id: { $ne: project._id },
-      });
-      if (count >= 3) {
-        return res.status(400).json({ message: 'Each Core Objective can have at most 3 Core Projects' });
+      const updateUser = userId ? await User.findById(userId).lean() : null;
+      const isPremium = updateUser && updateUser.hasActiveSubscription;
+      if (!isPremium) {
+        const count = await CoreProject.countDocuments({
+          ...wsFilter,
+          isDeleted: false,
+          linkedCoreOKR: project.linkedCoreOKR,
+          _id: { $ne: project._id },
+        });
+        if (count >= 3) {
+          return res.status(400).json({ message: 'Each Core Objective can have at most 3 Core Projects on the free plan' });
+        }
       }
     }
 
