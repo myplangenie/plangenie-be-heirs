@@ -88,8 +88,9 @@ exports.createCheckoutSession = async (req, res) => {
       sub.currentPeriodEnd = new Date(now.getTime() + addDays * 24 * 60 * 60 * 1000);
       sub.renewalDate = sub.currentPeriodEnd;
       await sub.save();
-      // Only Pro unlocks premium features
-      user.hasActiveSubscription = (sub.planType === 'Pro');
+      // Pro and Enterprise unlock premium features
+      user.hasActiveSubscription = (['Pro', 'Enterprise'].includes(sub.planType));
+      user.planSlug = (sub.planType || 'Lite').toLowerCase();
       await user.save();
       await SubscriptionHistory.create({
         user: user._id,
@@ -123,8 +124,9 @@ exports.createCheckoutSession = async (req, res) => {
         sub.renewalDate = sub.currentPeriodEnd;
         await sub.save();
 
-        // Only Pro unlocks premium features
-        user.hasActiveSubscription = (sub.planType === 'Pro');
+        // Pro and Enterprise unlock premium features
+        user.hasActiveSubscription = (['Pro', 'Enterprise'].includes(sub.planType));
+        user.planSlug = (sub.planType || 'Lite').toLowerCase();
         await user.save();
 
         // Record redemption
@@ -626,11 +628,12 @@ exports.webhook = async (req, res) => {
           await subscriptionDoc.save();
 
           if (user) {
-            // Only Pro unlocks premium features
+            // Pro and Enterprise unlock premium features
             user.hasActiveSubscription = (
               ['active', 'trialing'].includes(subscriptionDoc.status) &&
-              String(subscriptionDoc.planType || '') === 'Pro'
+              ['Pro', 'Enterprise'].includes(String(subscriptionDoc.planType || ''))
             );
+            user.planSlug = (subscriptionDoc.planType || 'Lite').toLowerCase();
             await user.save();
           }
 
@@ -672,8 +675,9 @@ exports.webhook = async (req, res) => {
             if (user) {
               user.hasActiveSubscription = (
                 ['active', 'trialing'].includes(sub.status) &&
-                String(sub.planType || '') === 'Pro'
+                ['Pro', 'Enterprise'].includes(String(sub.planType || ''))
               );
+              user.planSlug = (sub.planType || 'Lite').toLowerCase();
               await user.save();
             }
             await SubscriptionHistory.create({
@@ -729,8 +733,9 @@ exports.webhook = async (req, res) => {
           if (user) {
             user.hasActiveSubscription = (
               ['active', 'trialing'].includes(sub.status) &&
-              String(sub.planType || '') === 'Pro'
+              ['Pro', 'Enterprise'].includes(String(sub.planType || ''))
             );
+            user.planSlug = (sub.planType || 'Lite').toLowerCase();
             await user.save();
           }
 

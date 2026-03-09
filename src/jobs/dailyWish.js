@@ -126,8 +126,8 @@ Return JSON with this structure:
  */
 async function sendWishToUser(user, resend, fromAddress, dashboardUrl) {
   try {
-    // Pro only: skip users without an active Pro subscription
-    if (!user?.hasActiveSubscription || entitlements.effectivePlan(user) !== 'pro') {
+    // Pro/Enterprise only: skip users without an active premium subscription
+    if (!user?.hasActiveSubscription || !['pro', 'enterprise'].includes(entitlements.effectivePlan(user))) {
       return { sent: false, reason: 'not_pro' };
     }
     const todayDate = getTodayDateET();

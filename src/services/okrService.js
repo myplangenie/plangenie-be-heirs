@@ -48,6 +48,7 @@ function computeProjectProgress(project) {
   return clamp((done / delivs.length) * 100);
 }
 
+// Returns null when no OKRs are linked (distinct from 0% progress on existing OKRs)
 async function computeGoalProgressFromOkrs(goalId, workspaceId) {
   const okrs = await OKR.find({
     workspace: workspaceId,
@@ -55,20 +56,21 @@ async function computeGoalProgressFromOkrs(goalId, workspaceId) {
     okrType: 'core',
     derivedFromGoals: goalId,
   }).lean();
-  if (!okrs.length) return 0;
+  if (!okrs.length) return null;
   const values = okrs.map(computeOkrProgress);
   const sum = values.reduce((a, b) => a + b, 0);
   return clamp(sum / values.length);
 }
 
 async function computeGoalProgressFromProjects(goalId, workspaceId) {
-  // Identify the index of this 1‑year goal among ordered 1y goals (legacy project link uses indices)
+  // Identify this goal's order value — projects store links using the goal's order field as the index
   const goals = await VisionGoal.find({ workspace: workspaceId, goalType: '1y', isDeleted: false })
     .sort({ order: 1 })
-    .select('_id')
+    .select('_id order')
     .lean();
-  const idx = goals.findIndex(g => String(g._id) === String(goalId));
-  if (idx < 0) return 0;
+  const goal = goals.find(g => String(g._id) === String(goalId));
+  if (!goal) return 0;
+  const idx = goal.order;
 
   // Fetch core projects linked to this goal index
   const core = await CoreProject.find({ workspace: workspaceId, isDeleted: false, linkedGoals: idx })
@@ -100,7 +102,10 @@ async function computeGoalProgress(goalId, workspaceId) {
     if (mode === 'projects') {
       return await computeGoalProgressFromProjects(goalId, workspaceId);
     }
-    return await computeGoalProgressFromOkrs(goalId, workspaceId);
+    // OKR mode: use OKR progress when OKRs are linked; fall back to projects when none are linked
+    const okrProgress = await computeGoalProgressFromOkrs(goalId, workspaceId);
+    if (okrProgress !== null) return okrProgress;
+    return await computeGoalProgressFromProjects(goalId, workspaceId);
   } catch (_) {
     return 0;
   }

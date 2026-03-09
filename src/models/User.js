@@ -50,6 +50,7 @@ const UserSchema = new mongoose.Schema(
     // Billing/Subscription
     stripeCustomerId: { type: String, default: undefined },
     hasActiveSubscription: { type: Boolean, default: false },
+    planSlug: { type: String, default: 'lite' },
 
     // Notification preferences
     notifications: {

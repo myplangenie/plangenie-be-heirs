@@ -55,10 +55,40 @@ const plans = {
       decisionsPerMonth: 100000,
     },
   },
+  enterprise: {
+    name: 'Enterprise',
+    features: {
+      financials: true,
+      aiCompetitors: true,
+      aiCustomerAnalysis: true,
+      aiCoreProjects: true,
+      aiActionPlans: true,
+      financialAutoLinkage: true,
+      orgChartImage: true,
+      planEdit: true,
+      departmentPlans: true,
+      multiUserTeam: true,
+      assumptionScenarios: true,
+    },
+    limits: {
+      maxPlans: 1000,
+      maxJourneys: 1000,
+      maxWorkspaces: 1000,
+      maxGoals: 1000,
+      maxCoreProjects: 1000,
+      maxCollaborators: 0, // 0 = unlimited
+      reviewsPerMonth: 100000,
+      decisionsPerMonth: 100000,
+    },
+  },
 };
 
 function effectivePlan(user) {
-  if (user && user.hasActiveSubscription) return 'pro';
+  if (user && user.hasActiveSubscription) {
+    // Use planSlug if available to distinguish pro vs enterprise
+    if (user.planSlug === 'enterprise') return 'enterprise';
+    return 'pro';
+  }
   return 'lite';
 }
 

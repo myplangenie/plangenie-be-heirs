@@ -106,8 +106,8 @@ function formatDueDate(dueWhen) {
  */
 async function sendDigestToUser(user, resend, fromAddress, dashboardUrl) {
   try {
-    // Pro only: skip users without an active Pro subscription
-    if (!user?.hasActiveSubscription || entitlements.effectivePlan(user) !== 'pro') {
+    // Pro/Enterprise only: skip users without an active premium subscription
+    if (!user?.hasActiveSubscription || !['pro', 'enterprise'].includes(entitlements.effectivePlan(user))) {
       return { sent: false, reason: 'not_pro' };
     }
     // Get user's default workspace with notification preferences
