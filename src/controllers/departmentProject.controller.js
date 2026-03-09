@@ -193,7 +193,7 @@ exports.create = async (req, res, next) => {
       const OKR = require('../models/OKR');
       const okr = await OKR.findOne({ _id: linkedDeptOKR, ...wsFilter, okrType: 'department', isDeleted: false }).lean();
       if (!okr) return res.status(400).json({ message: 'linkedDeptOKR must reference a Department OKR in this workspace' });
-      if (String(okr.departmentKey || '') !== String(departmentKey || '')) {
+      if (String(okr.departmentKey || '').toLowerCase().trim() !== String(departmentKey || '').toLowerCase().trim()) {
         return res.status(400).json({ message: 'Department Project must link to a Department OKR in the same department' });
       }
       const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(linkedDeptKrId));
@@ -300,7 +300,7 @@ exports.update = async (req, res, next) => {
       const OKR = require('../models/OKR');
       const okr = await OKR.findOne({ _id: project.linkedDeptOKR, ...wsFilter, okrType: 'department', isDeleted: false }).lean();
       if (!okr) return res.status(400).json({ message: 'linkedDeptOKR must reference a Department OKR in this workspace' });
-      if (String(okr.departmentKey || '') !== String(project.departmentKey || '')) {
+      if (String(okr.departmentKey || '').toLowerCase().trim() !== String(project.departmentKey || '').toLowerCase().trim()) {
         return res.status(400).json({ message: 'Department Project must link to a Department OKR in the same department' });
       }
       const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(project.linkedDeptKrId));
