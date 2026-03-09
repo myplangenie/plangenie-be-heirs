@@ -49,7 +49,7 @@ const plans = {
       maxJourneys: 1000,
       maxWorkspaces: 1000,
       maxGoals: 1000,
-      maxCoreProjects: 1000,
+      maxCoreProjects: 0, // 0 = unlimited
       maxCollaborators: 0, // 0 = unlimited
       reviewsPerMonth: 100000,
       decisionsPerMonth: 100000,
@@ -75,7 +75,7 @@ const plans = {
       maxJourneys: 1000,
       maxWorkspaces: 1000,
       maxGoals: 1000,
-      maxCoreProjects: 1000,
+      maxCoreProjects: 0, // 0 = unlimited
       maxCollaborators: 0, // 0 = unlimited
       reviewsPerMonth: 100000,
       decisionsPerMonth: 100000,

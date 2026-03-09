@@ -143,10 +143,13 @@ exports.create = async (req, res, next) => {
       const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(linkedCoreKrId));
       if (!krExists) return res.status(400).json({ message: 'linkedCoreKrId must reference a Key Result within the linked Core OKR' });
 
-      // Enforce 1-3 projects per Core Objective
-      const existingCount = await CoreProject.countDocuments({ ...wsFilter, isDeleted: false, linkedCoreOKR });
-      if (existingCount >= 3) {
-        return res.status(400).json({ message: 'Each Core Objective can have at most 3 Core Projects' });
+      // Enforce 1-3 projects per Core Objective for Lite users only
+      const isPremium = user && user.hasActiveSubscription;
+      if (!isPremium) {
+        const existingCount = await CoreProject.countDocuments({ ...wsFilter, isDeleted: false, linkedCoreOKR });
+        if (existingCount >= 3) {
+          return res.status(400).json({ message: 'Each Core Objective can have at most 3 Core Projects on the free plan' });
+        }
       }
     }
 
