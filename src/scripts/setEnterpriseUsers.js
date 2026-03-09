@@ -13,6 +13,7 @@ const ENTERPRISE_EMAILS = [
   'eadelekeife@gmail.com',
   'adelekeifeoluwase@gmail.com',
   'chike@karannagroup.com',
+  'eadelekeife@yahoo.com',
 ];
 
 async function run() {
