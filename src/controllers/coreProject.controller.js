@@ -273,7 +273,7 @@ exports.update = async (req, res, next) => {
 
     // If linkedCoreOKR is set, enforce per-objective cap of 3 for Lite users only
     if (project.linkedCoreOKR) {
-      const updateUser = userId ? await User.findById(userId).lean() : null;
+      const updateUser = req.user?.id ? await User.findById(req.user.id).lean() : null;
       const isPremium = updateUser && updateUser.hasActiveSubscription;
       if (!isPremium) {
         const count = await CoreProject.countDocuments({
