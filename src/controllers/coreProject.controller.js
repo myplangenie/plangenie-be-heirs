@@ -128,25 +128,26 @@ exports.create = async (req, res, next) => {
 
     if (!title || !title.trim()) return res.status(400).json({ message: 'Title is required' });
     if (!Array.isArray(departments) || departments.length === 0) return res.status(400).json({ message: 'Involved Departments are required' });
-    if (!executiveSponsorName || !String(executiveSponsorName).trim()) return res.status(400).json({ message: 'Executive Sponsor is required' });
-    if (!responsibleLeadName || !String(responsibleLeadName).trim()) return res.status(400).json({ message: 'Responsible Project Lead is required' });
 
-    // Enforce linkage to a single Core KR (system rule)
-    if (!linkedCoreOKR || !linkedCoreKrId) {
-      return res.status(400).json({ message: 'Core Project must link to exactly one Core Key Result' });
-    }
+    // Provide sensible defaults for sponsor/lead when not provided (e.g., onboarding quick adds)
+    const fallbackUserName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email || (ownerName || 'Unassigned');
+    const execName = (String(executiveSponsorName || ownerName || fallbackUserName).trim()) || 'Unassigned';
+    const respName = (String(responsibleLeadName || ownerName || fallbackUserName).trim()) || 'Unassigned';
 
-    // Validate OKR and KR linkage
-    const OKR = require('../models/OKR');
-    const okr = await OKR.findOne({ _id: linkedCoreOKR, ...wsFilter, okrType: 'core', isDeleted: false }).lean();
-    if (!okr) return res.status(400).json({ message: 'linkedCoreOKR must reference a Core OKR in this workspace' });
-    const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(linkedCoreKrId));
-    if (!krExists) return res.status(400).json({ message: 'linkedCoreKrId must reference a Key Result within the linked Core OKR' });
+    // Prefer linkage to a single Core KR, but allow creation without it during onboarding.
+    // If provided, validate linkage and enforce per-objective cap.
+    if (linkedCoreOKR && linkedCoreKrId) {
+      const OKR = require('../models/OKR');
+      const okr = await OKR.findOne({ _id: linkedCoreOKR, ...wsFilter, okrType: 'core', isDeleted: false }).lean();
+      if (!okr) return res.status(400).json({ message: 'linkedCoreOKR must reference a Core OKR in this workspace' });
+      const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(linkedCoreKrId));
+      if (!krExists) return res.status(400).json({ message: 'linkedCoreKrId must reference a Key Result within the linked Core OKR' });
 
-    // Enforce 1-3 projects per Core Objective
-    const existingCount = await CoreProject.countDocuments({ ...wsFilter, isDeleted: false, linkedCoreOKR });
-    if (existingCount >= 3) {
-      return res.status(400).json({ message: 'Each Core Objective can have at most 3 Core Projects' });
+      // Enforce 1-3 projects per Core Objective
+      const existingCount = await CoreProject.countDocuments({ ...wsFilter, isDeleted: false, linkedCoreOKR });
+      if (existingCount >= 3) {
+        return res.status(400).json({ message: 'Each Core Objective can have at most 3 Core Projects' });
+      }
     }
 
     const projectData = addWorkspaceToDoc({
@@ -159,10 +160,10 @@ exports.create = async (req, res, next) => {
       priority: priority || undefined,
       ownerId: ownerId || undefined,
       ownerName: ownerName?.trim() || undefined,
-      executiveSponsorName: executiveSponsorName?.trim() || undefined,
-      responsibleLeadName: responsibleLeadName?.trim() || undefined,
-      linkedCoreOKR,
-      linkedCoreKrId,
+      executiveSponsorName: execName,
+      responsibleLeadName: respName,
+      linkedCoreOKR: linkedCoreOKR || undefined,
+      linkedCoreKrId: linkedCoreKrId || undefined,
       linkedGoals: Array.isArray(linkedGoals) ? linkedGoals : undefined,
       departments: departments,
       deliverables: Array.isArray(deliverables)

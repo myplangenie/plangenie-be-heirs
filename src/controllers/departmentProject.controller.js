@@ -187,18 +187,18 @@ exports.create = async (req, res, next) => {
       }
     }
 
-    // Enforce linkage to a Department KR (system rule)
-    if (!linkedDeptOKR || !linkedDeptKrId) {
-      return res.status(400).json({ message: 'Department Project must link to one Department Key Result' });
+    // Prefer linkage to a Department KR, but allow creation without it (onboarding quick adds).
+    // If provided, validate integrity and department match.
+    if (linkedDeptOKR && linkedDeptKrId) {
+      const OKR = require('../models/OKR');
+      const okr = await OKR.findOne({ _id: linkedDeptOKR, ...wsFilter, okrType: 'department', isDeleted: false }).lean();
+      if (!okr) return res.status(400).json({ message: 'linkedDeptOKR must reference a Department OKR in this workspace' });
+      if (String(okr.departmentKey || '') !== String(departmentKey || '')) {
+        return res.status(400).json({ message: 'Department Project must link to a Department OKR in the same department' });
+      }
+      const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(linkedDeptKrId));
+      if (!krExists) return res.status(400).json({ message: 'linkedDeptKrId must reference a Key Result within the linked Department OKR' });
     }
-    const OKR = require('../models/OKR');
-    const okr = await OKR.findOne({ _id: linkedDeptOKR, ...wsFilter, okrType: 'department', isDeleted: false }).lean();
-    if (!okr) return res.status(400).json({ message: 'linkedDeptOKR must reference a Department OKR in this workspace' });
-    if (String(okr.departmentKey || '') !== String(departmentKey || '')) {
-      return res.status(400).json({ message: 'Department Project must link to a Department OKR in the same department' });
-    }
-    const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(linkedDeptKrId));
-    if (!krExists) return res.status(400).json({ message: 'linkedDeptKrId must reference a Key Result within the linked Department OKR' });
 
     const projectData = addWorkspaceToDoc({
       user: userId,
@@ -215,8 +215,8 @@ exports.create = async (req, res, next) => {
       ownerId: ownerId || undefined,
       linkedCoreProject: linkedCoreProject || undefined,
       linkedGoal: typeof linkedGoal === 'number' ? linkedGoal : undefined,
-      linkedDeptOKR,
-      linkedDeptKrId,
+      linkedDeptOKR: linkedDeptOKR || undefined,
+      linkedDeptKrId: linkedDeptKrId || undefined,
       deliverables: Array.isArray(deliverables)
         ? deliverables.map(d => ({
             text: d.text?.trim() || '',
