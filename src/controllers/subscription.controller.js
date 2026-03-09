@@ -367,22 +367,26 @@ exports.getMySubscription = async (req, res) => {
     if (sub && sub.status === 'active' && !sub.stripeSubscriptionId && sub.currentPeriodEnd) {
       const now = new Date();
       if (now > new Date(sub.currentPeriodEnd)) {
-        // Subscription has expired - update status
-        sub.status = 'expired';
-        await sub.save();
+        // Isolate the expiry update so a save/write failure doesn't kill the whole response
+        try {
+          sub.status = 'expired';
+          await sub.save();
 
-        // Also update user's hasActiveSubscription flag
-        if (user.hasActiveSubscription) {
-          user.hasActiveSubscription = false;
-          await user.save();
+          if (user.hasActiveSubscription) {
+            user.hasActiveSubscription = false;
+            await user.save();
+          }
+
+          await SubscriptionHistory.create({
+            user: user._id,
+            subscription: sub._id,
+            event: 'deactivated',
+            reason: 'promo_code_expired',
+          });
+        } catch (saveErr) {
+          console.error('getMySubscription: expiry update failed (non-fatal)', saveErr);
+          // Still return the subscription data below — don't rethrow
         }
-
-        await SubscriptionHistory.create({
-          user: user._id,
-          subscription: sub._id,
-          event: 'deactivated',
-          reason: 'promo_code_expired',
-        });
       }
     }
 
