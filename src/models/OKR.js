@@ -60,6 +60,9 @@ const OKRSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  // Owner (display + optional id)
+  ownerId: { type: String, trim: true },
+  ownerName: { type: String, trim: true },
   // Key Results for this objective
   keyResults: {
     type: [KeyResultSchema],

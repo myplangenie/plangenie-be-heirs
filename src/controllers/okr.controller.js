@@ -110,7 +110,7 @@ exports.create = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
 
-    const { objective, keyResults, notes, timeframe, okrType, departmentKey, derivedFromGoals, anchorCoreOKR, anchorCoreKrId } = req.body;
+    const { objective, keyResults, notes, timeframe, okrType, departmentKey, derivedFromGoals, anchorCoreOKR, anchorCoreKrId, ownerId, ownerName } = req.body;
 
     if (!objective || !objective.trim()) {
       return res.status(400).json({ message: 'Objective is required' });
@@ -172,6 +172,8 @@ exports.create = async (req, res, next) => {
       objective: objective.trim(),
       keyResults: processedKRs,
       notes: notes?.trim() || undefined,
+      ownerId: ownerId ? String(ownerId).trim() : undefined,
+      ownerName: ownerName ? String(ownerName).trim() : undefined,
       // status is computed by consumers; do not accept manual status
       timeframe: timeframe || '1y',
       order,
@@ -220,12 +222,14 @@ exports.update = async (req, res, next) => {
       return res.status(404).json({ message: 'OKR not found' });
     }
 
-    const { objective, keyResults, notes, timeframe, order, departmentKey, derivedFromGoals, anchorCoreOKR, anchorCoreKrId } = req.body;
+    const { objective, keyResults, notes, timeframe, order, departmentKey, derivedFromGoals, anchorCoreOKR, anchorCoreKrId, ownerId, ownerName } = req.body;
 
     if (objective !== undefined) okr.objective = objective.trim();
     if (notes !== undefined) okr.notes = notes?.trim() || undefined;
     if (timeframe !== undefined) okr.timeframe = timeframe;
     if (order !== undefined) okr.order = order;
+    if (ownerId !== undefined) okr.ownerId = ownerId ? String(ownerId).trim() : undefined;
+    if (ownerName !== undefined) okr.ownerName = ownerName ? String(ownerName).trim() : undefined;
 
     if (okr.okrType === 'department' && typeof departmentKey !== 'undefined') {
       okr.departmentKey = String(departmentKey || '').trim() || okr.departmentKey;
