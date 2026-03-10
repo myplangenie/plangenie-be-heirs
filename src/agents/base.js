@@ -22,6 +22,7 @@ const SwotEntry = require('../models/SwotEntry');
 const Product = require('../models/Product');
 const OrgPosition = require('../models/OrgPosition');
 const StrategyDocument = require('../models/StrategyDocument');
+const Collaboration = require('../models/Collaboration');
 const { getWorkspaceFields } = require('../services/workspaceFieldService');
 
 // Cache TTL configurations (in milliseconds)
@@ -166,6 +167,8 @@ async function buildAgentContext(userId, workspaceId = null) {
     products,
     orgPositions,
     strategyDocuments,
+    collabAccepted,
+    collabPending,
   ] = await Promise.all([
     Onboarding.findOne(obFilter).lean(),
     User.findById(userId).lean(),
@@ -182,6 +185,9 @@ async function buildAgentContext(userId, workspaceId = null) {
     OrgPosition.find(crudFilter).sort({ order: 1 }).lean(),
     // Strategy documents for RAG context
     workspaceId ? StrategyDocument.getContextForWorkspace(workspaceId) : Promise.resolve([]),
+    // Collaborations for counts (accepted + pending)
+    Collaboration.find({ owner: userId, status: 'accepted' }).select('email collaborator').limit(200).lean(),
+    Collaboration.find({ owner: userId, status: 'pending' }).select('email').limit(200).lean(),
   ]);
 
   console.log('[buildAgentContext] Data found:');
@@ -257,6 +263,19 @@ async function buildAgentContext(userId, workspaceId = null) {
     });
   });
 
+  // Fallback: if no TeamMember docs, derive from OrgPosition (active positions)
+  let teamMembersOut = teamMembers;
+  try {
+    if ((!teamMembersOut || teamMembersOut.length === 0) && Array.isArray(orgPositions) && orgPositions.length > 0) {
+      const active = orgPositions.filter((p) => String(p?.status || 'Active').trim() === 'Active' || p?.status == null);
+      teamMembersOut = active.map((p) => ({
+        name: String(p?.name || '').trim(),
+        role: String(p?.position || p?.role || '').trim(),
+        department: String(p?.department || '').trim(),
+      }));
+    }
+  } catch {}
+
   return {
     // User profile
     fullName: up.fullName || user?.fullName || '',
@@ -302,9 +321,17 @@ async function buildAgentContext(userId, workspaceId = null) {
 
     // Team & Org (+ new OrgPosition model)
     departments,
-    teamMembers,
-    teamMemberCount: teamMembers.length,
+    teamMembers: teamMembersOut,
+    teamMemberCount: teamMembersOut.length,
     orgPositions: orgPositions || [],
+    // Collaborations
+    collaborations: collabAccepted || [],
+    collaborationStats: {
+      acceptedCount: (collabAccepted || []).length,
+      pendingCount: (collabPending || []).length,
+      // Owner is effectively a collaborator on their own workspace
+      totalWithOwner: (collabAccepted || []).length + 1,
+    },
 
     // SWOT (from new SwotEntry model only - no legacy fallback)
     swot: {
@@ -419,6 +446,26 @@ function formatContextForPrompt(context) {
       .map(p => p.title || 'Untitled')
       .join(', ');
     lines.push(`\nActive Projects: ${projectList}`);
+  }
+
+  // Team summary (names + roles) — include a lightweight roster for LLM reference
+  if (Array.isArray(context.teamMembers) && context.teamMembers.length > 0) {
+    const max = 20;
+    const roster = context.teamMembers
+      .slice(0, max)
+      .map((t) => {
+        const name = (t?.name || '').trim();
+        const role = (t?.role || '').trim();
+        const dept = (t?.department || '').trim();
+        const parts = [name, role && `(${role})`, dept && `- ${dept}`].filter(Boolean).join(' ');
+        return parts || name || 'Team Member';
+      })
+      .filter(Boolean)
+      .join('\n');
+    const tmCount = context.teamMemberCount || context.teamMembers.length;
+    lines.push(`\nActive Team Members: ${tmCount}`);
+    lines.push(`Team Members (${tmCount}):`);
+    lines.push(roster);
   }
 
   // Strategy documents (RAG context) - include at the end as reference material

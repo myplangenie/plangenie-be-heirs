@@ -20,6 +20,7 @@ const strategySuggestion = require('./strategySuggestionAgent');
 const progressStatus = require('./progressStatusAgent');
 const strategicIntegrator = require('./strategicIntegratorAgent');
 const base = require('./base');
+const registry = require('./registry');
 
 module.exports = {
   // Plan Guidance
@@ -41,6 +42,9 @@ module.exports = {
   // Utilities
   invalidateCache: base.invalidateCache,
   buildAgentContext: base.buildAgentContext,
+  // Capability registry / resolver
+  listCapabilities: registry.listCapabilities,
+  resolveAgentForTask: registry.resolveAgentForTask,
 
   // Individual agent modules for advanced use
   agents: {

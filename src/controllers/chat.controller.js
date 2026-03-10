@@ -19,6 +19,8 @@ const { getLimit } = require('../config/entitlements');
 const { getWorkspaceFilter, getWorkspaceId } = require('../utils/workspaceQuery');
 const { getWorkspaceFields, updateWorkspaceFields } = require('../services/workspaceFieldService');
 const agents = require('../agents');
+const { buildAgentContext, formatContextForPrompt, callOpenAI } = require('../agents/base');
+const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
 const OKR = require('../models/OKR');
 const Decision = require('../models/Decision');
 const Assumption = require('../models/Assumption');
@@ -245,6 +247,172 @@ const MUTATION_TOOLS = new Set([
   'update_kr_fields',
   'create_vision_goal', 'update_vision_goal', 'delete_vision_goal',
 ]);
+
+// ── Helpers for richer AI-driven project generation ──
+function _sanitizeCurrency(s) {
+  if (!s && s !== 0) return undefined;
+  const str = String(s);
+  const match = str.replace(/[,\s]/g, '').match(/\$?(-?\d+(?:\.\d{1,2})?)/);
+  if (!match) return undefined;
+  const num = Number(match[1]);
+  if (!Number.isFinite(num)) return undefined;
+  // Return simple string (keep as numeric string without $ to match existing storage pattern)
+  return String(Math.round(num));
+}
+
+async function _aiEstimateBudget(userId, workspaceId, context, hint) {
+  try {
+    const ctxStr = formatContextForPrompt(context || {});
+    const prompt = [
+      ctxStr,
+      '\nTask: Estimate a realistic project budget in dollars for the following project. Return ONLY a number (no currency symbol, no commas).',
+      `Hint: ${hint}`,
+    ].join('\n');
+    const { content } = await callOpenAI(prompt, { model: 'gpt-4o-mini', temperature: 0.3, maxTokens: 60 });
+    return _sanitizeCurrency(content);
+  } catch {
+    return undefined;
+  }
+}
+
+async function _aiSuggestDeliverables(userId, workspaceId, context, params) {
+  const { departmentLabel, projectTitle, goal, count = 6 } = params;
+  try {
+    const ctxStr = formatContextForPrompt(context || {});
+    const prompt = [
+      ctxStr,
+      '\nTask: List short, concrete deliverables for the following project. Each deliverable should be an action phrase (5-10 words).',
+      `Department: ${departmentLabel || 'General'}`,
+      projectTitle ? `Project Title: ${projectTitle}` : '',
+      goal ? `Goal: ${goal}` : '',
+      `Return a pure JSON array of ${count} strings. Example: ["Define campaign brief", "Launch pilot ads", ...]`,
+    ].filter(Boolean).join('\n');
+    const { data } = await require('../agents/base').callOpenAIJSON(prompt, { model: 'gpt-4o-mini', temperature: 0.5, maxTokens: 400 });
+    if (Array.isArray(data)) {
+      return data
+        .map((t) => String(t || '').trim())
+        .map((t) => t.replace(/^["'“‘`]+/, '').replace(/["'”’`]+$/, ''))
+        .filter(Boolean)
+        .slice(0, count);
+    }
+  } catch {}
+  return [];
+}
+
+async function _aiSuggestKPI(userId, workspaceId, context, deliverable, departmentLabel) {
+  try {
+    const ctxStr = formatContextForPrompt(context || {});
+    const prompt = [
+      ctxStr,
+      'Task: Provide ONE quantifiable KPI with a specific numeric target for the deliverable. Keep it short.',
+      `Department: ${departmentLabel || 'General'}`,
+      `Deliverable: ${deliverable}`,
+      'Return ONLY the KPI phrase (e.g., "Achieve 20% CTR", "Gain 500 qualified leads").',
+    ].join('\n');
+    const { content } = await callOpenAI(prompt, { model: 'gpt-4o-mini', temperature: 0.4, maxTokens: 60 });
+    const raw = String(content || '').trim();
+    // Strip any leading/trailing quotes (straight/curly/backticks)
+    return raw.replace(/^["'“‘`]+/, '').replace(/["'”’`]+$/, '');
+  } catch {
+    return '';
+  }
+}
+
+function _spreadDueDates(now, finalDate, n) {
+  const out = [];
+  const start = new Date(now);
+  const end = new Date(finalDate);
+  if (!Number.isFinite(end.getTime())) {
+    // Default: +90 days
+    end.setTime(Date.now() + 90 * 24 * 60 * 60 * 1000);
+  }
+  const totalMs = Math.max(1, end.getTime() - start.getTime());
+  for (let i = 1; i <= n; i++) {
+    const t = start.getTime() + Math.round((totalMs * i) / (n + 1));
+    const d = new Date(Math.min(t, end.getTime()));
+    out.push(d.toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+async function _pickAssignee(workspaceId, deptKeyOrLabel) {
+  try {
+    const OrgPosition = require('../models/OrgPosition');
+    const positions = await OrgPosition.find({ workspace: workspaceId, isDeleted: false }).select('name position department').lean();
+    if (!positions || positions.length === 0) return null;
+    const normDept = normalizeDepartmentKey(String(deptKeyOrLabel || '')) || '';
+    // Prefer department-matching positions
+    const inDept = positions.filter((p) => normalizeDepartmentKey(String(p.department || '')) === normDept);
+    const pool = inDept.length ? inDept : positions;
+    // Bias to managerial titles if possible
+    const mgr = pool.find(p => /(head|lead|manager|director)/i.test(p.position || '')) || pool[0];
+    return mgr?.name || null;
+  } catch {
+    return null;
+  }
+}
+
+async function _getCycleWindow(workspaceId, type /* 'core' | 'department' */) {
+  const { getWorkspaceFields } = require('../services/workspaceFieldService');
+  const fields = await getWorkspaceFields(workspaceId);
+  const fiscalStartMonth = Number(fields.fiscalYearStartMonth) || 1; // 1-12
+  const rollThresholdDays = Number(fields.okrRollThresholdDays) || 10;
+  function getAnnualWindow(now) {
+    const startMonthIdx = fiscalStartMonth - 1;
+    let year = now.getFullYear();
+    const fyStart = new Date(year, startMonthIdx, 1);
+    if (now < fyStart) year -= 1;
+    const start = new Date(year, startMonthIdx, 1);
+    const end = new Date(start);
+    end.setFullYear(start.getFullYear() + 1);
+    end.setDate(end.getDate() - 1);
+    return { start, end };
+  }
+  function getQuarterWindow(now) {
+    const startMonthIdx = fiscalStartMonth - 1;
+    const nowMonth = now.getMonth();
+    let diff = nowMonth - startMonthIdx; if (diff < 0) diff += 12;
+    const qIndex = Math.floor(diff / 3);
+    let qStartYear = now.getFullYear();
+    const qStartMonth = (startMonthIdx + qIndex * 3) % 12;
+    if (qStartMonth > nowMonth) qStartYear -= 1;
+    const start = new Date(qStartYear, qStartMonth, 1);
+    const nextQStart = new Date(start); nextQStart.setMonth(start.getMonth() + 3, 1);
+    const end = new Date(nextQStart); end.setDate(0);
+    const msPerDay = 24*60*60*1000;
+    const daysLeft = Math.ceil((end.getTime() - now.getTime())/msPerDay);
+    if (daysLeft >= 0 && daysLeft <= rollThresholdDays) {
+      const nextStart = new Date(start); nextStart.setMonth(start.getMonth() + 3, 1);
+      const nextEnd = new Date(nextStart); nextEnd.setMonth(nextStart.getMonth() + 3, 0);
+      return { start: nextStart, end: nextEnd };
+    }
+    return { start, end };
+  }
+  const now = new Date();
+  return type === 'core' ? getAnnualWindow(now) : getQuarterWindow(now);
+}
+
+// ── Similarity helpers to prevent duplicate OKR objectives ──
+function _textTokens(text, minLen = 4) {
+  const t = String(text || '').toLowerCase();
+  return Array.from(new Set(t.replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w && w.length >= minLen)));
+}
+function _isSimilarObjective(a, b) {
+  const A = _textTokens(a, 4);
+  const B = _textTokens(b, 4);
+  if (!A.length || !B.length) return false;
+  const inter = A.filter((x) => B.includes(x)).length;
+  const ratio = inter / Math.min(A.length, B.length);
+  return ratio >= 0.7;
+}
+function _isSimilarKr(a, b) {
+  const A = _textTokens(a, 3);
+  const B = _textTokens(b, 3);
+  if (!A.length || !B.length) return false;
+  const inter = A.filter((x) => B.includes(x)).length;
+  const ratio = inter / Math.min(A.length, B.length);
+  return ratio >= 0.8;
+}
 
 // ── Helper: send workspace invite email (used by add_team_member tool) ──
 async function _sendWorkspaceInviteEmail(member, workspaceId, invitedByUserId) {
@@ -764,8 +932,14 @@ exports.respond = async (req, res) => {
           Collaboration.find({ owner: userId, status: 'accepted' }).populate('collaborator', 'firstName lastName email').lean(),
         ]);
 
+        // Also fetch pending invites for tools
+        let pendingInvites = [];
+        try {
+          pendingInvites = await Collaboration.find({ owner: userId, status: 'pending' }).lean().exec();
+        } catch {}
+
         // Store for use in runTool
-        crudData = { coreProjects: coreProjects || [], deptProjects: deptProjects || [], products: products || [], orgPositions: orgPositions || [], competitors: competitors || [], swotEntries: swotEntries || [], collaborations: collaborations || [] };
+        crudData = { coreProjects: coreProjects || [], deptProjects: deptProjects || [], products: products || [], orgPositions: orgPositions || [], competitors: competitors || [], swotEntries: swotEntries || [], collaborations: collaborations || [], collabInvites: pendingInvites || [] };
 
         // Read from Workspace.fields instead of Onboarding.answers
         const a = await getWorkspaceFields(workspaceId);
@@ -863,6 +1037,7 @@ exports.respond = async (req, res) => {
           'IMPORTANT: You are not just a reporting advisor. You can take real actions on this platform. When the user asks you to create a project, add a deliverable, assign an owner, reschedule a task, mark something complete, or delete a project — use the available action tools to do it immediately. Do not just give advice; actually execute the action. After completing an action, briefly confirm what was done.',
           'PROJECTS: When creating a core project, always call get_okrs first to retrieve available Core OKRs and their key result IDs. Core projects MUST link to a Core OKR key result and require executiveSponsorName, responsibleLeadName, and departments. When creating a department project, always call get_okrs first to retrieve available Department OKRs for that department. Department projects MUST link to a Department OKR key result in the same department.',
           'PEOPLE: There are two distinct concepts. (1) Team Members — people on the internal roster/directory (name, role, department). Use add_team_member when the user says "add [name] to the team", "add a team member", or mentions a person by name. No email needed, no invite sent. (2) Collaborators — people who need actual login access to the platform. Use invite_collaborator ONLY when the user explicitly says "invite", "give access", "send an invite", or "add as a collaborator". This sends an email invite and requires an email address. Never use invite_collaborator just because someone says "add a team member".',
+          'WHEN ASKED ABOUT TEAM: If the user asks for the number of team members or their names, ALWAYS call get_team_members_count and/or get_team_members before answering. Do not reply that the information is not provided without first calling these tools.',
           'SAFETY: Before calling delete_project, ALWAYS confirm with the user first. Say exactly: "Are you sure you want to delete [project name]? Reply yes to confirm." Only call delete_project after the user confirms. Similarly, before calling remove_team_member or revoke_collaborator, confirm with the user: "Are you sure you want to remove [name/email]? Reply yes to confirm." Only proceed after the user confirms.',
         ].join(' ');
 
@@ -900,6 +1075,8 @@ exports.respond = async (req, res) => {
           { type: 'function', function: { name: 'get_competitors', description: 'Get list of competitors with their advantages.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 20 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_collaborators', description: 'Get list of collaborators (people invited to collaborate on the workspace/team).', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_collaborators_count', description: 'Get count of collaborators on the team.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_pending_invites', description: 'Get list of pending collaborator invitations.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_pending_invites_count', description: 'Get count of pending collaborator invitations.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           // ── Action / Mutation tools ──
           { type: 'function', function: { name: 'create_core_project', description: 'Create a new core strategic project. Requires a title, executive sponsor, responsible lead, at least one department, and must be linked to a Core OKR Key Result. Call get_okrs first to get valid linkedCoreOKR and linkedCoreKrId values.', parameters: { type: 'object', properties: { title: { type: 'string', description: 'Project title (required)' }, executiveSponsorName: { type: 'string', description: 'Name of the executive sponsor (required)' }, responsibleLeadName: { type: 'string', description: 'Name of the responsible project lead (required)' }, departments: { type: 'array', items: { type: 'string' }, description: 'Department keys involved in this project (required, e.g. ["marketing", "sales"])' }, linkedCoreOKR: { type: 'string', description: '_id of the Core OKR to link this project to (required) — use get_okrs to find' }, linkedCoreKrId: { type: 'string', description: '_id of the specific Key Result within that OKR (required) — use get_okrs to find' }, description: { type: 'string', description: 'Project description' }, goal: { type: 'string', description: 'Project goal or objective' }, dueWhen: { type: 'string', description: 'Due date in YYYY-MM-DD format' }, cost: { type: 'string', description: 'Estimated cost or budget' }, ownerName: { type: 'string', description: 'Owner full name' }, priority: { type: 'string', enum: ['high', 'medium', 'low'], description: 'Project priority level' }, linkedGoals: { type: 'array', items: { type: 'string' }, description: 'VisionGoal _ids this project is linked to — get from get_vision_and_goals' } }, required: ['title', 'executiveSponsorName', 'responsibleLeadName', 'departments', 'linkedCoreOKR', 'linkedCoreKrId'], additionalProperties: false } } },
           { type: 'function', function: { name: 'create_department_project', description: 'Create a new departmental project for a specific department. Must be linked to a Department OKR Key Result in the same department. Call get_okrs first to get valid linkedDeptOKR and linkedDeptKrId values.', parameters: { type: 'object', properties: { title: { type: 'string', description: 'Project title (required)' }, department: { type: 'string', description: 'Department key (required). E.g. marketing, sales, operations, financeAdmin, peopleHR, technology, partnerships, communityImpact.' }, linkedDeptOKR: { type: 'string', description: '_id of the Department OKR to link this project to (required) — use get_okrs to find' }, linkedDeptKrId: { type: 'string', description: '_id of the Key Result within that Department OKR (required) — use get_okrs to find' }, description: { type: 'string', description: 'Project description' }, goal: { type: 'string', description: 'Project goal or objective' }, dueWhen: { type: 'string', description: 'Due date in YYYY-MM-DD format' }, cost: { type: 'string', description: 'Estimated cost or budget' }, ownerName: { type: 'string', description: 'Full name of the person responsible' }, milestone: { type: 'string', description: 'Key milestone' }, resources: { type: 'string', description: 'Resources needed' }, kpi: { type: 'string', description: 'Key performance indicator' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'department', 'linkedDeptOKR', 'linkedDeptKrId'], additionalProperties: false } } },
@@ -1319,6 +1496,21 @@ exports.respond = async (req, res) => {
             case 'get_collaborators_count': {
               return { count: (crudData.collaborations || []).length };
             }
+            case 'get_pending_invites': {
+              const limit = limitNum(args?.limit, 20, 50);
+              const invites = crudData.collabInvites || [];
+              return {
+                count: invites.length,
+                list: invites.slice(0, limit).map((c) => ({
+                  email: String(c?.email || '').trim() || undefined,
+                  invitedAt: c?.invitedAt || c?.createdAt || undefined,
+                  accessType: c?.accessType || 'admin',
+                })),
+              };
+            }
+            case 'get_pending_invites_count': {
+              return { count: (crudData.collabInvites || []).length };
+            }
             // ── Mutation / Action tools ──
             case 'create_core_project': {
               const title = String(args.title || '').trim();
@@ -1370,6 +1562,49 @@ exports.respond = async (req, res) => {
                 });
               } catch {}
 
+              // Build richer defaults (budget, due date, deliverables)
+              const context = await buildAgentContext(String(wsFilter.user || ''), String(wsFilter.workspace || ''));
+
+              // Try to infer due date from linked Core KR
+              let inferredDueWhen = String(args.dueWhen || '').trim() || undefined;
+              if (!inferredDueWhen) {
+                const kr = (coreOkr.keyResults || []).find((k) => String(k._id) === String(args.linkedCoreKrId));
+                if (kr?.endAt) {
+                  inferredDueWhen = new Date(kr.endAt).toISOString().slice(0, 10);
+                }
+              }
+              // Estimate budget if missing
+              let inferredCost = _sanitizeCurrency(args.cost);
+              if (!inferredCost) {
+                const hint = `Project Title: ${title}${args.goal ? ` | Goal: ${String(args.goal).trim()}` : ''}`;
+                inferredCost = await _aiEstimateBudget(String(wsFilter.user || ''), String(wsFilter.workspace || ''), context, hint);
+              }
+              // Generate deliverables (6) with KPIs, owners, and spaced due dates
+              const firstDept = normalizedDepartments[0];
+              let deliverableTitles = await _aiSuggestDeliverables(String(wsFilter.user || ''), String(wsFilter.workspace || ''), context, {
+                departmentLabel: firstDept,
+                projectTitle: title,
+                goal: String(args.goal || ''),
+                count: 6,
+              });
+              if (!deliverableTitles || deliverableTitles.length === 0) {
+                deliverableTitles = ['Define scope and requirements', 'Implement core tasks', 'QA and finalize'];
+              }
+              const spacedDates = _spreadDueDates(new Date(), inferredDueWhen || new Date(Date.now() + 90*24*60*60*1000), Math.max(3, deliverableTitles.length || 6));
+              const defaultOwner = await _pickAssignee(wsFilter.workspace, firstDept);
+              const richDeliverables = [];
+              for (let i = 0; i < deliverableTitles.length; i++) {
+                const text = deliverableTitles[i];
+                const kpi = await _aiSuggestKPI(String(wsFilter.user || ''), String(wsFilter.workspace || ''), context, text, firstDept);
+                richDeliverables.push({
+                  text,
+                  kpi: kpi || undefined,
+                  ownerName: defaultOwner || String(args.responsibleLeadName).trim() || undefined,
+                  dueWhen: spacedDates[i] || undefined,
+                  done: false,
+                });
+              }
+
               const project = new CoreProject({
                 workspace: wsFilter.workspace,
                 user: wsFilter.user,
@@ -1382,15 +1617,15 @@ exports.respond = async (req, res) => {
                 linkedCoreKrId: args.linkedCoreKrId,
                 linkedGoals: Array.isArray(args.linkedGoals) ? args.linkedGoals : undefined,
                 goal: String(args.goal || '').trim() || undefined,
-                dueWhen: String(args.dueWhen || '').trim() || undefined,
-                cost: String(args.cost || '').trim() || undefined,
+                dueWhen: inferredDueWhen,
+                cost: inferredCost,
                 ownerName: String(args.ownerName || '').trim() || undefined,
                 priority: ['high', 'medium', 'low'].includes(args.priority) ? args.priority : undefined,
-                deliverables: [],
+                deliverables: richDeliverables,
               });
               await project.save();
               try { await agents.invalidateCache(String(wsFilter.user || ''), null, String(wsFilter.workspace || '')); } catch {}
-              return { success: true, id: project._id.toString(), title: project.title, message: `Core project "${project.title}" created successfully.` };
+              return { success: true, id: project._id.toString(), title: project.title, message: `Core project "${project.title}" created with budget and deliverables.` };
             }
             case 'create_department_project': {
               const title = String(args.title || '').trim();
@@ -1430,6 +1665,46 @@ exports.respond = async (req, res) => {
                   if (nk && nk === normalizedDept) { normalizedDept = String(k); break; }
                 }
               } catch {}
+              // Rich defaults (budget, due date, deliverables)
+              const context = await buildAgentContext(String(wsFilter.user || ''), String(wsFilter.workspace || ''));
+              // Infer due date from linked Dept KR
+              let inferredDueWhen = String(args.dueWhen || '').trim() || undefined;
+              if (!inferredDueWhen) {
+                const kr = (deptOkr.keyResults || []).find((k) => String(k._id) === String(args.linkedDeptKrId));
+                if (kr?.endAt) {
+                  inferredDueWhen = new Date(kr.endAt).toISOString().slice(0, 10);
+                }
+              }
+              // Estimate budget if missing
+              let inferredCost = _sanitizeCurrency(args.cost);
+              if (!inferredCost) {
+                const hint = `Department: ${normalizedDept} | Project: ${title}${args.goal ? ` | Goal: ${String(args.goal).trim()}` : ''}`;
+                inferredCost = await _aiEstimateBudget(String(wsFilter.user || ''), String(wsFilter.workspace || ''), context, hint);
+              }
+              let deliverableTitles = await _aiSuggestDeliverables(String(wsFilter.user || ''), String(wsFilter.workspace || ''), context, {
+                departmentLabel: normalizedDept,
+                projectTitle: title,
+                goal: String(args.goal || ''),
+                count: 6,
+              });
+              if (!deliverableTitles || deliverableTitles.length === 0) {
+                deliverableTitles = ['Define scope and requirements', 'Implement core tasks', 'QA and finalize'];
+              }
+              const spacedDates = _spreadDueDates(new Date(), inferredDueWhen || new Date(Date.now() + 90*24*60*60*1000), Math.max(3, deliverableTitles.length || 6));
+              const defaultOwner = await _pickAssignee(wsFilter.workspace, normalizedDept);
+              const richDeliverables = [];
+              for (let i = 0; i < deliverableTitles.length; i++) {
+                const text = deliverableTitles[i];
+                const kpi = await _aiSuggestKPI(String(wsFilter.user || ''), String(wsFilter.workspace || ''), context, text, normalizedDept);
+                richDeliverables.push({
+                  text,
+                  kpi: kpi || undefined,
+                  ownerName: defaultOwner || String(args.ownerName || '').trim() || undefined,
+                  dueWhen: spacedDates[i] || undefined,
+                  done: false,
+                });
+              }
+
               const ownerParts = String(args.ownerName || '').trim().split(' ');
               const deptProject = new DepartmentProject({
                 workspace: wsFilter.workspace,
@@ -1440,19 +1715,19 @@ exports.respond = async (req, res) => {
                 linkedDeptOKR: args.linkedDeptOKR,
                 linkedDeptKrId: args.linkedDeptKrId,
                 goal: String(args.goal || '').trim() || undefined,
-                dueWhen: String(args.dueWhen || '').trim() || undefined,
-                cost: String(args.cost || '').trim() || undefined,
+                dueWhen: inferredDueWhen,
+                cost: inferredCost,
                 kpi: String(args.kpi || '').trim() || undefined,
                 milestone: String(args.milestone || '').trim() || undefined,
                 resources: String(args.resources || '').trim() || undefined,
                 firstName: ownerParts[0] || undefined,
                 lastName: ownerParts.slice(1).join(' ') || undefined,
                 priority: ['high', 'medium', 'low'].includes(args.priority) ? args.priority : undefined,
-                deliverables: [],
+                deliverables: richDeliverables,
               });
               await deptProject.save();
               try { await agents.invalidateCache(String(wsFilter.user || ''), null, String(wsFilter.workspace || '')); } catch {}
-              return { success: true, id: deptProject._id.toString(), title: deptProject.title, department: deptProject.departmentKey, message: `Department project "${deptProject.title}" created for ${deptProject.departmentKey}.` };
+              return { success: true, id: deptProject._id.toString(), title: deptProject.title, department: deptProject.departmentKey, message: `Department project "${deptProject.title}" created with budget and deliverables for ${deptProject.departmentKey}.` };
             }
             case 'add_deliverable': {
               const text = String(args.text || '').trim();
@@ -1470,7 +1745,7 @@ exports.respond = async (req, res) => {
                 done: false,
                 dueWhen: String(args.dueWhen || '').trim() || undefined,
                 ownerName: String(args.ownerName || '').trim() || undefined,
-                kpi: String(args.kpi || '').trim() || undefined,
+                kpi: (String(args.kpi || '').trim().replace(/^[\"'“‘`]+/, '').replace(/[\"'”’`]+$/, '')) || undefined,
               });
               await project.save();
               try { await agents.invalidateCache(String(wsFilter.user || ''), null, String(wsFilter.workspace || '')); } catch {}
@@ -1649,9 +1924,150 @@ exports.respond = async (req, res) => {
               const okrType = args.okrType === 'department' ? 'department' : 'core';
               // Validate type-specific required fields
               if (okrType === 'department' && !String(args.departmentKey || '').trim()) return { error: 'departmentKey is required for department OKRs.' };
-              if (okrType === 'department' && (!args.anchorCoreOKR || !args.anchorCoreKrId)) return { error: 'anchorCoreOKR and anchorCoreKrId are required for department OKRs. Call get_okrs to find a core OKR and its KR id.' };
-              const inputKrs = Array.isArray(args.keyResults) ? args.keyResults : [];
+              // Prevent duplicate/similar objectives; auto-generate a novel one if needed
+              let finalObjective = objective;
+              try {
+                const existFilter = { workspace: wsFilter.workspace, okrType, isDeleted: { $ne: true } };
+                if (okrType === 'department' && String(args.departmentKey || '').trim()) {
+                  existFilter.departmentKey = String(args.departmentKey).trim();
+                }
+                const existing = await OKR.find(existFilter).select('objective').lean();
+                const existingObjectives = existing.map((e) => String(e.objective || ''));
+                const isDup = existingObjectives.some((e) => _isSimilarObjective(e, finalObjective));
+                if (isDup) {
+                  // Build a novelty prompt and attempt up to 3 retries
+                  const ctx = await buildAgentContext(String(wsFilter.user || ''), String(wsFilter.workspace || ''));
+                  const ctxStr = formatContextForPrompt(ctx);
+                  const doNotRepeat = existingObjectives
+                    .concat([finalObjective])
+                    .filter(Boolean)
+                    .slice(0, 50) // avoid very long prompts
+                    .map((s, i) => `${i + 1}. ${s}`)
+                    .join('\n');
+                  const basePrompt = [
+                    ctxStr,
+                    `Task: Propose ONE NEW ${okrType.toUpperCase()} OKR Objective (1 sentence) that is meaningfully different from all of the existing objectives listed below.`,
+                    'Constraints:',
+                    '- Do NOT rephrase or restate any item in the list.',
+                    '- Be specific and measurable in spirit but qualitative as an objective.',
+                    '- Keep to one sentence, no quotes, no labels.',
+                    '',
+                    'Existing objectives to avoid (hard do-not-repeat list):',
+                    doNotRepeat,
+                  ].join('\n');
+                  for (let attempt = 0; attempt < 3; attempt++) {
+                    const alt = (await callOpenAI(basePrompt, { model: 'gpt-4o-mini', temperature: 0.9, maxTokens: 120 }))?.content || '';
+                    const altObj = String(alt || '').trim();
+                    if (altObj && !existingObjectives.some((e) => _isSimilarObjective(e, altObj)) && !_isSimilarObjective(finalObjective, altObj)) {
+                      finalObjective = altObj;
+                      break;
+                    }
+                  }
+                  // If still duplicate, fail with a helpful message
+                  if (existingObjectives.some((e) => _isSimilarObjective(e, finalObjective))) {
+                    return { error: 'Generated objective would duplicate existing OKRs. Please try again with different phrasing.' };
+                  }
+                }
+              } catch {}
+              let inputKrs = Array.isArray(args.keyResults) ? args.keyResults : [];
               if (okrType === 'core' && (inputKrs.length < 2 || inputKrs.length > 4)) return { error: 'Core OKRs must have 2 to 4 key results.' };
+              // Compute default cycle window for missing dates
+              const win = await _getCycleWindow(wsFilter.workspace, okrType);
+
+              // Departmental OKR: ensure valid anchor to Core OKR + KR (auto-select if missing/invalid)
+              let anchorOkrId = okrType === 'department' ? (args.anchorCoreOKR ? String(args.anchorCoreOKR) : '') : '';
+              let anchorKrId = okrType === 'department' ? (args.anchorCoreKrId ? String(args.anchorCoreKrId) : '') : '';
+              if (okrType === 'department') {
+                const validateAnchor = async (okrId, krId) => {
+                  const coreOkr = await OKR.findOne({ _id: okrId, workspace: wsFilter.workspace, okrType: 'core', isDeleted: { $ne: true } }).lean();
+                  if (!coreOkr) return false;
+                  const hasKr = (coreOkr.keyResults || []).some((k) => String(k._id) === String(krId));
+                  return !!hasKr;
+                };
+                let valid = false;
+                if (anchorOkrId && anchorKrId) {
+                  valid = await validateAnchor(anchorOkrId, anchorKrId);
+                }
+                if (!valid) {
+                  try {
+                    const cores = await OKR.find({ workspace: wsFilter.workspace, okrType: 'core', isDeleted: { $ne: true } })
+                      .sort({ order: 1 })
+                      .limit(25)
+                      .lean();
+                    const objTok = _textTokens(finalObjective || objective, 3);
+                    const krTextAll = inputKrs.map((k) => String(k?.text || '')).filter(Boolean).join(' ');
+                    const krTok = _textTokens(krTextAll, 3);
+                    let best = null;
+                    for (const c of cores) {
+                      const cObjTok = _textTokens(c.objective || '', 3);
+                      const objInter = objTok.filter((x) => cObjTok.includes(x)).length;
+                      const objScore = objTok.length && cObjTok.length ? (objInter / Math.min(objTok.length, cObjTok.length)) : 0;
+                      for (const kr of (c.keyResults || [])) {
+                        const cKrTok = _textTokens(kr.text || '', 3);
+                        const krInter = krTok.filter((x) => cKrTok.includes(x)).length;
+                        const krScore = (krTok.length && cKrTok.length) ? (krInter / Math.min(krTok.length, cKrTok.length)) : 0;
+                        const score = objScore * 0.6 + krScore * 0.4;
+                        if (!best || score > best.score) best = { okrId: String(c._id), krId: String(kr._id), score };
+                      }
+                    }
+                    if (best) {
+                      anchorOkrId = best.okrId;
+                      anchorKrId = best.krId;
+                      valid = true;
+                    }
+                  } catch {}
+                }
+                if (!valid) {
+                  return { error: 'Unable to determine a valid Core OKR anchor. Please select a Core OKR and a Key Result to anchor this departmental OKR.' };
+                }
+              }
+              // De-duplicate KR texts against existing KR texts in workspace and within this batch
+              try {
+                const existing = await OKR.find({ workspace: wsFilter.workspace, isDeleted: { $ne: true } })
+                  .select('keyResults.text objective okrType departmentKey')
+                  .lean();
+                const existingKrTexts = [];
+                existing.forEach((o) => (o.keyResults || []).forEach((k) => k?.text && existingKrTexts.push(String(k.text))));
+                // Flag duplicates and gather indices needing replacement
+                const needs = [];
+                const seen = [];
+                inputKrs.forEach((kr, idx) => {
+                  const txt = String(kr?.text || '').trim();
+                  if (!txt) return;
+                  const dupExisting = existingKrTexts.some((ek) => _isSimilarKr(ek, txt));
+                  const dupSeen = seen.some((sk) => _isSimilarKr(sk, txt));
+                  if (dupExisting || dupSeen) {
+                    needs.push(idx);
+                  } else {
+                    seen.push(txt);
+                  }
+                });
+                if (needs.length > 0) {
+                  const avoid = Array.from(new Set(existingKrTexts.concat(seen))).slice(0, 200);
+                  const ctx = await buildAgentContext(String(wsFilter.user || ''), String(wsFilter.workspace || ''));
+                  const ctxStr = formatContextForPrompt(ctx);
+                  const askN = needs.length;
+                  const prompt = [
+                    ctxStr,
+                    `Task: Propose exactly ${askN} NEW Key Result statements (text only) for the objective below.`,
+                    `Objective: ${finalObjective}`,
+                    'Constraints:',
+                    '- Each KR must be measurable with a numeric target; keep each under 18 words.',
+                    '- Do NOT duplicate or rephrase any of the KRs in the avoid list.',
+                    '- Return ONLY a strict JSON array of strings.',
+                    '',
+                    'Avoid list (existing KRs and those already accepted):',
+                    avoid.map((a) => `- ${a}`).join('\n'),
+                  ].join('\n');
+                  const { data } = await require('../agents/base').callOpenAIJSON(prompt, { model: 'gpt-4o-mini', temperature: 0.9, maxTokens: 400 });
+                  const candidates = Array.isArray(data) ? data.map((s) => String(s || '').trim()).filter(Boolean) : [];
+                  needs.forEach((idx, i) => {
+                    if (candidates[i]) {
+                      inputKrs[idx] = { ...inputKrs[idx], text: candidates[i] };
+                    }
+                  });
+                }
+              } catch {}
               const keyResults = inputKrs
                 .map((kr) => {
                   const baseline = Number(kr.baseline) || 0;
@@ -1663,8 +2079,8 @@ exports.respond = async (req, res) => {
                     baseline,
                     target: Number(kr.target) || 0,
                     current: kr.current !== undefined ? Number(kr.current) : baseline,
-                    startAt: kr.startAt ? new Date(kr.startAt) : undefined,
-                    endAt: kr.endAt ? new Date(kr.endAt) : undefined,
+                    startAt: kr.startAt ? new Date(kr.startAt) : new Date(win.start),
+                    endAt: kr.endAt ? new Date(kr.endAt) : new Date(win.end),
                     linkTag: ['driver', 'enablement', 'operational'].includes(kr.linkTag) ? kr.linkTag : undefined,
                   };
                 })
@@ -1676,14 +2092,39 @@ exports.respond = async (req, res) => {
                 user: wsFilter.user,
                 okrType,
                 departmentKey: okrType === 'department' ? _normDeptForOKR(String(args.departmentKey || '')) || undefined : undefined,
-                objective,
+                objective: finalObjective,
                 keyResults,
                 notes: String(args.notes || '').trim() || undefined,
                 order: okrOrder,
-                derivedFromGoals: okrType === 'core' && Array.isArray(args.derivedFromGoals) ? args.derivedFromGoals : undefined,
-                anchorCoreOKR: okrType === 'department' ? args.anchorCoreOKR : undefined,
-                anchorCoreKrId: okrType === 'department' ? args.anchorCoreKrId : undefined,
+                derivedFromGoals: okrType === 'core' && Array.isArray(args.derivedFromGoals) && args.derivedFromGoals.length ? args.derivedFromGoals : undefined,
+                anchorCoreOKR: okrType === 'department' ? anchorOkrId : undefined,
+                anchorCoreKrId: okrType === 'department' ? anchorKrId : undefined,
               });
+              // Fallback: if core OKR has no derivedFromGoals provided, pick the most relevant 1–2 1-year goals
+              if (okrType === 'core' && (!okr.derivedFromGoals || okr.derivedFromGoals.length === 0)) {
+                try {
+                  const VisionGoal = require('../models/VisionGoal');
+                  const goals = await VisionGoal.find({ workspace: wsFilter.workspace, isDeleted: false, goalType: '1y' })
+                    .select('_id text order')
+                    .sort({ order: 1 })
+                    .lean();
+                  if (goals && goals.length) {
+                    const tok = (s, minLen = 4) => Array.from(new Set(String(s || '')
+                      .toLowerCase()
+                      .replace(/[^a-z0-9\s]/g, ' ')
+                      .split(/\s+/)
+                      .filter((w) => w && w.length >= minLen)));
+                    const objTok = tok(finalObjective, 4);
+                    const scored = goals.map((g) => {
+                      const gt = tok(g.text || '', 4);
+                      const inter = objTok.filter((x) => gt.includes(x)).length;
+                      const score = inter / Math.max(1, Math.min(objTok.length, gt.length));
+                      return { id: String(g._id), score };
+                    }).sort((a, b) => b.score - a.score);
+                    okr.derivedFromGoals = scored.slice(0, Math.min(2, scored.length)).map((s) => s.id);
+                  }
+                } catch {}
+              }
               await okr.save();
               try { await agents.invalidateCache(String(wsFilter.user || ''), null, String(wsFilter.workspace || '')); } catch {}
               return { success: true, id: okr._id.toString(), objective: okr.objective, okrType: okr.okrType, keyResultCount: keyResults.length, message: `OKR "${okr.objective}" created with ${keyResults.length} key result(s).` };

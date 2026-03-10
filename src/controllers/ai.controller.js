@@ -462,6 +462,13 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
 async function webSearch(query, num = 5) {
   return [];
 }
+
+// Utility: strip leading/trailing straight, curly, or backtick quotes
+function stripOuterQuotes(s) {
+  if (s == null) return s;
+  const t = String(s).trim();
+  return t.replace(/^["'“‘`]+/, '').replace(/["'”’`]+$/, '');
+}
 async function callOpenAI({ type, input, contextText }) {
   const client = getOpenAI();
   // Select appropriate expert prompt based on field type
@@ -555,10 +562,8 @@ async function callOpenAI({ type, input, contextText }) {
     .map((l) => l.replace(/^[-*\d\.\)\s]+/, '').trim())
     .filter((l) => l && !l.startsWith('```'))[0];
   // Strip surrounding quotes if present
-  const unquoted = first && ((first.startsWith('"') && first.endsWith('"')) || (first.startsWith("'") && first.endsWith("'")))
-    ? first.slice(1, -1).trim()
-    : first;
-  return unquoted || '';
+  const unquoted = first || '';
+  return stripOuterQuotes(unquoted);
 }
 
 // New: return an array of n suggestions (default 3)
@@ -651,7 +656,7 @@ async function callOpenAIList({ type, input, contextText, n = 3, nonce, avoid = 
   }
 
   const unique = Array.from(new Set(arr.map((s) => String(s)))).filter((s) => s && s !== '[object Object]');
-  return unique.slice(0, n);
+  return unique.slice(0, n).map(stripOuterQuotes);
 }
 
 // Write multi-paragraph professional prose for business plan sections
@@ -705,7 +710,7 @@ async function callOpenAIProse({ type, input, contextText, maxTokens = 800 }) {
   // Strip code fences if present
   const fenceMatch = text.match(/```(?:[a-z]+)?\s*([\s\S]*?)\s*```/i);
   if (fenceMatch) text = fenceMatch[1].trim();
-  return text;
+  return stripOuterQuotes(text);
 }
 
 exports.callOpenAIProse = callOpenAIProse;
@@ -1133,10 +1138,8 @@ async function callOpenAIRewrite({ type, text, contextText }) {
     .split('\n')
     .map((l) => l.replace(/^[-*\d\.\)\s]+/, '').trim())
     .filter((l) => l && !l.startsWith('```'))[0];
-  const unquoted = first && ((first.startsWith('"') && first.endsWith('"')) || (first.startsWith("'") && first.endsWith("'")))
-    ? first.slice(1, -1).trim()
-    : first;
-  return unquoted || '';
+  const unquoted = first || '';
+  return stripOuterQuotes(unquoted);
 }
 
 exports.suggestUbp = async (req, res) => {
@@ -2578,6 +2581,7 @@ exports.suggestOkrs = async (req, res) => {
 
     // Optional anchor candidates for Department OKRs
     let anchorCandidatesText = '';
+    let anchorCandidates = [];
     if (clientContext?.anchorCandidates && Array.isArray(clientContext.anchorCandidates) && clientContext.anchorCandidates.length) {
       try {
         const blocks = clientContext.anchorCandidates.map((o) => {
@@ -2586,6 +2590,29 @@ exports.suggestOkrs = async (req, res) => {
           return `${header}${krs ? `\n${krs}` : ''}`;
         }).join('\n');
         anchorCandidatesText = `\n\n--- CORE OKR ANCHOR CANDIDATES ---\n${blocks}\n--- END CANDIDATES ---`;
+        anchorCandidates = clientContext.anchorCandidates;
+      } catch {}
+    } else if (clientContext?.mode === 'department-okr' && workspaceId) {
+      // Fallback: load top core OKRs from DB as candidates
+      try {
+        const OKR = require('../models/OKR');
+        const cores = await OKR.find({ workspace: workspaceId, okrType: 'core', isDeleted: { $ne: true } })
+          .sort({ order: 1 })
+          .limit(15)
+          .lean();
+        anchorCandidates = cores.map((o) => ({
+          id: String(o._id),
+          objective: o.objective,
+          keyResults: (o.keyResults || []).map((kr) => ({ id: String(kr._id), text: kr.text })),
+        }));
+        if (anchorCandidates.length) {
+          const blocks = anchorCandidates.map((o) => {
+            const header = `- ${o.id}: ${o.objective}`;
+            const krs = Array.isArray(o.keyResults) ? o.keyResults.map((k) => `    * KR ${k.id}: ${k.text}`).join('\n') : '';
+            return `${header}${krs ? `\n${krs}` : ''}`;
+          }).join('\n');
+          anchorCandidatesText = `\n\n--- CORE OKR ANCHOR CANDIDATES ---\n${blocks}\n--- END CANDIDATES ---`;
+        }
       } catch {}
     }
 
@@ -2674,6 +2701,25 @@ exports.suggestOkrs = async (req, res) => {
       goalsCatalogText = `\n\n--- GOAL CATALOG (1-YEAR) ---\n${lines}\n--- END GOAL CATALOG ---`;
     }
 
+    // Build explicit DO-NOT-REPEAT lists from existing workspace OKRs
+    let avoidObjectivesText = '';
+    let avoidKrsText = '';
+    try {
+      const OKR = require('../models/OKR');
+      const okrExisting = await OKR.find({ workspace: workspaceId, isDeleted: { $ne: true } })
+        .select('objective keyResults.text')
+        .lean();
+      const exObjs = Array.from(new Set(
+        okrExisting.map(o => String(o.objective || '').trim()).filter(Boolean)
+          .concat(Array.isArray(existingObjectives) ? existingObjectives.map(String) : [])
+      )).slice(0, 50);
+      const exKrAll = [];
+      okrExisting.forEach(o => (o.keyResults || []).forEach(k => k?.text && exKrAll.push(String(k.text).trim())));
+      const exKrs = Array.from(new Set(exKrAll)).slice(0, 80);
+      if (exObjs.length) avoidObjectivesText = `\n\n--- DO-NOT-REPEAT OBJECTIVES ---\n${exObjs.map((o,i) => `${i+1}. ${o}`).join('\n')}\n--- END OBJECTIVES ---`;
+      if (exKrs.length) avoidKrsText = `\n\n--- DO-NOT-REPEAT KEY RESULTS ---\n${exKrs.map((o,i) => `${i+1}. ${o}`).join('\n')}\n--- END KRS ---`;
+    } catch {}
+
     const prompt = `Based on the business context provided${clientContext?.mode ? ` for ${clientContext.mode}` : ''}, generate ${count} professional OKRs (Objectives and Key Results).
 
 Each OKR should have:
@@ -2713,7 +2759,7 @@ Guidelines:
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        { role: 'system', content: `You are a strategic planning expert specializing in OKR frameworks. Generate professional, actionable OKRs based on the business context.\n\n${contextText}${goalsCatalogText}` },
+        { role: 'system', content: `You are a strategic planning expert specializing in OKR frameworks. Generate professional, actionable OKRs based on the business context.\n\n${contextText}${goalsCatalogText}${avoidObjectivesText}${avoidKrsText}` },
         { role: 'user', content: prompt },
       ],
       temperature: 0.7,
@@ -2798,6 +2844,212 @@ Guidelines:
     } catch (parseErr) {
       console.warn('[suggestOkrs] Failed to parse OKR JSON:', parseErr.message);
     }
+
+    // For department mode: ensure each OKR is anchored to a Core OKR + KR; if missing, auto-select best match
+    try {
+      if (clientContext?.mode === 'department-okr' && Array.isArray(okrs) && okrs.length) {
+        const tok = (s, minLen = 3) => Array.from(new Set(String(s || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w && w.length >= minLen)));
+        okrs = okrs.map((o) => {
+          if (o.anchorCoreOKR && o.anchorCoreKrId) return o;
+          let best = null;
+          const objTok = tok(o.objective, 3);
+          const krTexts = (o.keyResultsDetailed || []).map((d) => String(d.text || ''));
+          const krTok = tok(krTexts.join(' '), 3);
+          anchorCandidates.forEach((c) => {
+            const cObjTok = tok(c.objective, 3);
+            const objScore = objTok.filter((x) => cObjTok.includes(x)).length / Math.max(1, Math.min(objTok.length, cObjTok.length));
+            (c.keyResults || []).forEach((k) => {
+              const cKrTok = tok(k.text, 3);
+              const krScore = krTok.filter((x) => cKrTok.includes(x)).length / Math.max(1, Math.min(krTok.length || 1, cKrTok.length || 1));
+              const score = objScore * 0.6 + krScore * 0.4;
+              if (!best || score > best.score) best = { okrId: c.id, krId: k.id, score };
+            });
+          });
+          if (best) {
+            o.anchorCoreOKR = best.okrId;
+            o.anchorCoreKrId = best.krId;
+          }
+          return o;
+        });
+      }
+    } catch {}
+
+    // Post-filter: remove objectives too similar to existing ones (including provided existingObjectives)
+    try {
+      const OKR = require('../models/OKR');
+      const existingDb = await OKR.find({ workspace: workspaceId, isDeleted: { $ne: true } }).select('objective okrType departmentKey').lean();
+      const allExisting = []
+        .concat(existingDb.map((o) => String(o.objective || '')))
+        .concat(Array.isArray(existingObjectives) ? existingObjectives.map(String) : [])
+        .filter(Boolean);
+      const tok = (s) => Array.from(new Set(String(s || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w && w.length >= 4)));
+      const isSim = (a, b) => {
+        const A = tok(a), B = tok(b);
+        if (!A.length || !B.length) return false;
+        const inter = A.filter((x) => B.includes(x)).length;
+        const ratio = inter / Math.min(A.length, B.length);
+        return ratio >= 0.7;
+      };
+      const filtered = [];
+      okrs.forEach((o) => {
+        const obj = String(o?.objective || '').trim();
+        if (!obj) return;
+        const simExisting = allExisting.some((ex) => isSim(ex, obj));
+        const simBatch = filtered.some((ex) => isSim(ex.objective, obj));
+        if (!simExisting && !simBatch) filtered.push(o);
+      });
+      okrs = filtered;
+    } catch {}
+
+    // KR-level novelty: filter out KRs too similar to existing KR texts; keep at least 2
+    try {
+      // Build existing KR list from DB for this workspace
+      const OKR = require('../models/OKR');
+      const ex = await OKR.find({ workspace: workspaceId, isDeleted: { $ne: true } }).select('keyResults.text').lean();
+      const exKR = [];
+      ex.forEach(o => (o.keyResults || []).forEach(k => k?.text && exKR.push(String(k.text).trim())));
+      const tok3 = (s) => Array.from(new Set(String(s || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w && w.length >= 3)));
+      const isSimKR = (a, b) => {
+        const A = tok3(a), B = tok3(b);
+        if (!A.length || !B.length) return false;
+        const inter = A.filter((x) => B.includes(x)).length;
+        const ratio = inter / Math.min(A.length, B.length);
+        return ratio >= 0.8;
+      };
+      okrs = okrs.map((o) => {
+        const seen = [];
+        const krs = (o.keyResultsDetailed || []).filter(Boolean).map((d) => ({ ...d }));
+        const filtered = [];
+        krs.forEach((d) => {
+          const txt = String(d.text || '').trim();
+          if (!txt) return;
+          const dupExisting = exKR.some((ek) => isSimKR(ek, txt));
+          const dupSeen = seen.some((t) => isSimKR(t, txt));
+          if (!dupExisting && !dupSeen) {
+            filtered.push(d);
+            seen.push(txt);
+          }
+        });
+        if (filtered.length >= 2) {
+          return { ...o, keyResultsDetailed: filtered.slice(0,4), keyResults: filtered.map((d) => d.text).slice(0,4) };
+        }
+        // fallback: ensure at least 2 by keeping original first two
+        return { ...o, keyResultsDetailed: krs.slice(0,4), keyResults: krs.map((d) => d.text).slice(0,4) };
+      });
+    } catch {}
+
+    // Post-filter: remove objectives too similar to existing ones (including provided existingObjectives)
+    try {
+      const OKR = require('../models/OKR');
+      const existingDb = await OKR.find({ workspace: workspaceId, isDeleted: { $ne: true } }).select('objective okrType departmentKey keyResults.text').lean();
+      const allExisting = []
+        .concat(existingDb.map((o) => String(o.objective || '')))
+        .concat(Array.isArray(existingObjectives) ? existingObjectives.map(String) : [])
+        .filter(Boolean);
+      const tok = (s) => Array.from(new Set(String(s || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w && w.length >= 4)));
+      const isSim = (a, b) => {
+        const A = tok(a), B = tok(b);
+        if (!A.length || !B.length) return false;
+        const inter = A.filter((x) => B.includes(x)).length;
+        const ratio = inter / Math.min(A.length, B.length);
+        return ratio >= 0.7;
+      };
+      const filtered = [];
+      okrs.forEach((o) => {
+        const obj = String(o?.objective || '').trim();
+        if (!obj) return;
+        const simExisting = allExisting.some((ex) => isSim(ex, obj));
+        const simBatch = filtered.some((ex) => isSim(ex.objective, obj));
+        if (!simExisting && !simBatch) filtered.push(o);
+      });
+      okrs = filtered;
+
+      // KR-level novelty: avoid duplicating existing KR texts; keep at least 2 per OKR
+      const exKR = [];
+      existingDb.forEach(o => (o.keyResults || []).forEach(k => k?.text && exKR.push(String(k.text).trim())));
+      const tok3 = (s) => Array.from(new Set(String(s || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter((w) => w && w.length >= 3)));
+      const isSimKR = (a, b) => {
+        const A = tok3(a), B = tok3(b);
+        if (!A.length || !B.length) return false;
+        const inter = A.filter((x) => B.includes(x)).length;
+        const ratio = inter / Math.min(A.length, B.length);
+        return ratio >= 0.8;
+      };
+      okrs = okrs.map((o) => {
+        const seen = [];
+        const krs = (o.keyResultsDetailed || []).filter(Boolean).map((d) => ({ ...d }));
+        const filteredKrs = [];
+        krs.forEach((d) => {
+          const txt = String(d.text || '').trim();
+          if (!txt) return;
+          const dupExisting = exKR.some((ek) => isSimKR(ek, txt));
+          const dupSeen = seen.some((t) => isSimKR(t, txt));
+          if (!dupExisting && !dupSeen) {
+            filteredKrs.push(d);
+            seen.push(txt);
+          }
+        });
+        if (filteredKrs.length >= 2) {
+          return { ...o, keyResultsDetailed: filteredKrs.slice(0,4), keyResults: filteredKrs.map((d) => d.text).slice(0,4) };
+        }
+        return { ...o, keyResultsDetailed: krs.slice(0,4), keyResults: krs.map((d) => d.text).slice(0,4) };
+      });
+    } catch {}
+
+    // Rebalance derivedFromGoals so multiple goals are used when available
+    try {
+      const VisionGoal = require('../models/VisionGoal');
+      const goals = await VisionGoal.find({ workspace: workspaceId, isDeleted: false, goalType: '1y' })
+        .select('_id text order')
+        .sort({ order: 1 })
+        .lean();
+      if (goals && goals.length > 1 && okrs && okrs.length > 1) {
+        const gMap = new Map(goals.map((g) => [String(g._id), g]));
+        const tok = (s, minLen = 4) => Array.from(new Set(String(s || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .split(/\s+/)
+          .filter((w) => w && w.length >= minLen)));
+        const usage = new Map(Array.from(gMap.keys()).map((k) => [k, 0]));
+        // Normalize goal IDs and count usage
+        okrs.forEach((o) => {
+          let ids = Array.isArray(o.derivedFromGoals) ? o.derivedFromGoals.map(String) : [];
+          ids = ids.filter((id) => gMap.has(id)).slice(0, 2);
+          o.derivedFromGoals = ids;
+          ids.forEach((id) => usage.set(id, (usage.get(id) || 0) + 1));
+        });
+        const allGoalIds = Array.from(gMap.keys());
+        okrs.forEach((o, idx) => {
+          const obj = String(o.objective || '');
+          const objTok = tok(obj, 4);
+          const scored = allGoalIds.map((id) => {
+            const g = gMap.get(id);
+            const gt = tok(g?.text || '', 4);
+            const inter = objTok.filter((x) => gt.includes(x)).length;
+            const score = inter / Math.max(1, Math.min(objTok.length, gt.length));
+            return { id, score, used: usage.get(id) || 0 };
+          }).sort((a, b) => (b.score - a.score) || (a.used - b.used));
+          const current = new Set(Array.isArray(o.derivedFromGoals) ? o.derivedFromGoals.map(String) : []);
+          // For early OKRs, enforce diverse goals when possible
+          if (idx < allGoalIds.length) {
+            const pick = scored.find((s) => !current.has(s.id)) || scored[0];
+            if (pick && (!current.size || (usage.get(pick.id) < Math.max(...Array.from(usage.values()))))) {
+              const arr = Array.from(current);
+              if (arr.length === 0) {
+                o.derivedFromGoals = [pick.id];
+                usage.set(pick.id, (usage.get(pick.id) || 0) + 1);
+              } else if (!current.has(pick.id)) {
+                const worst = arr[0];
+                usage.set(worst, Math.max(0, (usage.get(worst) || 0) - 1));
+                o.derivedFromGoals = [pick.id];
+                usage.set(pick.id, (usage.get(pick.id) || 0) + 1);
+              }
+            }
+          }
+          if (Array.isArray(o.derivedFromGoals)) o.derivedFromGoals = o.derivedFromGoals.slice(0, 2);
+        });
+      }
+    } catch {}
 
     return res.json({ okrs, raw: content });
   } catch (err) {
@@ -3079,7 +3331,7 @@ async function callOpenAIListPhrases({ type, input, contextText, n = 3, existing
   if (!Array.isArray(arr) || !arr.length) {
     arr = text.split('\n').map((l)=>l.replace(/^[-*\d\.\)\s]+/, '').trim()).filter(Boolean);
   }
-  const uniq = Array.from(new Set(arr.map((x)=>String(x).trim()))).filter(Boolean);
+  const uniq = Array.from(new Set(arr.map((x)=>stripOuterQuotes(String(x).trim())))).filter(Boolean);
   // Ensure sentence case: first letter uppercase, rest lowercase
   const formatted = uniq.map((s) => {
     if (!s) return s;
@@ -3107,8 +3359,7 @@ async function callOpenAIRewritePhrase({ type, text, contextText }) {
   let out = (resp.choices?.[0]?.message?.content || '').trim();
   const fence = out.match(/```(?:json)?\s*([\s\S]*?)\s*```/i); if (fence) out = fence[1].trim();
   out = out.split('\n').map((x)=>x.replace(/^[-*\d\.\)\s]+/, '').trim()).filter(Boolean)[0] || '';
-  if ((out.startsWith('"') && out.endsWith('"')) || (out.startsWith("'") && out.endsWith("'"))) out = out.slice(1,-1).trim();
-  return out;
+  return stripOuterQuotes(out);
 }
 
 // Redistribute all deliverable due dates across ALL projects from ALL departments

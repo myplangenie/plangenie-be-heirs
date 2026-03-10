@@ -17,6 +17,7 @@ const viewAs = require('../middleware/viewAs');
 const workspaceContext = require('../middleware/workspace');
 const { requireViewer, requireContributor } = require('../middleware/workspaceRole');
 const agents = require('../agents');
+const { listCapabilities, resolveAgentForTask } = require('../agents');
 
 // Apply auth first, then viewAs (for collaborators), then workspace context to all agent routes
 // Note: auth() must run before workspaceContext because workspace needs req.user.id
@@ -37,7 +38,15 @@ router.post('/plan-guidance', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
-    const { forceRefresh, timeHorizon = 'week' } = req.body;
+    const { forceRefresh, timeHorizon = 'week', task } = req.body;
+
+    // Optional referral: if task suggests another agent, return referral metadata
+    if (typeof task === 'string' && task.trim()) {
+      const { agent, reason } = resolveAgentForTask(task);
+      if (agent?.key && agent.key !== 'plan-guidance') {
+        return res.json({ success: true, referral: { to: agent, reason }, agent: 'plan-guidance' });
+      }
+    }
 
     // Validate timeHorizon
     const validHorizons = ['today', 'week', 'month'];
@@ -65,6 +74,36 @@ router.post('/plan-guidance', requireViewer, async (req, res) => {
 });
 
 /**
+ * Capability Directory
+ * GET /api/agents/capabilities
+ */
+router.get('/capabilities', requireViewer, async (req, res) => {
+  try {
+    res.json({ success: true, data: listCapabilities() });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to load capabilities' });
+  }
+});
+
+/**
+ * Resolve which agent should handle a natural-language task
+ * POST /api/agents/resolve
+ * Body: { task: string }
+ */
+router.post('/resolve', requireViewer, async (req, res) => {
+  try {
+    const { task } = req.body || {};
+    if (!task || typeof task !== 'string') {
+      return res.status(400).json({ success: false, error: 'Missing task' });
+    }
+    const { agent, reason } = resolveAgentForTask(task);
+    res.json({ success: true, data: { agent, reason } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message || 'Failed to resolve agent' });
+  }
+});
+
+/**
  * Financial Validation Agent
  * POST /api/agents/financial-validate
  * Returns validation flags and warnings
@@ -73,7 +112,14 @@ router.post('/financial-validate', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
-    const { forceRefresh } = req.body;
+    const { forceRefresh, task } = req.body;
+
+    if (typeof task === 'string' && task.trim()) {
+      const { agent, reason } = resolveAgentForTask(task);
+      if (agent?.key && agent.key !== 'financial-validate') {
+        return res.json({ success: true, referral: { to: agent, reason }, agent: 'financial-validate' });
+      }
+    }
 
     console.log('[Agent] financial-validate - userId:', userId, 'workspaceId:', workspaceId);
 
@@ -101,7 +147,14 @@ router.post('/strategy-suggest', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
-    const { forceRefresh, focusArea } = req.body;
+    const { forceRefresh, focusArea, task } = req.body;
+
+    if (typeof task === 'string' && task.trim()) {
+      const { agent, reason } = resolveAgentForTask(task);
+      if (agent?.key && agent.key !== 'strategy-suggest') {
+        return res.json({ success: true, referral: { to: agent, reason }, agent: 'strategy-suggest' });
+      }
+    }
 
     const result = await agents.generateStrategySuggestions(userId, {
       forceRefresh,
@@ -135,7 +188,14 @@ router.post('/progress-status', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
-    const { forceRefresh, timeHorizon = 'week' } = req.body;
+    const { forceRefresh, timeHorizon = 'week', task } = req.body;
+
+    if (typeof task === 'string' && task.trim()) {
+      const { agent, reason } = resolveAgentForTask(task);
+      if (agent?.key && agent.key !== 'progress-status') {
+        return res.json({ success: true, referral: { to: agent, reason }, agent: 'progress-status' });
+      }
+    }
 
     // Validate timeHorizon
     const validHorizons = ['today', 'week', 'month'];
@@ -171,7 +231,14 @@ router.post('/strategic-integrate', requireViewer, async (req, res) => {
   try {
     const userId = req.user.id;
     const workspaceId = req.workspace?._id;
-    const { forceRefresh } = req.body;
+    const { forceRefresh, task } = req.body;
+
+    if (typeof task === 'string' && task.trim()) {
+      const { agent, reason } = resolveAgentForTask(task);
+      if (agent?.key && agent.key !== 'strategic-integrate') {
+        return res.json({ success: true, referral: { to: agent, reason }, agent: 'strategic-integrate' });
+      }
+    }
 
     console.log('[Agent] strategic-integrate - userId:', userId, 'workspaceId:', workspaceId);
 
