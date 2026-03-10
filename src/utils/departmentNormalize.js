@@ -15,6 +15,10 @@ const DEFAULT_DEPARTMENTS = [
 const DEFAULT_DEPT_KEYS = DEFAULT_DEPARTMENTS.map((d) => d.key);
 
 const LEGACY_KEY_MAP = {
+  'Central (Executive View)': 'executive',
+  'Central Executive': 'executive',
+  centralExecutive: 'executive',
+  centralExecutiveView: 'executive',
   financeAdmin: 'finance',
   'Finance & Admin': 'finance',
   'Finance and Admin': 'finance',
@@ -39,12 +43,15 @@ function normalizeDepartmentKey(input) {
   );
   if (matchByLabel) return matchByLabel.key;
 
-  return trimmed
+  const normalized = trimmed
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\s+(.)/g, (_, ch) => ch.toUpperCase())
     .replace(/\s/g, '');
+
+  if (['centralExecutive', 'centralExecutiveView', 'executive'].includes(normalized)) return 'executive';
+
+  return normalized;
 }
 
 module.exports = { normalizeDepartmentKey };
-

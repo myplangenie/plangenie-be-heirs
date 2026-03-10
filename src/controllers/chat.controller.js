@@ -1344,6 +1344,32 @@ exports.respond = async (req, res) => {
                 const existingCount = await CoreProject.countDocuments({ workspace: wsFilter.workspace, isDeleted: false, linkedCoreOKR: args.linkedCoreOKR });
                 if (existingCount >= 3) return { error: 'Each Core Objective can have at most 3 Core Projects on the free plan.' };
               }
+              // Resolve departments to existing keys in this workspace when possible
+              const { normalizeDepartmentKey: _normDeptArr } = require('../utils/departmentNormalize');
+              const rawDepts = Array.isArray(args.departments) ? args.departments : [];
+              let normalizedDepartments = Array.from(new Set(rawDepts.map((d) => _normDeptArr(String(d || ''))))).filter(Boolean);
+              try {
+                const DepartmentProject = require('../models/DepartmentProject');
+                const CoreProject = require('../models/CoreProject');
+                const existingDeptKeys = await DepartmentProject.distinct('departmentKey', { workspace: wsFilter.workspace, isDeleted: false });
+                const existingCoreDeptKeys = await CoreProject.distinct('departments', { workspace: wsFilter.workspace, isDeleted: false });
+                const { getWorkspaceFields } = require('../services/workspaceFieldService');
+                const fields = await getWorkspaceFields(wsFilter.workspace);
+                const editable = Array.isArray(fields.editableDepts) ? fields.editableDepts : [];
+                const candidates = []
+                  .concat(existingDeptKeys || [])
+                  .concat(existingCoreDeptKeys || [])
+                  .concat(editable.map((d) => (typeof d === 'string' ? d : (d?.key || d?.label || ''))));
+                // Map each normalized dept to first matching existing candidate (by normalized form)
+                normalizedDepartments = normalizedDepartments.map((nd) => {
+                  for (const k of candidates) {
+                    const nk = _normDeptArr(String(k || ''));
+                    if (nk && nk === nd) return String(k);
+                  }
+                  return nd;
+                });
+              } catch {}
+
               const project = new CoreProject({
                 workspace: wsFilter.workspace,
                 user: wsFilter.user,
@@ -1351,7 +1377,7 @@ exports.respond = async (req, res) => {
                 description: String(args.description || '').trim() || undefined,
                 executiveSponsorName: String(args.executiveSponsorName).trim(),
                 responsibleLeadName: String(args.responsibleLeadName).trim(),
-                departments: args.departments,
+                departments: normalizedDepartments,
                 linkedCoreOKR: args.linkedCoreOKR,
                 linkedCoreKrId: args.linkedCoreKrId,
                 linkedGoals: Array.isArray(args.linkedGoals) ? args.linkedGoals : undefined,
@@ -1379,14 +1405,36 @@ exports.respond = async (req, res) => {
               // Validate dept OKR + KR exist and match department
               const deptOkr = await OKR.findOne({ _id: args.linkedDeptOKR, workspace: wsFilter.workspace, okrType: 'department', isDeleted: { $ne: true } }).lean();
               if (!deptOkr) return { error: `Department OKR "${args.linkedDeptOKR}" not found. Use get_okrs to list available Department OKRs.` };
-              if (String(deptOkr.departmentKey || '') !== String(department || '')) return { error: `The linked OKR belongs to department "${deptOkr.departmentKey}" but the project is for "${department}". They must match.` };
+              const { normalizeDepartmentKey: _normDeptKeyMatch } = require('../utils/departmentNormalize');
+              if (_normDeptKeyMatch(String(deptOkr.departmentKey || '')) !== _normDeptKeyMatch(String(department || ''))) {
+                return { error: `The linked OKR belongs to department "${deptOkr.departmentKey}" but the project is for "${department}". They must match.` };
+              }
               const deptKrExists = (deptOkr.keyResults || []).some((kr) => String(kr._id) === String(args.linkedDeptKrId));
               if (!deptKrExists) return { error: `Key Result "${args.linkedDeptKrId}" not found in that OKR. Use get_okrs to list key result IDs.` };
+              const { normalizeDepartmentKey: _normDeptKey } = require('../utils/departmentNormalize');
+              let normalizedDept = _normDeptKey(department);
+              try {
+                const DepartmentProject = require('../models/DepartmentProject');
+                const CoreProject = require('../models/CoreProject');
+                const existingDeptKeys = await DepartmentProject.distinct('departmentKey', { workspace: wsFilter.workspace, isDeleted: false });
+                const existingCoreDeptKeys = await CoreProject.distinct('departments', { workspace: wsFilter.workspace, isDeleted: false });
+                const { getWorkspaceFields } = require('../services/workspaceFieldService');
+                const fields = await getWorkspaceFields(wsFilter.workspace);
+                const editable = Array.isArray(fields.editableDepts) ? fields.editableDepts : [];
+                const candidates = []
+                  .concat(existingDeptKeys || [])
+                  .concat(existingCoreDeptKeys || [])
+                  .concat(editable.map((d) => (typeof d === 'string' ? d : (d?.key || d?.label || ''))));
+                for (const k of candidates) {
+                  const nk = _normDeptKey(String(k || ''));
+                  if (nk && nk === normalizedDept) { normalizedDept = String(k); break; }
+                }
+              } catch {}
               const ownerParts = String(args.ownerName || '').trim().split(' ');
               const deptProject = new DepartmentProject({
                 workspace: wsFilter.workspace,
                 user: wsFilter.user,
-                departmentKey: department,
+                departmentKey: normalizedDept,
                 title,
                 description: String(args.description || '').trim() || undefined,
                 linkedDeptOKR: args.linkedDeptOKR,
@@ -1622,11 +1670,12 @@ exports.respond = async (req, res) => {
                 })
                 .filter((kr) => kr.text);
               const okrOrder = await OKR.getNextOrder(wsFilter.workspace);
+              const { normalizeDepartmentKey: _normDeptForOKR } = require('../utils/departmentNormalize');
               const okr = new OKR({
                 workspace: wsFilter.workspace,
                 user: wsFilter.user,
                 okrType,
-                departmentKey: okrType === 'department' ? String(args.departmentKey || '').trim().toLowerCase() || undefined : undefined,
+                departmentKey: okrType === 'department' ? _normDeptForOKR(String(args.departmentKey || '')) || undefined : undefined,
                 objective,
                 keyResults,
                 notes: String(args.notes || '').trim() || undefined,

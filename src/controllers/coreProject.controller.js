@@ -153,6 +153,11 @@ exports.create = async (req, res, next) => {
       }
     }
 
+    const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
+    const normalizedDepartments = Array.isArray(departments)
+      ? Array.from(new Set(departments.map((d) => normalizeDepartmentKey(String(d || ''))))).filter(Boolean)
+      : [];
+
     const projectData = addWorkspaceToDoc({
       user: userId,
       title: title.trim(),
@@ -168,7 +173,7 @@ exports.create = async (req, res, next) => {
       linkedCoreOKR: linkedCoreOKR || undefined,
       linkedCoreKrId: linkedCoreKrId || undefined,
       linkedGoals: Array.isArray(linkedGoals) ? linkedGoals : undefined,
-      departments: departments,
+      departments: normalizedDepartments,
       deliverables: Array.isArray(deliverables)
         ? deliverables.map(d => ({
             text: d.text?.trim() || '',
@@ -253,7 +258,33 @@ exports.update = async (req, res, next) => {
       if (!krExists) return res.status(400).json({ message: 'linkedCoreKrId must reference a Key Result within the linked Core OKR' });
     }
     if (linkedGoals !== undefined) project.linkedGoals = Array.isArray(linkedGoals) ? linkedGoals : [];
-    if (departments !== undefined) project.departments = Array.isArray(departments) ? departments : [];
+    if (departments !== undefined) {
+      const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
+      const base = Array.isArray(departments) ? departments : [];
+      const normalized = Array.from(new Set(base.map((d)=> normalizeDepartmentKey(String(d || ''))))).filter(Boolean);
+      try {
+        const DepartmentProject = require('../models/DepartmentProject');
+        const CoreProject = require('../models/CoreProject');
+        const existingDeptKeys = await DepartmentProject.distinct('departmentKey', { ...wsFilter, isDeleted: false });
+        const existingCoreDeptKeys = await CoreProject.distinct('departments', { ...wsFilter, isDeleted: false });
+        const { getWorkspaceFields } = require('../services/workspaceFieldService');
+        const fields = await getWorkspaceFields(wsFilter.workspace);
+        const editable = Array.isArray(fields.editableDepts) ? fields.editableDepts : [];
+        const candidates = []
+          .concat(existingDeptKeys || [])
+          .concat(existingCoreDeptKeys || [])
+          .concat(editable.map((d) => (typeof d === 'string' ? d : (d?.key || d?.label || ''))));
+        project.departments = normalized.map((nd) => {
+          for (const k of candidates) {
+            const nk = normalizeDepartmentKey(String(k || ''));
+            if (nk && nk === nd) return String(k);
+          }
+          return nd;
+        });
+      } catch {
+        project.departments = normalized;
+      }
+    }
     if (order !== undefined) project.order = order;
 
     // Replace deliverables if provided
