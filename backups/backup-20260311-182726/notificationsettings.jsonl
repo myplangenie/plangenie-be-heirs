@@ -1,0 +1,1 @@
+{"_id":{"$oid":"69031b6733d35d7ce7cd5fff"},"user":{"$oid":"6902f6e58d0d3a49714de018"},"__v":{"$numberInt":"0"},"createdAt":{"$date":{"$numberLong":"1761811303361"}},"frequency":"Real-time","tone":"Professional","updatedAt":{"$date":{"$numberLong":"1761811303361"}}}

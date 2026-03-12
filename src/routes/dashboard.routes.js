@@ -56,6 +56,7 @@ router.post('/daily-wishes/:id/view', requireViewer, ctrl.markWishViewed);
 router.get('/departments', requireViewer, ctrl.getDepartments);
 router.get('/departments/export/pdf', requireViewer, requireDepartmentsPdfExport, ctrl.exportDepartmentsPdf);
 router.get('/departments/export/docx', requireViewer, requireDepartmentsDocxExport, ctrl.exportDepartmentsDocx);
+router.post('/departments', requireContributor, requireFeature('departmentPlans'), ctrl.createDepartment);
 router.patch('/departments', requireContributor, requireFeature('departmentPlans'), ctrl.updateDepartment);
 router.patch('/action-assignments/status', requireContributor, requireFeature('departmentPlans'), ctrl.updateActionAssignmentStatus);
 router.patch('/action-assignments/item', requireContributor, requireFeature('departmentPlans'), ctrl.updateActionAssignmentItem);

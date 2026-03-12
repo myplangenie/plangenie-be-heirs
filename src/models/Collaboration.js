@@ -49,6 +49,11 @@ const mongoose = require('mongoose');
         'assumptions',
       ],
     }],
+    // Optional linkage to the owner's Department documents (id-based)
+    // Primary department this collaborator belongs to (if any)
+    primaryDepartmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department', default: null, index: true },
+    // Additional departments (scoped access)
+    departmentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Department' }],
   },
   { timestamps: true }
 );

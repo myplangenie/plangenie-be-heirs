@@ -54,10 +54,16 @@ router.post('/plan-guidance', requireViewer, async (req, res) => {
 
     console.log('[Agent] plan-guidance - userId:', userId, 'workspaceId:', workspaceId, 'timeHorizon:', horizon);
 
+    const viewerContext = req.user.viewerId ? {
+      viewerId: String(req.user.viewerId),
+      accessType: String(req.user.accessType || 'admin').toLowerCase(),
+      allowedDepartments: Array.isArray(req.user.allowedDepartments) ? req.user.allowedDepartments : [],
+    } : null;
     const result = await agents.generateGuidance(userId, {
       forceRefresh,
       workspaceId,
       timeHorizon: horizon,
+      viewerContext,
     });
 
     res.json({
@@ -123,7 +129,12 @@ router.post('/financial-validate', requireViewer, async (req, res) => {
 
     console.log('[Agent] financial-validate - userId:', userId, 'workspaceId:', workspaceId);
 
-    const result = await agents.validateFinancials(userId, { forceRefresh, workspaceId });
+    const viewerContext = req.user.viewerId ? {
+      viewerId: String(req.user.viewerId),
+      accessType: String(req.user.accessType || 'admin').toLowerCase(),
+      allowedDepartments: Array.isArray(req.user.allowedDepartments) ? req.user.allowedDepartments : [],
+    } : null;
+    const result = await agents.validateFinancials(userId, { forceRefresh, workspaceId, viewerContext });
 
     res.json({
       success: true,
@@ -203,10 +214,16 @@ router.post('/progress-status', requireViewer, async (req, res) => {
 
     console.log('[Agent] progress-status - userId:', userId, 'workspaceId:', workspaceId, 'timeHorizon:', horizon);
 
+    const viewerContext = req.user.viewerId ? {
+      viewerId: String(req.user.viewerId),
+      accessType: String(req.user.accessType || 'admin').toLowerCase(),
+      allowedDepartments: Array.isArray(req.user.allowedDepartments) ? req.user.allowedDepartments : [],
+    } : null;
     const result = await agents.getProgressStatus(userId, {
       forceRefresh,
       workspaceId,
       timeHorizon: horizon,
+      viewerContext,
     });
 
     res.json({
@@ -242,7 +259,12 @@ router.post('/strategic-integrate', requireViewer, async (req, res) => {
 
     console.log('[Agent] strategic-integrate - userId:', userId, 'workspaceId:', workspaceId);
 
-    const result = await agents.getStrategicIntegration(userId, { forceRefresh, workspaceId });
+    const viewerContext = req.user.viewerId ? {
+      viewerId: String(req.user.viewerId),
+      accessType: String(req.user.accessType || 'admin').toLowerCase(),
+      allowedDepartments: Array.isArray(req.user.allowedDepartments) ? req.user.allowedDepartments : [],
+    } : null;
+    const result = await agents.getStrategicIntegration(userId, { forceRefresh, workspaceId, viewerContext });
 
     res.json({
       success: true,

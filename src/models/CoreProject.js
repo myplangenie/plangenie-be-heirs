@@ -37,7 +37,8 @@ const CoreProjectSchema = new mongoose.Schema({
   // Link to a single Core Key Result (system rule)
   linkedCoreOKR: { type: mongoose.Schema.Types.ObjectId, ref: 'OKR' },
   linkedCoreKrId: { type: mongoose.Schema.Types.ObjectId },
-  departments: [{ type: String }], // Department keys this project relates to
+  departments: [{ type: String }], // Legacy department keys/labels (kept for compatibility)
+  departmentIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Department' }], // Preferred id-based linkage
   relatedProjects: [{ type: mongoose.Schema.Types.ObjectId, ref: 'CoreProject' }],
 
   // Deliverables (sub-documents with their own IDs)

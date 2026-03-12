@@ -6,6 +6,7 @@
  */
 
 const Workspace = require('../models/Workspace');
+const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
 
 /**
  * Get all workspace fields as a plain object
@@ -153,6 +154,66 @@ async function updateWorkspaceFields(workspaceId, updates) {
 }
 
 /**
+ * Ensure canonical departments registry (fields.actionSections) contains provided names/keys.
+ * Merges with existing entries and preserves existing labels.
+ * @param {string} workspaceId
+ * @param {string[]} namesOrKeys
+ */
+async function ensureActionSections(workspaceId, namesOrKeys) {
+  try {
+    if (!workspaceId || !Array.isArray(namesOrKeys) || namesOrKeys.length === 0) return;
+    const ws = await Workspace.findById(workspaceId);
+    if (!ws) return;
+    if (!ws.fields) ws.fields = new Map();
+
+    const existing = ws.fields.get('actionSections');
+    const sections = Array.isArray(existing) ? existing : [];
+    const map = new Map();
+    // Seed map with existing entries
+    for (const s of sections) {
+      const key = normalizeDepartmentKey(String((s && s.key) || (s && s.label) || ''));
+      if (!key) continue;
+      const label = String((s && s.label) || '').trim() || labelize(key);
+      map.set(key, { key, label });
+    }
+    // Merge incoming
+    for (const n of namesOrKeys) {
+      const raw = String(n || '').trim();
+      if (!raw) continue;
+      const key = normalizeDepartmentKey(raw);
+      if (!key) continue;
+      // Prefer original raw as label when it looks human (has space or capitalized), else derive from key
+      const label = hasHumanLabel(raw) ? raw : labelize(key);
+      map.set(key, { key, label });
+    }
+
+    const next = Array.from(map.values());
+    ws.fields.set('actionSections', next);
+    ws.markModified('fields');
+    await ws.save();
+  } catch {
+    // Non-fatal
+  }
+}
+
+function hasHumanLabel(s = '') {
+  // Heuristics: contains space, starts with capital, or contains '&'
+  return /\s/.test(s) || /^[A-Z]/.test(s) || /&/.test(s);
+}
+
+function labelize(key = '') {
+  // From camelCase or kebab/underscore to Title Case
+  const spaced = String(key)
+    .replace(/[-_]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2');
+  return spaced
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+/**
  * Parse targetMarket JSON to human-readable string
  * @param {string} value - JSON string or legacy string
  * @returns {string} - Human-readable customer type description
@@ -275,5 +336,6 @@ module.exports = {
   getMarketFields,
   getFinancialFields,
   updateWorkspaceFields,
+  ensureActionSections,
   buildContextFromWorkspace,
 };

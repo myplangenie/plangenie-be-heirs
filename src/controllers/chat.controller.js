@@ -98,6 +98,8 @@ function _toolStatusMsg(name, args) {
     case 'create_vision_goal': return `Creating ${args.goalType || ''} goal...`;
     case 'update_vision_goal': return `Updating ${args.goalType || ''} goal...`;
     case 'delete_vision_goal': return `Deleting ${args.goalType || ''} goal...`;
+    case 'create_department': return `Creating department "${args.name || ''}"...`;
+    case 'delete_department': return `Deleting department "${args.name || args.key || ''}"...`;
     case 'update_vision_goals': return 'Updating vision and goals...';
     case 'update_cash_position': return 'Updating cash position...';
     case 'update_fixed_costs': return 'Updating fixed costs...';
@@ -246,6 +248,7 @@ const MUTATION_TOOLS = new Set([
   'invite_workspace_member', 'remove_workspace_member', 'update_workspace',
   'update_kr_fields',
   'create_vision_goal', 'update_vision_goal', 'delete_vision_goal',
+  'create_department', 'delete_department',
 ]);
 
 // ── Helpers for richer AI-driven project generation ──
@@ -1036,9 +1039,10 @@ exports.respond = async (req, res) => {
           'If team member names are not in context, do not guess; state that they are not provided.',
           'IMPORTANT: You are not just a reporting advisor. You can take real actions on this platform. When the user asks you to create a project, add a deliverable, assign an owner, reschedule a task, mark something complete, or delete a project — use the available action tools to do it immediately. Do not just give advice; actually execute the action. After completing an action, briefly confirm what was done.',
           'PROJECTS: When creating a core project, always call get_okrs first to retrieve available Core OKRs and their key result IDs. Core projects MUST link to a Core OKR key result and require executiveSponsorName, responsibleLeadName, and departments. When creating a department project, always call get_okrs first to retrieve available Department OKRs for that department. Department projects MUST link to a Department OKR key result in the same department.',
+          'DEPARTMENTS: To create a new department (so it appears on Departments and in selectors), call create_department with a name (and optional key). This updates workspace configuration (actionSections/editableDepts).',
           'PEOPLE: There are two distinct concepts. (1) Team Members — people on the internal roster/directory (name, role, department). Use add_team_member when the user says "add [name] to the team", "add a team member", or mentions a person by name. No email needed, no invite sent. (2) Collaborators — people who need actual login access to the platform. Use invite_collaborator ONLY when the user explicitly says "invite", "give access", "send an invite", or "add as a collaborator". This sends an email invite and requires an email address. Never use invite_collaborator just because someone says "add a team member".',
           'WHEN ASKED ABOUT TEAM: If the user asks for the number of team members or their names, ALWAYS call get_team_members_count and/or get_team_members before answering. Do not reply that the information is not provided without first calling these tools.',
-          'SAFETY: Before calling delete_project, ALWAYS confirm with the user first. Say exactly: "Are you sure you want to delete [project name]? Reply yes to confirm." Only call delete_project after the user confirms. Similarly, before calling remove_team_member or revoke_collaborator, confirm with the user: "Are you sure you want to remove [name/email]? Reply yes to confirm." Only proceed after the user confirms.',
+          'SAFETY: Before calling delete_project or delete_department, ALWAYS confirm with the user first. Say exactly: "Are you sure you want to delete [item]? Reply yes to confirm." Only call delete_project/delete_department after the user confirms. Similarly, before calling remove_team_member or revoke_collaborator, confirm with: "Are you sure you want to remove [name/email]? Reply yes to confirm." Only proceed after the user confirms.',
         ].join(' ');
 
         const safeMsgs = messages
@@ -1055,6 +1059,7 @@ exports.respond = async (req, res) => {
           { type: 'function', function: { name: 'get_team_members', description: 'List active team members.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_departments_count', description: 'Get count of departments.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_departments', description: 'List departments.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 100 } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'create_department', description: 'Create a new department (adds to workspace configuration so it appears on Departments page and selectors).', parameters: { type: 'object', properties: { name: { type: 'string', description: 'Department display name (required)' }, key: { type: 'string', description: 'Optional unique key (letters/numbers only). If omitted, derived from name.' } }, required: ['name'], additionalProperties: false } } },
           { type: 'function', function: { name: 'get_core_projects_count', description: 'Get count of core strategic projects.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_core_projects', description: 'List core strategic projects.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_core_deliverables_count', description: 'Get count of active (not completed) deliverables under core strategic projects.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
@@ -1235,8 +1240,64 @@ exports.respond = async (req, res) => {
             }
             case 'get_team_members_count': return { count: teamMembersCount || 0 };
             case 'get_team_members': { const limit = limitNum(args?.limit, 20, 200); return { list: (teamMembers || []).slice(0, limit).map((t)=>({ name: t?.name||'', role: t?.role||'', department: t?.department||'', email: t?.email||'' })) }; }
-            case 'get_departments_count': return { count: (departments || []).length };
-            case 'get_departments': { const limit = limitNum(args?.limit, 20, 100); return { list: (departments || []).slice(0, limit).map((d)=>({ name: d?.name||'', status: d?.status||'', owner: d?.owner||'', dueDate: d?.dueDate||'' })) }; }
+            case 'get_departments_count': {
+              try {
+                const fields = await getWorkspaceFields(wsFilter.workspace);
+                const sections = Array.isArray(fields.actionSections) ? fields.actionSections : [];
+                if (sections.length) return { count: sections.length };
+                // Fallback to editableDepts (unique by key)
+                const ed = Array.isArray(fields.editableDepts) ? fields.editableDepts : [];
+                const keys = Array.from(new Set(ed.map((d) => (typeof d === 'string' ? d : (d?.key || '')).trim()).filter(Boolean)));
+                if (keys.length) return { count: keys.length };
+              } catch {}
+              return { count: (departments || []).length };
+            }
+            case 'get_departments': {
+              const limit = limitNum(args?.limit, 20, 100);
+              try {
+                const fields = await getWorkspaceFields(wsFilter.workspace);
+                const sections = Array.isArray(fields.actionSections) ? fields.actionSections : [];
+                if (sections.length) {
+                  const list = sections.map((s) => ({ name: String(s?.label || s?.name || s?.key || '').trim() })).filter((x) => x.name);
+                  return { list: list.slice(0, limit) };
+                }
+                const ed = Array.isArray(fields.editableDepts) ? fields.editableDepts : [];
+                if (ed.length) {
+                  const list = ed.map((d) => ({ name: typeof d === 'string' ? d : (d?.label || d?.key || '') })).filter((x) => x.name);
+                  return { list: list.slice(0, limit) };
+                }
+              } catch {}
+              // Legacy fallback
+              return { list: (departments || []).slice(0, limit).map((d)=>({ name: d?.name||'', status: d?.status||'', owner: d?.owner||'', dueDate: d?.dueDate||'' })) };
+            }
+            case 'create_department': {
+              const name = String(args.name || '').trim();
+              if (!name) return { error: 'Department name is required.' };
+              const fields = await getWorkspaceFields(wsFilter.workspace);
+              const sections = Array.isArray(fields.actionSections) ? fields.actionSections : [];
+              const editable = Array.isArray(fields.editableDepts) ? fields.editableDepts : [];
+              const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
+              const rawKey = String(args.key || '').trim();
+              let key = rawKey || normalizeDepartmentKey(name);
+              if (!key) key = name.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+(.)/g, (_, ch) => ch.toUpperCase()).replace(/\s/g, '');
+              const existsByKey = sections.some((s) => String(s?.key || '') === key);
+              const existsByLabel = sections.some((s) => String(s?.label || s?.name || '').toLowerCase() === name.toLowerCase());
+              if (existsByKey || existsByLabel) return { error: `Department already exists (${name}).` };
+              const newSections = sections.concat([{ key, label: name }]);
+              let newEditable = editable;
+              if (editable.length > 0) {
+                if (typeof editable[0] === 'string') {
+                  if (!editable.includes(key)) newEditable = editable.concat([key]);
+                } else {
+                  if (!editable.some((d) => String(d?.key || '') === key)) newEditable = editable.concat([{ key, label: name }]);
+                }
+              } else {
+                newEditable = [key];
+              }
+              await updateWorkspaceFields(wsFilter.workspace, { actionSections: newSections, editableDepts: newEditable, deptsConfirmed: true });
+              try { await agents.invalidateCache(String(wsFilter.user || ''), null, String(wsFilter.workspace || '')); } catch {}
+              return { success: true, key, name, message: `Department "${name}" created.` };
+            }
             case 'get_core_projects_count': {
               // Use new CoreProject model only - no legacy fallback
               return { count: crudData.coreProjects?.length || 0 };
@@ -1632,20 +1693,11 @@ exports.respond = async (req, res) => {
               const department = String(args.department || '').trim();
               if (!title) return { error: 'Title is required.' };
               if (!department) return { error: 'Department key is required.' };
-              if (!args.linkedDeptOKR || !args.linkedDeptKrId) return { error: 'linkedDeptOKR and linkedDeptKrId are required. Call get_okrs first to find valid IDs.' };
               // Pro feature gate (same as departmentProject.controller.js)
               const dpOwner = await User.findById(wsFilter.user).lean();
               const { hasFeature } = require('../config/entitlements');
               if (!hasFeature(dpOwner, 'departmentPlans')) return { error: 'Department projects require a Pro plan. Upgrade to create department projects.' };
-              // Validate dept OKR + KR exist and match department
-              const deptOkr = await OKR.findOne({ _id: args.linkedDeptOKR, workspace: wsFilter.workspace, okrType: 'department', isDeleted: { $ne: true } }).lean();
-              if (!deptOkr) return { error: `Department OKR "${args.linkedDeptOKR}" not found. Use get_okrs to list available Department OKRs.` };
               const { normalizeDepartmentKey: _normDeptKeyMatch } = require('../utils/departmentNormalize');
-              if (_normDeptKeyMatch(String(deptOkr.departmentKey || '')) !== _normDeptKeyMatch(String(department || ''))) {
-                return { error: `The linked OKR belongs to department "${deptOkr.departmentKey}" but the project is for "${department}". They must match.` };
-              }
-              const deptKrExists = (deptOkr.keyResults || []).some((kr) => String(kr._id) === String(args.linkedDeptKrId));
-              if (!deptKrExists) return { error: `Key Result "${args.linkedDeptKrId}" not found in that OKR. Use get_okrs to list key result IDs.` };
               const { normalizeDepartmentKey: _normDeptKey } = require('../utils/departmentNormalize');
               let normalizedDept = _normDeptKey(department);
               try {
@@ -1665,12 +1717,53 @@ exports.respond = async (req, res) => {
                   if (nk && nk === normalizedDept) { normalizedDept = String(k); break; }
                 }
               } catch {}
+              // Ensure dept OKR + KR exist and match department (auto-select if missing)
+              let linkedDeptOKR = String(args.linkedDeptOKR || '').trim();
+              let linkedDeptKrId = String(args.linkedDeptKrId || '').trim();
+              let deptOkr = null;
+              if (!linkedDeptOKR || !linkedDeptKrId) {
+                try {
+                  const candidates = await OKR.find({ workspace: wsFilter.workspace, okrType: 'department', isDeleted: { $ne: true } }).lean();
+                  const objTok = _textTokens(`${title} ${String(args.goal || '')}`, 3);
+                  let best = null;
+                  for (const c of candidates) {
+                    if (_normDeptKeyMatch(String(c.departmentKey || '')) !== _normDeptKeyMatch(String(normalizedDept || ''))) continue;
+                    const cObjTok = _textTokens(c.objective || '', 3);
+                    const objInter = objTok.filter((x)=> cObjTok.includes(x)).length;
+                    const objScore = objTok.length && cObjTok.length ? (objInter / Math.min(objTok.length, cObjTok.length)) : 0;
+                    for (const kr of (c.keyResults || [])) {
+                      const cKrTok = _textTokens(kr.text || '', 3);
+                      const krInter = objTok.filter((x)=> cKrTok.includes(x)).length;
+                      const krScore = objTok.length && cKrTok.length ? (krInter / Math.min(objTok.length, cKrTok.length)) : 0;
+                      const score = objScore * 0.6 + krScore * 0.4;
+                      if (!best || score > best.score) best = { okrId: String(c._id), krId: String(kr._id), score, okr: c };
+                    }
+                  }
+                  if (best) {
+                    linkedDeptOKR = best.okrId;
+                    linkedDeptKrId = best.krId;
+                    deptOkr = best.okr;
+                  }
+                } catch {}
+              }
+              if (!linkedDeptOKR || !linkedDeptKrId) {
+                return { error: 'linkedDeptOKR and linkedDeptKrId are required or could not be auto-selected. Call get_okrs first to find valid IDs.' };
+              }
+              if (!deptOkr) {
+                deptOkr = await OKR.findOne({ _id: linkedDeptOKR, workspace: wsFilter.workspace, okrType: 'department', isDeleted: { $ne: true } }).lean();
+                if (!deptOkr) return { error: `Department OKR "${linkedDeptOKR}" not found. Use get_okrs to list available Department OKRs.` };
+              }
+              if (_normDeptKeyMatch(String(deptOkr.departmentKey || '')) !== _normDeptKeyMatch(String(normalizedDept || ''))) {
+                return { error: `The linked OKR belongs to department "${deptOkr.departmentKey}" but the project is for "${normalizedDept}". They must match.` };
+              }
+              const deptKrExists = (deptOkr.keyResults || []).some((kr) => String(kr._id) === String(linkedDeptKrId));
+              if (!deptKrExists) return { error: `Key Result "${linkedDeptKrId}" not found in that OKR. Use get_okrs to list key result IDs.` };
               // Rich defaults (budget, due date, deliverables)
               const context = await buildAgentContext(String(wsFilter.user || ''), String(wsFilter.workspace || ''));
               // Infer due date from linked Dept KR
               let inferredDueWhen = String(args.dueWhen || '').trim() || undefined;
               if (!inferredDueWhen) {
-                const kr = (deptOkr.keyResults || []).find((k) => String(k._id) === String(args.linkedDeptKrId));
+                const kr = (deptOkr.keyResults || []).find((k) => String(k._id) === String(linkedDeptKrId));
                 if (kr?.endAt) {
                   inferredDueWhen = new Date(kr.endAt).toISOString().slice(0, 10);
                 }
@@ -1712,8 +1805,8 @@ exports.respond = async (req, res) => {
                 departmentKey: normalizedDept,
                 title,
                 description: String(args.description || '').trim() || undefined,
-                linkedDeptOKR: args.linkedDeptOKR,
-                linkedDeptKrId: args.linkedDeptKrId,
+                linkedDeptOKR: linkedDeptOKR,
+                linkedDeptKrId: linkedDeptKrId,
                 goal: String(args.goal || '').trim() || undefined,
                 dueWhen: inferredDueWhen,
                 cost: inferredCost,
@@ -1726,6 +1819,11 @@ exports.respond = async (req, res) => {
                 deliverables: richDeliverables,
               });
               await deptProject.save();
+              // Ensure canonical registry includes this department
+              try {
+                const { ensureActionSections } = require('../services/workspaceFieldService');
+                await ensureActionSections(wsFilter.workspace, [normalizedDept]);
+              } catch {}
               try { await agents.invalidateCache(String(wsFilter.user || ''), null, String(wsFilter.workspace || '')); } catch {}
               return { success: true, id: deptProject._id.toString(), title: deptProject.title, department: deptProject.departmentKey, message: `Department project "${deptProject.title}" created with budget and deliverables for ${deptProject.departmentKey}.` };
             }
@@ -2126,6 +2224,12 @@ exports.respond = async (req, res) => {
                 } catch {}
               }
               await okr.save();
+              if (okrType === 'department') {
+                try {
+                  const { ensureActionSections } = require('../services/workspaceFieldService');
+                  await ensureActionSections(wsFilter.workspace, [String(args.departmentKey || '')]);
+                } catch {}
+              }
               try { await agents.invalidateCache(String(wsFilter.user || ''), null, String(wsFilter.workspace || '')); } catch {}
               return { success: true, id: okr._id.toString(), objective: okr.objective, okrType: okr.okrType, keyResultCount: keyResults.length, message: `OKR "${okr.objective}" created with ${keyResults.length} key result(s).` };
             }

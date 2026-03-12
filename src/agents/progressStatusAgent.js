@@ -421,10 +421,33 @@ function buildMomentumStatement(completed, total, trend) {
  * @returns {Object} Execution report with 6 zones
  */
 async function getProgressStatus(userId, options = {}) {
-  const { forceRefresh = false, workspaceId = null, timeHorizon = 'week' } = options;
+  const { forceRefresh = false, workspaceId = null, timeHorizon = 'week', viewerContext = null } = options;
 
   // Build context
-  const context = await buildAgentContext(userId, workspaceId);
+  let context = await buildAgentContext(userId, workspaceId);
+
+  // Apply viewer scoping
+  try {
+    if (viewerContext && viewerContext.viewerId) {
+      const User = require('../models/User');
+      const u = await User.findById(viewerContext.viewerId).select('firstName lastName fullName').lean();
+      const viewerName = u ? (`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.fullName || '') : '';
+      const nameLower = String(viewerName || '').trim().toLowerCase();
+      const ownerMatches = (p) => String(p?.ownerName || p?.ownerId || '')?.trim()?.toLowerCase() === nameLower;
+      const allowed = Array.isArray(viewerContext.allowedDepartments) ? viewerContext.allowedDepartments : [];
+      const inDept = (p) => allowed.length > 0 && String(p?.departmentKey || p?.department || '')?.trim() && allowed.includes(String(p.departmentKey || p.department));
+
+      if (viewerContext.accessType === 'limited') {
+        const core = (context.coreProjects || []).filter(ownerMatches);
+        const dept = (context.departmentProjects || []).filter(ownerMatches);
+        if (core.length || dept.length) context = { ...context, coreProjects: core, departmentProjects: dept };
+      } else if (viewerContext.accessType === 'admin') {
+        const core = (context.coreProjects || []).filter((p) => ownerMatches(p) || inDept(p));
+        const dept = (context.departmentProjects || []).filter((p) => ownerMatches(p) || inDept(p));
+        if (core.length || dept.length) context = { ...context, coreProjects: core, departmentProjects: dept };
+      }
+    }
+  } catch (_) {}
 
   // Calculate all statistics
   const deliveryStats = calculateDeliveryStats(context, timeHorizon);
@@ -438,6 +461,7 @@ async function getProgressStatus(userId, options = {}) {
     overdueCount: deliveryStats.overdueCount,
     blockedCount: dependencyStats.blockedCount,
     timeHorizon,
+    viewerScope: viewerContext ? { type: viewerContext.accessType, depts: viewerContext.allowedDepartments || [], viewer: viewerContext.viewerId || '' } : null,
   });
 
   // Check cache

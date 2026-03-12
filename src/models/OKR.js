@@ -10,6 +10,12 @@ const mongoose = require('mongoose');
 const KeyResultSchema = new mongoose.Schema({
   // Human-readable name of the KR
   text: { type: String, required: true, trim: true },
+  // Optional notes for this KR
+  notes: { type: String, trim: true },
+
+  // Optional owner for this KR (falls back to OKR owner if unset)
+  ownerId: { type: String, trim: true },
+  ownerName: { type: String, trim: true },
 
   // Metric tracking fields (source of truth)
   metric: { type: String, trim: true }, // e.g., 'revenue', 'margin', 'churn', 'growth', 'adoption', 'cost', or custom for departments
@@ -53,6 +59,7 @@ const OKRSchema = new mongoose.Schema({
     index: true,
   },
   // Department ownership for department OKRs
+  departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department', index: true },
   departmentKey: { type: String, trim: true, index: true },
   // The Objective
   objective: {

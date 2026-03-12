@@ -110,7 +110,7 @@ exports.create = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
 
-    const { objective, keyResults, notes, timeframe, okrType, departmentKey, derivedFromGoals, anchorCoreOKR, anchorCoreKrId, ownerId, ownerName } = req.body;
+    const { objective, keyResults, notes, timeframe, okrType, departmentKey, departmentName, derivedFromGoals, anchorCoreOKR, anchorCoreKrId, ownerId, ownerName } = req.body;
 
     if (!objective || !objective.trim()) {
       return res.status(400).json({ message: 'Objective is required' });
@@ -129,6 +129,9 @@ exports.create = async (req, res, next) => {
 
     const processedKRs = inputKrs.map((kr) => {
       const text = typeof kr === 'string' ? kr.trim() : String(kr.text || '').trim();
+      const notes = typeof kr === 'object' && kr.notes ? String(kr.notes).trim() : undefined;
+      let ownerIdKr = (typeof kr === 'object' && kr.ownerId) ? String(kr.ownerId).trim() : undefined;
+      let ownerNameKr = (typeof kr === 'object' && kr.ownerName) ? String(kr.ownerName).trim() : undefined;
       const metric = String(kr.metric || '').trim().toLowerCase();
       const unit = kr.unit ? String(kr.unit).trim() : undefined;
       const direction = (kr.direction === 'decrease') ? 'decrease' : 'increase';
@@ -161,14 +164,50 @@ exports.create = async (req, res, next) => {
         }
       }
 
-      return { text, metric, unit, direction, baseline, target, current, startAt, endAt, linkTag, canonicalMetric };
+      // Default KR owner to OKR owner if not provided
+      if (!ownerIdKr && !ownerNameKr) {
+        ownerIdKr = req.body.ownerId ? String(req.body.ownerId).trim() : undefined;
+        ownerNameKr = req.body.ownerName ? String(req.body.ownerName).trim() : undefined;
+      }
+      return { text, notes, ownerId: ownerIdKr, ownerName: ownerNameKr, metric, unit, direction, baseline, target, current, startAt, endAt, linkTag, canonicalMetric };
     }).filter(Boolean);
+
+    // Resolve department (for department OKRs) if "Other..." name was provided
+    let effectiveDeptKey = (String(departmentKey || '').trim() || undefined);
+    if (type === 'department' && departmentName && String(departmentName).trim()) {
+      try {
+        const Department = require('../models/Department');
+        const name = String(departmentName).trim();
+        // Find or create department by exact name within workspace
+        let dept = await Department.findOne({ ...wsFilter, name }).lean();
+        if (!dept) {
+          const { addWorkspaceToDoc } = require('../utils/workspaceQuery');
+          const created = await Department.create(addWorkspaceToDoc({ user: userId, name }, req));
+          dept = created.toObject();
+        }
+        const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
+        effectiveDeptKey = normalizeDepartmentKey(name);
+        // Upsert label into canonical registry
+        try {
+          const { ensureActionSections } = require('../services/workspaceFieldService');
+          await ensureActionSections(wsFilter.workspace, [name]);
+        } catch {}
+        // Attach departmentId
+        if (dept && dept._id) {
+          // will be used below when building doc
+          req._resolvedDepartmentId = dept._id;
+        }
+      } catch (e) {
+        // Non-fatal; fall back to provided departmentKey if any
+      }
+    }
 
     // Validate derivations/anchors
     const doc = addWorkspaceToDoc({
       user: userId,
       okrType: type,
-      departmentKey: type === 'department' ? (departmentKey || undefined) : undefined,
+      departmentKey: type === 'department' ? (effectiveDeptKey || departmentKey || undefined) : undefined,
+      departmentId: type === 'department' ? (req._resolvedDepartmentId || undefined) : undefined,
       objective: objective.trim(),
       keyResults: processedKRs,
       notes: notes?.trim() || undefined,
@@ -186,8 +225,8 @@ exports.create = async (req, res, next) => {
       }
       doc.derivedFromGoals = derived;
     } else {
-      if (!departmentKey) {
-        return res.status(400).json({ message: 'Department OKR must include departmentKey' });
+      if (!departmentKey && !(departmentName && String(departmentName).trim())) {
+        return res.status(400).json({ message: 'Department OKR must include a department' });
       }
       if (!anchorCoreOKR || !anchorCoreKrId) {
         return res.status(400).json({ message: 'Department OKR must anchor to one Core Key Result' });
@@ -197,6 +236,13 @@ exports.create = async (req, res, next) => {
     }
 
     const okr = await OKR.create(doc);
+    // If a Department OKR was created, ensure canonical registry includes the department
+    if (type === 'department') {
+      try {
+        const { ensureActionSections } = require('../services/workspaceFieldService');
+        await ensureActionSections(wsFilter.workspace, [String(departmentKey || '').trim()]);
+      } catch {}
+    }
     return res.status(201).json({ okr, message: 'OKR created' });
   } catch (err) {
     if (err && err.statusCode) return res.status(err.statusCode).json({ message: err.message });
@@ -253,6 +299,9 @@ exports.update = async (req, res, next) => {
       }
       okr.keyResults = inputKrs.map((kr) => {
         const text = typeof kr === 'string' ? kr.trim() : String(kr.text || '').trim();
+        const notes = typeof kr === 'object' && kr.notes ? String(kr.notes).trim() : undefined;
+        const ownerIdKr = (typeof kr === 'object' && kr.ownerId) ? String(kr.ownerId).trim() : undefined;
+        const ownerNameKr = (typeof kr === 'object' && kr.ownerName) ? String(kr.ownerName).trim() : undefined;
         const metric = String(kr.metric || '').trim().toLowerCase();
         const unit = kr.unit ? String(kr.unit).trim() : undefined;
         const direction = (kr.direction === 'decrease') ? 'decrease' : 'increase';
@@ -284,7 +333,7 @@ exports.update = async (req, res, next) => {
           }
         }
 
-        return { text, metric, unit, direction, baseline, target, current, startAt, endAt, linkTag, canonicalMetric };
+        return { text, notes, ownerId: ownerIdKr, ownerName: ownerNameKr, metric, unit, direction, baseline, target, current, startAt, endAt, linkTag, canonicalMetric };
       }).filter(Boolean);
     }
 
@@ -437,8 +486,28 @@ exports.updateKrMetrics = async (req, res, next) => {
     const kr = okr.keyResults.id(krId);
     if (!kr) return res.status(404).json({ message: 'Key Result not found' });
 
+    // Collaborator guard: Contributors can only edit KR metrics assigned to them
+    try {
+      const isCollab = !!req.user?.viewerId;
+      const isLimited = isCollab && String(req.user?.accessType || '').toLowerCase() === 'limited';
+      if (isLimited) {
+        const viewerId = String(req.user.viewerId);
+        let viewerName = '';
+        try {
+          const User = require('../models/User');
+          const u = await User.findById(viewerId).select('firstName lastName fullName').lean();
+          if (u) viewerName = ((u.firstName || '') + ' ' + (u.lastName || '')).trim() || (u.fullName || '');
+        } catch {}
+        const ownerIdMatches = kr.ownerId && String(kr.ownerId) === viewerId;
+        const ownerNameMatches = viewerName && kr.ownerName && String(kr.ownerName).trim().toLowerCase() === String(viewerName).trim().toLowerCase();
+        if (!ownerIdMatches && !ownerNameMatches) {
+          return res.status(403).json({ message: 'Contributors can only update their assigned key results' });
+        }
+      }
+    } catch (_) {}
+
     // Update metric fields only; no manual progress/status
-    const { metric, current, baseline, target, unit, direction, startAt, endAt } = req.body;
+    const { metric, current, baseline, target, unit, direction, startAt, endAt, notes, ownerId, ownerName } = req.body;
     if (typeof metric !== 'undefined') kr.metric = String(metric || '').trim().toLowerCase() || kr.metric;
     if (typeof current !== 'undefined') kr.current = Number(current);
     if (typeof baseline !== 'undefined') kr.baseline = Number(baseline);
@@ -447,6 +516,9 @@ exports.updateKrMetrics = async (req, res, next) => {
     if (typeof direction !== 'undefined') kr.direction = (direction === 'decrease') ? 'decrease' : 'increase';
     if (typeof startAt !== 'undefined') kr.startAt = startAt ? new Date(startAt) : undefined;
     if (typeof endAt !== 'undefined') kr.endAt = endAt ? new Date(endAt) : undefined;
+    if (typeof notes !== 'undefined') kr.notes = notes ? String(notes).trim() : undefined;
+    if (typeof ownerId !== 'undefined') kr.ownerId = ownerId ? String(ownerId).trim() : undefined;
+    if (typeof ownerName !== 'undefined') kr.ownerName = ownerName ? String(ownerName).trim() : undefined;
 
     await okr.save();
 

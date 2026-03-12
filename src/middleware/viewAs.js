@@ -10,6 +10,7 @@ const WRITE_METHODS = new Set(['PUT', 'PATCH', 'DELETE']);
 // PATCH endpoints that collaborators can use (with restrictions enforced by the handler)
 const ALLOWED_PATCH_PATTERNS = [
   /^\/api\/workspaces\/[^/]+\/reviews\/[^/]+$/,  // Update own action items in reviews
+  /^\/api\/okrs\/[a-f0-9]{24}\/key-results\/[a-f0-9]{24}\/metrics$/i, // Update own KR metrics
 ];
 
 // Allow a viewer to access an owner's dashboard read-only by setting X-View-As: <ownerUserId>
@@ -23,16 +24,21 @@ module.exports = async function viewAs(req, res, next) {
     if (!mongoose.Types.ObjectId.isValid(asId)) return res.status(400).json({ message: 'Invalid view-as user id' });
     if (String(asId) === String(req.user.id)) return next();
 
-    // Block PUT, PATCH, DELETE for collaborators (these always modify data)
+    // Block writes for non-admin collaborators. Admin collaborators have full access.
     // Allow GET, POST, HEAD, OPTIONS - POST is used for read operations with complex bodies
     // Route handlers use requireContributor to block writes on POST endpoints
     const method = (req.method || 'GET').toUpperCase();
     if (WRITE_METHODS.has(method)) {
-      // Allow specific PATCH endpoints that support collaborator edits
-      const isAllowedPatch = method === 'PATCH' &&
+      // If this is an admin collaborator, allow writes
+      if (row.accessType === 'admin') {
+        // proceed
+      } else {
+        // Allow specific PATCH endpoints that support collaborator edits
+        const isAllowedPatch = method === 'PATCH' &&
         ALLOWED_PATCH_PATTERNS.some(pattern => pattern.test(req.path));
-      if (!isAllowedPatch) {
-        return res.status(403).json({ message: 'Read-only access for collaborators' });
+        if (!isAllowedPatch) {
+          return res.status(403).json({ message: 'Read-only access for collaborators' });
+        }
       }
     }
 

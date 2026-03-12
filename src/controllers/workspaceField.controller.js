@@ -73,7 +73,7 @@ const ALLOWED_FIELDS = [
   // Products
   'products',
   'competitorNames',
-  // Action sections
+  // Action sections (canonical department registry). Each entry should be { key, label }.
   'actionSections',
   // Plan prose
   'planProse',

@@ -211,7 +211,7 @@ function determineCoherenceState(priorityAlignment, financialFeasibility, execut
  * Generate strategic integration analysis
  */
 async function getStrategicIntegration(userId, options = {}) {
-  const { forceRefresh = false, workspaceId = null } = options;
+  const { forceRefresh = false, workspaceId = null, viewerContext = null } = options;
 
   // Build context
   const context = await buildAgentContext(userId, workspaceId);
@@ -223,9 +223,9 @@ async function getStrategicIntegration(userId, options = {}) {
 
   try {
     const [guidance, financial, progress] = await Promise.allSettled([
-      generateGuidance(userId, { workspaceId, timeHorizon: 'week' }),
-      validateFinancials(userId, { workspaceId }),
-      getProgressStatus(userId, { workspaceId, includeAIFeedback: false }),
+      generateGuidance(userId, { workspaceId, timeHorizon: 'week', viewerContext }),
+      validateFinancials(userId, { workspaceId, viewerContext }),
+      getProgressStatus(userId, { workspaceId, includeAIFeedback: false, viewerContext }),
     ]);
 
     guidanceData = guidance.status === 'fulfilled' ? guidance.value : null;
@@ -249,6 +249,7 @@ async function getStrategicIntegration(userId, options = {}) {
       overallProgress: progressData.overallProgress,
     } : null,
     coreProjects: context.coreProjects?.length || 0,
+    viewerScope: viewerContext ? { type: viewerContext.accessType, depts: viewerContext.allowedDepartments || [], viewer: viewerContext.viewerId || '' } : null,
   });
 
   // Check cache

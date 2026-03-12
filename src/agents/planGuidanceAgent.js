@@ -32,7 +32,8 @@ async function generateGuidance(userId, options = {}) {
   const {
     forceRefresh = false,
     workspaceId = null,
-    timeHorizon = 'week' // 'today', 'week', 'month'
+    timeHorizon = 'week', // 'today', 'week', 'month'
+    viewerContext = null,
   } = options;
 
   // Build context and create cache key
@@ -41,6 +42,7 @@ async function generateGuidance(userId, options = {}) {
     projects: context.coreProjectDetails?.map(p => ({ title: p.title, dueWhen: p.dueWhen })),
     assignments: Object.keys(context.actionAssignments || {}),
     timeHorizon,
+    viewerScope: viewerContext ? { type: viewerContext.accessType, depts: viewerContext.allowedDepartments || [], viewer: viewerContext.viewerId || '' } : null,
     updatedAt: new Date().toISOString().split('T')[0], // Daily cache
   });
 
@@ -53,7 +55,26 @@ async function generateGuidance(userId, options = {}) {
   }
 
   // Extract and score all items using CRUD models
-  const items = await scoringService.extractItemsFromModels(userId, workspaceId);
+  let items = await scoringService.extractItemsFromModels(userId, workspaceId);
+  // Apply viewer scoping: contributors -> only items they own; admin -> owned OR in allowed depts (fallback to all)
+  try {
+    if (viewerContext && viewerContext.viewerId) {
+      const User = require('../models/User');
+      const u = await User.findById(viewerContext.viewerId).select('firstName lastName fullName').lean();
+      const viewerName = u ? (`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.fullName || '') : '';
+      const nameLower = String(viewerName || '').trim().toLowerCase();
+      const ownerMatches = (it) => String(it.owner || '').trim().toLowerCase() === nameLower;
+      if (viewerContext.accessType === 'limited') {
+        const filtered = items.filter(ownerMatches);
+        if (filtered.length > 0) items = filtered;
+      } else if (viewerContext.accessType === 'admin') {
+        const allowed = Array.isArray(viewerContext.allowedDepartments) ? viewerContext.allowedDepartments : [];
+        const inDept = (it) => allowed.length > 0 && String(it.departmentKey || '').trim() && allowed.includes(String(it.departmentKey));
+        const filtered = items.filter((it) => ownerMatches(it) || inDept(it));
+        if (filtered.length > 0) items = filtered; // fallback to universal if none
+      }
+    }
+  } catch (_) {}
   const scoringContext = { allItems: items };
 
   const scoredItems = items.map((item) => {

@@ -1,6 +1,10 @@
+const mongoose = require('mongoose');
 const Collaboration = require('../models/Collaboration');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
+const TeamMember = require('../models/TeamMember');
+const Department = require('../models/Department');
+const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
 const crypto = require('crypto');
 const { effectivePlan, plans, getLimit } = require('../config/entitlements');
 const { Resend } = require('resend');
@@ -63,9 +67,10 @@ async function sendInviteEmail({ to, ownerName, acceptUrl }) {
   }
 }
 
+// Canonical valid department keys (normalized)
 const VALID_DEPARTMENTS = [
-  'marketing', 'sales', 'operations', 'financeAdmin',
-  'peopleHR', 'partnerships', 'technology', 'communityImpact',
+  'marketing', 'sales', 'operations', 'finance',
+  'peopleHR', 'partnerships', 'technology', 'sustainability',
 ];
 
 const VALID_RESTRICTED_PAGES = [
@@ -88,13 +93,25 @@ exports.invite = async (req, res) => {
     if (!['admin', 'limited'].includes(accessType)) {
       return res.status(400).json({ message: 'accessType must be "admin" or "limited"' });
     }
+    // Normalize departments to canonical keys (accept legacy keys/labels)
     let departments = req.body?.departments || [];
     if (!Array.isArray(departments)) departments = [];
-    departments = departments.filter((d) => VALID_DEPARTMENTS.includes(d));
+    departments = Array.from(new Set(departments.map((d) => normalizeDepartmentKey(String(d || '')))))
+      .filter((d) => VALID_DEPARTMENTS.includes(d));
+
+    // Optional: departmentIds / primaryDepartmentId (owner's Department docs)
+    let departmentIds = Array.isArray(req.body?.departmentIds) ? req.body.departmentIds : [];
+    departmentIds = departmentIds.filter((id) => mongoose.isValidObjectId(id));
+    let primaryDepartmentId = req.body?.primaryDepartmentId;
+    if (!mongoose.isValidObjectId(primaryDepartmentId || '')) primaryDepartmentId = null;
 
     let restrictedPages = req.body?.restrictedPages || [];
     if (!Array.isArray(restrictedPages)) restrictedPages = [];
     restrictedPages = restrictedPages.filter((p) => VALID_RESTRICTED_PAGES.includes(p));
+    // Default restrictions for limited access if none provided
+    if (accessType === 'limited' && restrictedPages.length === 0) {
+      restrictedPages = ['financial-clarity', 'plan'];
+    }
 
     // Check if email belongs to an existing user
     const existingUser = await User.findOne({ email: emailRaw }).select('_id isCollaborator onboardingDone').lean().exec();
@@ -128,6 +145,27 @@ exports.invite = async (req, res) => {
       }
     }
 
+    // If no departments provided, try to derive from an existing TeamMember record
+    if (departments.length === 0) {
+      try {
+        const tm = await TeamMember.findOne({ user: userId, email: emailRaw }).lean().exec();
+        const depLabel = (tm && tm.department) ? String(tm.department).trim() : '';
+        const key = depLabel ? normalizeDepartmentKey(depLabel) : '';
+        if (key && VALID_DEPARTMENTS.includes(key)) {
+          departments = [key];
+          if (accessType === 'admin') accessType = 'limited';
+          // Attempt to resolve Department doc for id tracking
+          try {
+            const depDoc = await Department.findOne({ user: userId, name: new RegExp(`^${depLabel.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}$`, 'i') }).lean().exec();
+            if (depDoc) {
+              primaryDepartmentId = depDoc._id;
+              departmentIds = departmentIds && departmentIds.length ? departmentIds : [depDoc._id];
+            }
+          } catch {}
+        }
+      } catch {}
+    }
+
     let collab = await Collaboration.findOne({ owner: userId, email: emailRaw });
     if (!collab) {
       collab = await Collaboration.create({
@@ -137,6 +175,8 @@ exports.invite = async (req, res) => {
         accessType,
         departments,
         restrictedPages,
+        primaryDepartmentId: primaryDepartmentId || null,
+        departmentIds: Array.isArray(departmentIds) ? departmentIds : [],
         // If existing collaborator-only user exists, link them immediately
         ...(existingUser ? { viewer: existingUser._id, collaborator: existingUser._id } : {}),
       });
@@ -145,6 +185,8 @@ exports.invite = async (req, res) => {
       collab.accessType = accessType;
       collab.departments = departments;
       collab.restrictedPages = restrictedPages;
+      if (primaryDepartmentId) collab.primaryDepartmentId = primaryDepartmentId;
+      if (Array.isArray(departmentIds)) collab.departmentIds = departmentIds;
       // If existing collaborator-only user exists, ensure they're linked
       if (existingUser) {
         collab.viewer = collab.viewer || existingUser._id;
@@ -577,10 +619,14 @@ exports.myRestrictions = async (req, res) => {
     let accessType = collab.accessType || 'admin';
     if (accessType === 'department') accessType = 'limited';
 
+    let restricted = collab.restrictedPages || [];
+    if (accessType === 'limited' && (!Array.isArray(restricted) || restricted.length === 0)) {
+      restricted = ['financial-clarity', 'plan'];
+    }
     return res.json({
       accessType,
       departments: collab.departments || [],
-      restrictedPages: collab.restrictedPages || [],
+      restrictedPages: restricted,
     });
   } catch (err) {
     return res.status(500).json({ message: err?.message || 'Failed to get restrictions' });
@@ -603,9 +649,17 @@ exports.updateAccess = async (req, res) => {
       return res.status(400).json({ message: 'accessType must be "admin" or "limited"' });
     }
 
+    // Normalize department keys
     let departments = req.body?.departments || [];
     if (!Array.isArray(departments)) departments = [];
-    departments = departments.filter((d) => VALID_DEPARTMENTS.includes(d));
+    departments = Array.from(new Set(departments.map((d) => normalizeDepartmentKey(String(d || '')))))
+      .filter((d) => VALID_DEPARTMENTS.includes(d));
+
+    // Optional id-based departments
+    let departmentIds = Array.isArray(req.body?.departmentIds) ? req.body.departmentIds : [];
+    departmentIds = departmentIds.filter((id) => mongoose.isValidObjectId(id));
+    let primaryDepartmentId = req.body?.primaryDepartmentId;
+    if (!mongoose.isValidObjectId(primaryDepartmentId || '')) primaryDepartmentId = null;
 
     let restrictedPages = req.body?.restrictedPages || [];
     if (!Array.isArray(restrictedPages)) restrictedPages = [];
@@ -617,6 +671,9 @@ exports.updateAccess = async (req, res) => {
     collab.accessType = accessType;
     collab.departments = accessType === 'limited' ? departments : [];
     collab.restrictedPages = accessType === 'limited' ? restrictedPages : [];
+    // Persist optional id-based departments regardless of accessType for reference
+    if (primaryDepartmentId) collab.primaryDepartmentId = primaryDepartmentId;
+    if (Array.isArray(departmentIds)) collab.departmentIds = departmentIds;
     await collab.save();
 
     return res.json({

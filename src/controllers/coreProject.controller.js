@@ -18,11 +18,22 @@ exports.list = async (req, res, next) => {
 
     if (isLimitedCollab) {
       // Bypass cache and filter by involved departments
-      const projects = await CoreProject.find({
+      const rows = await CoreProject.find({
         ...wsFilter,
         isDeleted: false,
         departments: { $in: allowedDepts.length ? allowedDepts : ['__none__'] },
-      }).sort({ order: 1 }).lean();
+      }).sort({ order: 1 }).populate('departmentIds', 'name').lean();
+      // Normalize: attach departmentsExpanded and keep departmentIds as string ids
+      const projects = rows.map((p) => {
+        const expanded = Array.isArray(p.departmentIds)
+          ? p.departmentIds.map((d) => ({ _id: String(d._id), name: d.name || '' }))
+          : [];
+        return {
+          ...p,
+          departmentIds: expanded.map((d) => d._id),
+          departmentsExpanded: expanded,
+        };
+      });
       return res.json({ projects });
     }
 
@@ -31,10 +42,21 @@ exports.list = async (req, res, next) => {
     const projects = await cache.getOrSet(
       cacheKey,
       async () => {
-        return CoreProject.find({
+        const rows = await CoreProject.find({
           ...wsFilter,
           isDeleted: false,
-        }).sort({ order: 1 }).lean();
+        }).sort({ order: 1 }).populate('departmentIds', 'name').lean();
+        // Normalize: attach departmentsExpanded and keep departmentIds as string ids
+        return rows.map((p) => {
+          const expanded = Array.isArray(p.departmentIds)
+            ? p.departmentIds.map((d) => ({ _id: String(d._id), name: d.name || '' }))
+            : [];
+          return {
+            ...p,
+            departmentIds: expanded.map((d) => d._id),
+            departmentsExpanded: expanded,
+          };
+        });
       },
       cache.TTL.MEDIUM
     );
@@ -57,7 +79,7 @@ exports.get = async (req, res, next) => {
       _id: id,
       ...wsFilter,
       isDeleted: false,
-    }).lean();
+    }).populate('departmentIds', 'name').lean();
 
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
@@ -75,6 +97,13 @@ exports.get = async (req, res, next) => {
         }
       }
     } catch (_) {}
+
+    // Normalize populated departmentIds into departmentsExpanded and id array
+    const expanded = Array.isArray(project.departmentIds)
+      ? project.departmentIds.map((d) => ({ _id: String(d._id), name: d.name || '' }))
+      : [];
+    project.departmentIds = expanded.map((d) => d._id);
+    project.departmentsExpanded = expanded;
 
     return res.json({ project });
   } catch (err) {
@@ -123,11 +152,14 @@ exports.create = async (req, res, next) => {
       linkedCoreKrId,
       linkedGoals,
       departments,
+      departmentIds,
       deliverables,
     } = req.body;
 
     if (!title || !title.trim()) return res.status(400).json({ message: 'Title is required' });
-    if (!Array.isArray(departments) || departments.length === 0) return res.status(400).json({ message: 'Involved Departments are required' });
+    if ((!Array.isArray(departments) || departments.length === 0) && (!Array.isArray(departmentIds) || departmentIds.length === 0)) {
+      return res.status(400).json({ message: 'Involved Departments are required' });
+    }
 
     // Provide sensible defaults for sponsor/lead when not provided (e.g., onboarding quick adds)
     const fallbackUserName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email || (ownerName || 'Unassigned');
@@ -154,9 +186,27 @@ exports.create = async (req, res, next) => {
     }
 
     const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
-    const normalizedDepartments = Array.isArray(departments)
-      ? Array.from(new Set(departments.map((d) => normalizeDepartmentKey(String(d || ''))))).filter(Boolean)
-      : [];
+    let normalizedDepartments = [];
+    let resolvedDepartmentIds = [];
+    if (Array.isArray(departmentIds) && departmentIds.length) {
+      const Department = require('../models/Department');
+      const rows = await Department.find({ _id: { $in: departmentIds }, ...getWorkspaceFilter(req) }).select('_id name').lean();
+      resolvedDepartmentIds = rows.map(r => r._id);
+      normalizedDepartments = rows.map(r => normalizeDepartmentKey(String(r.name || ''))).filter(Boolean);
+    } else if (Array.isArray(departments) && departments.length) {
+      normalizedDepartments = Array.from(new Set(departments.map((d) => normalizeDepartmentKey(String(d || ''))))).filter(Boolean);
+      // Also upsert Department docs for these names to get ids
+      try {
+        const Department = require('../models/Department');
+        for (const nameRaw of departments) {
+          const name = String(nameRaw || '').trim();
+          if (!name) continue;
+          let d = await Department.findOne({ ...getWorkspaceFilter(req), name }).lean();
+          if (!d) d = (await Department.create({ workspace: getWorkspaceId(req), user: userId, name })).toObject();
+          resolvedDepartmentIds.push(d._id);
+        }
+      } catch {}
+    }
 
     const projectData = addWorkspaceToDoc({
       user: userId,
@@ -174,6 +224,7 @@ exports.create = async (req, res, next) => {
       linkedCoreKrId: linkedCoreKrId || undefined,
       linkedGoals: Array.isArray(linkedGoals) ? linkedGoals : undefined,
       departments: normalizedDepartments,
+      departmentIds: resolvedDepartmentIds,
       deliverables: Array.isArray(deliverables)
         ? deliverables.map(d => ({
             text: d.text?.trim() || '',
@@ -187,6 +238,12 @@ exports.create = async (req, res, next) => {
     }, req);
 
     const project = await CoreProject.create(projectData);
+
+    // Ensure canonical departments registry includes these departments
+    try {
+      const { ensureActionSections } = require('../services/workspaceFieldService');
+      await ensureActionSections(wsFilter.workspace, normalizedDepartments);
+    } catch {}
 
     // Invalidate cache
     const workspaceId = getWorkspaceId(req) || 'default';
@@ -231,6 +288,7 @@ exports.update = async (req, res, next) => {
       linkedCoreKrId,
       linkedGoals,
       departments,
+      departmentIds,
       deliverables,
       order,
     } = req.body;
@@ -258,32 +316,26 @@ exports.update = async (req, res, next) => {
       if (!krExists) return res.status(400).json({ message: 'linkedCoreKrId must reference a Key Result within the linked Core OKR' });
     }
     if (linkedGoals !== undefined) project.linkedGoals = Array.isArray(linkedGoals) ? linkedGoals : [];
-    if (departments !== undefined) {
+    if (departmentIds !== undefined || departments !== undefined) {
       const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
-      const base = Array.isArray(departments) ? departments : [];
-      const normalized = Array.from(new Set(base.map((d)=> normalizeDepartmentKey(String(d || ''))))).filter(Boolean);
-      try {
-        const DepartmentProject = require('../models/DepartmentProject');
-        const CoreProject = require('../models/CoreProject');
-        const existingDeptKeys = await DepartmentProject.distinct('departmentKey', { ...wsFilter, isDeleted: false });
-        const existingCoreDeptKeys = await CoreProject.distinct('departments', { ...wsFilter, isDeleted: false });
-        const { getWorkspaceFields } = require('../services/workspaceFieldService');
-        const fields = await getWorkspaceFields(wsFilter.workspace);
-        const editable = Array.isArray(fields.editableDepts) ? fields.editableDepts : [];
-        const candidates = []
-          .concat(existingDeptKeys || [])
-          .concat(existingCoreDeptKeys || [])
-          .concat(editable.map((d) => (typeof d === 'string' ? d : (d?.key || d?.label || ''))));
-        project.departments = normalized.map((nd) => {
-          for (const k of candidates) {
-            const nk = normalizeDepartmentKey(String(k || ''));
-            if (nk && nk === nd) return String(k);
-          }
-          return nd;
-        });
-      } catch {
+      const Department = require('../models/Department');
+      let ids = [];
+      if (Array.isArray(departmentIds) && departmentIds.length) {
+        const rows = await Department.find({ _id: { $in: departmentIds }, ...wsFilter }).select('_id name').lean();
+        ids = rows.map(r => r._id);
+        // Mirror legacy labels for compatibility
+        project.departments = rows.map(r => normalizeDepartmentKey(String(r.name || ''))).filter(Boolean);
+      } else if (Array.isArray(departments)) {
+        const normalized = Array.from(new Set(departments.map((d)=> normalizeDepartmentKey(String(d || ''))))).filter(Boolean);
         project.departments = normalized;
+        for (const nameRaw of departments) {
+          const name = String(nameRaw || '').trim(); if (!name) continue;
+          let d = await Department.findOne({ ...wsFilter, name }).lean();
+          if (!d) d = (await Department.create({ workspace: wsFilter.workspace, user: req.user?.id, name })).toObject();
+          ids.push(d._id);
+        }
       }
+      project.departmentIds = ids;
     }
     if (order !== undefined) project.order = order;
 

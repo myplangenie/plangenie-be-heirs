@@ -6,7 +6,8 @@ const DailyWish = require('../models/DailyWish');
 const { hasDepartmentRestriction, filterCompiledPlan, filterActionAssignments } = require('../utils/filterByDepartment');
 const { getWorkspaceFilter, getWorkspaceId, addWorkspaceToDoc } = require('../utils/workspaceQuery');
 const { touchWorkspace } = require('../services/workspaceActivityService');
-const { getWorkspaceFields, updateWorkspaceFields } = require('../services/workspaceFieldService');
+const { getWorkspaceFields, updateWorkspaceFields, ensureActionSections } = require('../services/workspaceFieldService');
+const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
 const Notification = require('../models/Notification');
 const NotificationSettings = require('../models/NotificationSettings');
 const Department = require('../models/Department');
@@ -662,34 +663,21 @@ exports.createMember = async (req, res, next) => {
     const userId = req.user?.id;
     const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const { name, email, position, department, status, parentId } = req.body || {};
+    const { name, email, position, department, status } = req.body || {};
     const nm = String(name || '').trim();
     if (!nm) return res.status(400).json({ message: 'Name is required' });
-    // Read orgPositions from Workspace.fields
-    const wsFields = await getWorkspaceFields(workspaceId);
-    const list = Array.isArray(wsFields.orgPositions) ? wsFields.orgPositions : [];
-    const id = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`);
-    const entry = {
-      id,
-      name: nm,
-      email: typeof email === 'string' ? email : '',
-      position: typeof position === 'string' ? position : '',
-      department: typeof department === 'string' ? department : '',
-      status: typeof status === 'string' ? status : 'Active',
-      parentId: typeof parentId === 'string' && parentId.trim() ? parentId.trim() : null,
-      role: '',
-    };
-    list.push(entry);
-    // Save to OrgPosition model via saveAnswersToWorkspace
-    await saveAnswersToWorkspace(workspaceId, { orgPositions: list }, userId);
-    const member = {
-      mid: id,
-      name: entry.name,
-      email: entry.email,
-      position: entry.position,
-      department: entry.department,
-      status: entry.status,
-    };
+    const mid = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`);
+    const deptName = typeof department === 'string' ? department.trim() : '';
+    if (deptName) {
+      await Department.findOneAndUpdate(
+        { workspace: workspaceId, name: deptName },
+        { $setOnInsert: { user: userId, workspace: workspaceId, name: deptName } },
+        { upsert: true }
+      ).lean().exec();
+      try { await ensureActionSections(workspaceId, [deptName]); } catch {}
+    }
+    const doc = await TeamMember.create({ user: userId, workspace: workspaceId, mid, name: nm, email: String(email||''), role: String(position||''), department: deptName, status: String(status||'Active') });
+    const member = { mid: doc.mid, name: doc.name, email: doc.email, position: doc.role, department: doc.department, status: doc.status };
     return res.status(201).json({ member });
   } catch (err) {
     next(err);
@@ -1205,16 +1193,27 @@ exports.getDepartments = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const [ob, user] = await Promise.all([
-      Onboarding.findOne(wsFilter).lean().exec(),
+    const [a, user] = await Promise.all([
+      getAnswersFromWorkspace(wsFilter.workspace, userId),
       User.findById(userId).lean().exec(),
     ]);
-    const a = ob?.answers || {};
     // Fetch from DepartmentProject model only - no legacy fallback
     const assignments = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
+    const titleize = (s='') => {
+      try {
+        const spaced = String(s)
+          .replace(/[-_]+/g, ' ')
+          .replace(/([a-z])([A-Z])/g, '$1 $2');
+        return spaced
+          .split(' ')
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+      } catch { return String(s); }
+    };
     const label = (k) => ({
       marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability'
-    }[k] || k);
+    }[k] || titleize(k));
     const parseDate = (s) => { const m=String(s||'').match(/\d{4}-\d{2}-\d{2}/); return m?m[0]:''; };
     // Helper: compute completion percent for an assignment item
     const pctForItem = (it) => {
@@ -1237,10 +1236,10 @@ exports.getDepartments = async (req, res, next) => {
     // Determine the department universe from saved customizable sections if present;
     // otherwise derive only from assignments (do NOT expand from org positions to avoid noisy panels)
     const deptMap = new Map(); // key: canonical name -> { key?, name, dueDate? }
-    const sections = Array.isArray(a.actionSections) && a.actionSections.length
+    const sections = Array.isArray(a.actionSections)
       ? a.actionSections.map((s)=>({ key: String(s?.key||'').trim(), name: String(s?.label||'').trim() || label(String(s?.key||'')) })).filter((s)=>s.key)
-      : null;
-    if (sections && sections.length) {
+      : [];
+    if (sections.length) {
       for (const s of sections) {
         const name = s.name || label(s.key);
         const arr = assignments[s.key] || [];
@@ -1252,19 +1251,21 @@ exports.getDepartments = async (req, res, next) => {
         const dueDate = dates[0] || '-';
         deptMap.set(canon(name), { key: s.key, name, dueDate });
       }
-    } else {
-      for (const k of Object.keys(assignments || {})) {
-        const name = label(k);
-        const arr = assignments[k] || [];
-        const dates = (arr || [])
-          .filter((u) => pctForItem(u) < 100)
-          .map((u)=>parseDate(u?.dueWhen))
-          .filter(Boolean)
-          .sort();
-        const dueDate = dates[0] || '-';
-        deptMap.set(canon(name), { key: k, name, dueDate });
-      }
     }
+    // else {
+    //   // Legacy fallback (disabled): derive from Department Projects when no actionSections exist
+    //   for (const k of Object.keys(assignments || {})) {
+    //     const name = label(k);
+    //     const arr = assignments[k] || [];
+    //     const dates = (arr || [])
+    //       .filter((u) => pctForItem(u) < 100)
+    //       .map((u)=>parseDate(u?.dueWhen))
+    //       .filter(Boolean)
+    //       .sort();
+    //     const dueDate = dates[0] || '-';
+    //     deptMap.set(canon(name), { key: k, name, dueDate });
+    //   }
+    // }
 
     // Determine department heads from org chart
     const headFor = (deptName) => {
@@ -1321,12 +1322,34 @@ exports.getDepartments = async (req, res, next) => {
       const status = statusFromProgress(progress);
       return { key: r.key, name: r.name, owner, dueDate, progress, status };
     });
-    // Apply department filtering for restricted collaborators
-    if (hasDepartmentRestriction(req.user)) {
-      const filteredDepts = departments.filter((d) => req.user.allowedDepartments.includes(d.key));
-      return res.json({ departments: filteredDepts });
-    }
-    return res.json({ departments });
+    // PURE Department docs (IDs) — comment out above legacy approach
+    try {
+      const rows = await Department.find(wsFilter).lean().exec();
+      const projs = await DepartmentProject.find({ ...wsFilter, isDeleted: false }).select('departmentId deliverables dueWhen progress status').lean();
+      const byId = new Map();
+      for (const p of projs) {
+        const id = String(p.departmentId || '');
+        if (!id) continue;
+        const arr = byId.get(id) || []; arr.push(p); byId.set(id, arr);
+      }
+      const pctFromProj = (proj) => {
+        const ds = Array.isArray(proj?.deliverables) ? proj.deliverables : [];
+        if (ds.length) { const done = ds.filter(d=>d?.done===true).length; return Math.round((done/ds.length)*100); }
+        const v = Number(proj?.progress); if (isFinite(v)) return Math.max(0, Math.min(100, Math.round(v)));
+        const st = String(proj?.status || '').toLowerCase(); if (/done|complete|completed/.test(st)) return 100; if (/in[ _-]*progress/.test(st)) return 50; if (/not[ _-]*started/.test(st)) return 0; return 0;
+      };
+      const stat = (p) => (p>=80?'on-track':(p>=50?'in-progress':'at-risk'));
+      const fallbackOwner = (user?.fullName || '').trim() || '-';
+      const out = rows.map((d)=>{
+        const id = String(d._id);
+        const arr = byId.get(id)||[];
+        let progress = 0; if (arr.length) { const sum=arr.reduce((acc,it)=>acc+pctFromProj(it),0); progress=Math.round(sum/arr.length); }
+        let dueDate='-'; const dates=arr.map(p=>String(p?.dueWhen||'')).filter(Boolean).sort(); if(dates.length) dueDate=dates[dates.length-1];
+        return { _id: d._id, name: d.name||'', owner: (d.owner&&String(d.owner).trim())?d.owner:fallbackOwner, dueDate, progress, status: stat(progress) };
+      });
+      return res.json({ departments: out });
+    } catch {}
+    return res.json({ departments: [] });
   } catch (err) {
     next(err);
   }
@@ -1338,6 +1361,7 @@ exports.updateDepartment = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req) || 'default';
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { name, owner } = req.body || {};
     if (typeof name !== 'string' || !name.trim()) {
@@ -1390,7 +1414,7 @@ exports.updateDepartment = async (req, res, next) => {
     const ownerName = (doc.owner && String(doc.owner).trim()) ? doc.owner : (headFor(name) || fallbackOwner);
     // Derive progress from DepartmentProject model only - no legacy fallback
     const assignments = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
-    const deptKey = Object.keys(assignments || {}).find((k) => canon(({ marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability' }[k] || k)) === canon(name));
+    const deptKey = Object.keys(assignments || {}).find((k) => canon(({ marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability' }[k] || titleize(k))) === canon(name));
     let progress = 0;
     if (deptKey && Array.isArray(assignments[deptKey])) {
       const arr = assignments[deptKey];
@@ -1430,7 +1454,33 @@ exports.updateDepartment = async (req, res, next) => {
     // Shape response consistent with GET
     // Update workspace lastActivityAt
     if (req.workspace?._id) touchWorkspace(req.workspace._id);
+    try { await cache.invalidateCoreProjects(userId, workspaceId); } catch (_) {}
     return res.json({ department: { name: doc.name, owner: ownerName, dueDate, progress, status } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/dashboard/departments
+// Body: { name: string, owner?: string }
+exports.createDepartment = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
+    const workspaceId = getWorkspaceId(req) || 'default';
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const { name, owner } = req.body || {};
+    if (typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ message: 'Department name is required' });
+    }
+    const doc = await Department.findOneAndUpdate(
+      { workspace: wsFilter.workspace, name: name.trim() },
+      { $setOnInsert: { user: userId, name: name.trim(), workspace: wsFilter.workspace }, $set: { owner: owner?.trim() || undefined } },
+      { new: true, upsert: true }
+    ).lean().exec();
+    if (req.workspace?._id) touchWorkspace(req.workspace._id);
+    try { await cache.invalidateCoreProjects(userId, workspaceId); } catch (_) {}
+    return res.status(201).json({ department: { _id: doc._id, name: doc.name, owner: doc.owner || '' } });
   } catch (err) {
     next(err);
   }
@@ -3870,43 +3920,55 @@ exports.getSettings = async (req, res, next) => {
     const wsFilter = getWorkspaceFilter(req);
     const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const [user, ob] = await Promise.all([
+    const [user] = await Promise.all([
       User.findById(userId).lean().exec(),
-      Onboarding.findOne(wsFilter).lean().exec(),
     ]);
     const profile = {
       fullName: user?.fullName || '',
       email: user?.email || '',
-      jobTitle: (user?.jobTitle && user.jobTitle.trim()) || (ob?.userProfile?.role || ''),
+      jobTitle: (user?.jobTitle && user.jobTitle.trim()) || '',
       phone: user?.phone || '',
     };
-    // Read from Workspace.fields
-    const a = await getAnswersFromWorkspace(workspaceId);
-    let members = [];
-    try {
-      const org = Array.isArray(a.orgPositions) ? [...a.orgPositions] : [];
-      // Normalize: ensure each org position has a stable id
-      let changed = false;
-      for (const p of org) {
-        if (!p.id) { p.id = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`); changed = true; }
-      }
-      if (changed) {
-        await saveAnswersToWorkspace(workspaceId, { orgPositions: org }, userId).catch(()=>{});
-      }
-      members = org.map((p) => ({
-        mid: String(p.id || `${(p.position||'').slice(0,8)}-${(p.name||'').slice(0,8)}`),
-        name: p.name || '',
-        email: p.email || '',
-        position: p.position || '',
-        department: p.department || '',
-        status: p.status || 'Active',
-      }));
-    } catch {}
-    // Fallback: read any members from TeamMember collection (no seeding)
-    if (!members.length) {
-      const membersRaw = await TeamMember.find(wsFilter).lean().exec();
-      members = membersRaw.map((m) => ({ mid: m.mid, name: m.name, email: m.email, position: m.role, department: m.department, status: m.status }));
+    // Source of truth: TeamMember collection with Department names
+    const membersRaw = await TeamMember.find(wsFilter).lean().exec();
+    const departmentsRaw = await Department.find(wsFilter).lean().exec();
+    const deptByName = new Map((departmentsRaw||[]).map(d => [String(d.name||'').trim().toLowerCase(), d]));
+    // Deduplicate by email (preferred) or name; prefer Active and populated fields
+    const pickBetter = (a, b) => {
+      if (!a) return b;
+      if (!b) return a;
+      const score = (x) => {
+        let s = 0;
+        if ((x.status || '').toLowerCase() === 'active') s += 2;
+        if (x.email && x.email.trim()) s += 2;
+        if (x.position && x.position.trim()) s += 1;
+        if (x.department && x.department.trim()) s += 1;
+        return s;
+      };
+      return score(b) > score(a) ? b : a;
+    };
+
+    // Build a map by key
+    const byKey = new Map();
+    for (const m of membersRaw) {
+      const key = (m.email && m.email.trim().toLowerCase()) || (m.name && m.name.trim().toLowerCase()) || String(m.mid);
+      const existing = byKey.get(key);
+      byKey.set(key, pickBetter(existing, m));
     }
+
+    const deduped = Array.from(byKey.values());
+    const members = deduped.map((m) => {
+      const deptName = String(m.department || '').trim();
+      const d = deptByName.get(deptName.toLowerCase());
+      return {
+        mid: m.mid,
+        name: m.name || '',
+        email: m.email || '',
+        position: m.position || '',
+        department: d ? d.name : deptName,
+        status: m.status || 'Active',
+      };
+    });
     // Prefer stored first/last name; fallback to split from fullName
     const parts = (profile.fullName || '').trim().split(/\s+/);
     const firstName = (user?.firstName || '').trim() || parts[0] || '';
@@ -3914,7 +3976,8 @@ exports.getSettings = async (req, res, next) => {
     // Filter team members for department-restricted collaborators
     let filteredMembers = members;
     if (hasDepartmentRestriction(req.user)) {
-      filteredMembers = members.filter((m) => req.user.allowedDepartments.includes(m.department));
+      const allowed = Array.isArray(req.user.allowedDepartments) ? req.user.allowedDepartments : [];
+      filteredMembers = members.filter((m) => allowed.includes(normalizeDepartmentKey(m.department)));
     }
     return res.json({ profile: { ...profile, firstName, lastName }, members: filteredMembers });
   } catch (err) {
@@ -3968,7 +4031,7 @@ exports.updateProfile = async (req, res, next) => {
 };
 
 // PATCH /api/dashboard/settings/members/:mid
-// Update fields for a team member sourced from the Org Chart (Workspace.fields)
+// Update fields for a TeamMember (no workspace.fields fallback)
 exports.updateMember = async (req, res, next) => {
   try {
     const userId = req.user?.id;
@@ -3976,49 +4039,22 @@ exports.updateMember = async (req, res, next) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { mid } = req.params;
     const patch = req.body || {};
-
-    // Read from Workspace.fields
-    const a = await getAnswersFromWorkspace(workspaceId);
-    let list = Array.isArray(a.orgPositions) ? [...a.orgPositions] : [];
-    const idx = list.findIndex((p) => {
-      const id = String(p.id || '');
-      if (id && id === String(mid)) return true;
-      const fallback = `${String(p.position || '').slice(0, 8)}-${String(p.name || '').slice(0, 8)}`;
-      return String(fallback) === String(mid);
-    });
-    if (idx === -1) {
-      // Fallback: update seeded TeamMember if org member not found
-      const patchDB = {};
-      if (typeof patch.name === 'string') patchDB.name = patch.name;
-      if (typeof patch.email === 'string') patchDB.email = patch.email;
-      if (typeof patch.position === 'string') patchDB.role = patch.position;
-      if (typeof patch.department === 'string') patchDB.department = patch.department;
-      if (typeof patch.status === 'string') patchDB.status = patch.status;
-      const m = await TeamMember.findOneAndUpdate({ user: userId, mid }, { $set: patchDB }, { new: true }).lean();
-      const member = m ? { mid: m.mid, name: m.name, email: m.email, position: m.role, department: m.department, status: m.status } : null;
-      return res.json({ member });
+    const patchDB = {};
+    if (typeof patch.name === 'string') patchDB.name = patch.name;
+    if (typeof patch.email === 'string') patchDB.email = patch.email;
+    if (typeof patch.position === 'string') patchDB.role = patch.position;
+    if (typeof patch.department === 'string') patchDB.department = patch.department;
+    if (typeof patch.status === 'string') patchDB.status = patch.status;
+    if (typeof patch.department === 'string' && patch.department.trim()) {
+      await Department.findOneAndUpdate(
+        { workspace: workspaceId, name: patch.department.trim() },
+        { $setOnInsert: { user: userId, workspace: workspaceId, name: patch.department.trim() } },
+        { upsert: true }
+      ).lean().exec();
+      try { await ensureActionSections(workspaceId, [patch.department.trim()]); } catch {}
     }
-    const curr = list[idx] || {};
-    const next = { ...curr };
-    if (typeof patch.name === 'string') next.name = patch.name;
-    if (typeof patch.email === 'string') next.email = patch.email;
-    if (typeof patch.position === 'string') next.position = patch.position;
-    // Back-compat: if "role" provided, map to position
-    if (typeof patch.role === 'string') next.position = patch.role;
-    if (typeof patch.department === 'string') next.department = patch.department;
-    if (typeof patch.status === 'string') next.status = patch.status;
-    if (!next.id) { next.id = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`); }
-    list[idx] = next;
-    // Save to OrgPosition model via saveAnswersToWorkspace
-    await saveAnswersToWorkspace(workspaceId, { orgPositions: list }, userId);
-    const member = {
-      mid: String(next.id || mid),
-      name: next.name || '',
-      email: next.email || '',
-      position: next.position || '',
-      department: next.department || '',
-      status: next.status || 'Active',
-    };
+    const m = await TeamMember.findOneAndUpdate({ user: userId, workspace: workspaceId, mid }, { $set: patchDB }, { new: true }).lean();
+    const member = m ? { mid: m.mid, name: m.name, email: m.email, position: m.role, department: m.department, status: m.status } : null;
     return res.json({ member });
   } catch (err) {
     next(err);
@@ -4026,29 +4062,14 @@ exports.updateMember = async (req, res, next) => {
 };
 
 // DELETE /api/dashboard/settings/members/:mid
-// Remove member from Org Chart (Workspace.fields); if not found, remove from seeded TeamMember
+// Remove member from TeamMember collection
 exports.deleteMember = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { mid } = req.params;
-    // Read from Workspace.fields
-    const a = await getAnswersFromWorkspace(workspaceId);
-    if (Array.isArray(a.orgPositions) && a.orgPositions.length > 0) {
-      const before = a.orgPositions.length;
-      const filtered = a.orgPositions.filter((p) => {
-        const id = String(p.id || '');
-        if (id && id === String(mid)) return false;
-        const fallback = `${String(p.position || '').slice(0, 8)}-${String(p.name || '').slice(0, 8)}`;
-        if (String(fallback) === String(mid)) return false;
-        return true;
-      });
-      // Save to OrgPosition model via saveAnswersToWorkspace
-      await saveAnswersToWorkspace(workspaceId, { orgPositions: filtered }, userId);
-      return res.json({ ok: true, removed: before !== filtered.length });
-    }
-    const result = await TeamMember.deleteOne({ user: userId, mid }).exec();
+    const result = await TeamMember.deleteOne({ user: userId, workspace: workspaceId, mid }).exec();
     return res.json({ ok: true, removed: result.deletedCount > 0 });
   } catch (err) {
     next(err);

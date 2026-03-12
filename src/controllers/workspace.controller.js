@@ -408,6 +408,43 @@ exports.getDecisionStrip = async (req, res, next) => {
       });
     }
 
+    // Apply collaborator filtering
+    try {
+      const isCollab = !!req.user?.viewerId;
+      if (isCollab && cache) {
+        const accessType = String(req.user?.accessType || '').toLowerCase();
+        const viewerId = String(req.user.viewerId);
+        let viewerName = '';
+        try {
+          const User = require('../models/User');
+          const u = await User.findById(viewerId).select('firstName lastName fullName').lean();
+          if (u) viewerName = ((u.firstName || '') + ' ' + (u.lastName || '')).trim() || (u.fullName || '');
+        } catch {}
+        const nameLower = String(viewerName || '').trim().toLowerCase();
+        const ownerMatches = (it) => String(it?.owner || '').trim().toLowerCase() === nameLower;
+        const inAllowedDept = (it) => {
+          const allowed = Array.isArray(req.user?.allowedDepartments) ? req.user.allowedDepartments : [];
+          const key = (it && it.source && it.source.department) ? String(it.source.department) : '';
+          return allowed.length > 0 && key && allowed.includes(key);
+        };
+        if (accessType === 'limited') {
+          // Contributors: show only items assigned to them
+          const filterItems = (arr) => Array.isArray(arr) ? arr.filter(ownerMatches) : [];
+          cache.weeklyTop3 = filterItems(cache.weeklyTop3);
+          cache.upcomingItems = filterItems(cache.upcomingItems);
+        } else if (accessType === 'admin') {
+          // Admin collaborators: contextual view — items they own OR items in their department(s)
+          const filterItems = (arr) => Array.isArray(arr) ? arr.filter((it) => ownerMatches(it) || inAllowedDept(it)) : [];
+          const w3 = filterItems(cache.weeklyTop3);
+          const up = filterItems(cache.upcomingItems);
+          // Use filtered sets if not empty; otherwise keep universal
+          if (w3.length > 0) cache.weeklyTop3 = w3;
+          if (up.length > 0) cache.upcomingItems = up;
+        }
+        // clusters contain suggestions; leave as-is
+      }
+    } catch (_) {}
+
     // Generate AI summary using OpenAI
     let summary = '';
     try {

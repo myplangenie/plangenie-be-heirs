@@ -15,6 +15,7 @@ const DepartmentProjectSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
 
   // Department this project belongs to
+  departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department', index: true },
   departmentKey: { type: String, required: true, index: true },
 
   // Project identification
@@ -57,6 +58,7 @@ const DepartmentProjectSchema = new mongoose.Schema({
 
 // Compound indexes for efficient queries
 DepartmentProjectSchema.index({ workspace: 1, departmentKey: 1, isDeleted: 1, order: 1 });
+DepartmentProjectSchema.index({ workspace: 1, departmentId: 1, isDeleted: 1, order: 1 });
 DepartmentProjectSchema.index({ workspace: 1, isDeleted: 1, createdAt: -1 });
 DepartmentProjectSchema.index({ linkedCoreProject: 1 });
 

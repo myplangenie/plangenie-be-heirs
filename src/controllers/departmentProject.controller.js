@@ -22,7 +22,7 @@ async function loadUser(userId) {
 exports.list = async (req, res, next) => {
   try {
     const wsFilter = getWorkspaceFilter(req);
-    const { department, grouped } = req.query;
+  const { department, departmentId, grouped } = req.query;
 
     // Load full user to check subscription status
     const user = await loadUser(req.user?.id);
@@ -73,7 +73,9 @@ exports.list = async (req, res, next) => {
 
     // Build query (not cached - less frequent use case)
     const query = { ...wsFilter, isDeleted: false };
-    if (department) {
+    if (departmentId) {
+      query.departmentId = departmentId;
+    } else if (department) {
       const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
       query.departmentKey = normalizeDepartmentKey(String(department || ''));
     }
@@ -155,6 +157,8 @@ exports.create = async (req, res, next) => {
 
     const {
       departmentKey,
+      departmentId,
+      departmentName,
       title,
       goal,
       milestone,
@@ -172,8 +176,8 @@ exports.create = async (req, res, next) => {
       deliverables,
     } = req.body;
 
-    if (!departmentKey || !departmentKey.trim()) {
-      return res.status(400).json({ message: 'Department key is required' });
+    if ((!departmentKey || !String(departmentKey).trim()) && (!departmentId && !String(departmentName || '').trim())) {
+      return res.status(400).json({ message: 'Department is required' });
     }
 
     // Validate linkedCoreProject if provided
@@ -202,28 +206,36 @@ exports.create = async (req, res, next) => {
     }
 
     const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
-    // Resolve department to an existing key if present in this workspace
-    let normDeptKey = normalizeDepartmentKey(String(departmentKey || ''));
-    try {
-      const existingDeptKeys = await DepartmentProject.distinct('departmentKey', { ...wsFilter, isDeleted: false });
-      const CoreProject = require('../models/CoreProject');
-      const existingCoreDeptKeys = await CoreProject.distinct('departments', { ...wsFilter, isDeleted: false });
-      const { getWorkspaceFields } = require('../services/workspaceFieldService');
-      const fields = await getWorkspaceFields(wsFilter.workspace);
-      const editable = Array.isArray(fields.editableDepts) ? fields.editableDepts : [];
-      const candidates = []
-        .concat(existingDeptKeys || [])
-        .concat(existingCoreDeptKeys || [])
-        .concat(editable.map((d) => (typeof d === 'string' ? d : (d?.key || d?.label || ''))));
-      for (const k of candidates) {
-        const nk = normalizeDepartmentKey(String(k || ''));
-        if (nk && nk === normDeptKey) { normDeptKey = String(k); break; }
+    let normDeptKey = departmentKey ? normalizeDepartmentKey(String(departmentKey || '')) : null;
+    let resolvedDeptId = departmentId || null;
+    // If departmentName provided, find-or-create Department and resolve both id and key
+    if (departmentName && String(departmentName).trim()) {
+      const Department = require('../models/Department');
+      const name = String(departmentName).trim();
+      let dept = await Department.findOne({ ...wsFilter, name }).lean();
+      if (!dept) {
+        const { addWorkspaceToDoc } = require('../utils/workspaceQuery');
+        const created = await Department.create(addWorkspaceToDoc({ user: userId, name }, req));
+        dept = created.toObject();
       }
-    } catch {}
+      resolvedDeptId = dept._id;
+      normDeptKey = normalizeDepartmentKey(name);
+      try { const { ensureActionSections } = require('../services/workspaceFieldService'); await ensureActionSections(wsFilter.workspace, [name]); } catch {}
+    } else if (!resolvedDeptId) {
+      // Best-effort resolve id from existing Departments by normalized key/label if available
+      try {
+        const Department = require('../models/Department');
+        const titleize = (s='') => s.replace(/[-_]+/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').replace(/\b\w/g,c=>c.toUpperCase());
+        const nameGuess = departmentKey ? titleize(String(departmentKey)) : '';
+        const found = await Department.findOne({ ...wsFilter, name: nameGuess }).lean();
+        if (found) resolvedDeptId = found._id;
+      } catch {}
+    }
 
     const projectData = addWorkspaceToDoc({
       user: userId,
-      departmentKey: normDeptKey,
+      departmentKey: normDeptKey || undefined,
+      departmentId: resolvedDeptId || undefined,
       title: title?.trim() || undefined,
       goal: goal?.trim() || undefined,
       milestone: milestone?.trim() || undefined,
@@ -251,6 +263,12 @@ exports.create = async (req, res, next) => {
     }, req);
 
     const project = await DepartmentProject.create(projectData);
+
+    // Ensure canonical departments registry includes this department
+    try {
+      const { ensureActionSections } = require('../services/workspaceFieldService');
+      await ensureActionSections(wsFilter.workspace, [normDeptKey]);
+    } catch {}
 
     // Invalidate cache
     const workspaceId = getWorkspaceId(req) || 'default';
@@ -282,6 +300,8 @@ exports.update = async (req, res, next) => {
 
     const {
       departmentKey,
+      departmentId,
+      departmentName,
       title,
       goal,
       milestone,
@@ -301,9 +321,19 @@ exports.update = async (req, res, next) => {
     } = req.body;
 
     // Update fields if provided
-    if (departmentKey !== undefined) {
+    if (departmentKey !== undefined || departmentId !== undefined || (departmentName && String(departmentName).trim())) {
       const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
-      project.departmentKey = normalizeDepartmentKey(String(departmentKey || ''));
+      if (departmentKey !== undefined) project.departmentKey = normalizeDepartmentKey(String(departmentKey || ''));
+      if (departmentName && String(departmentName).trim()) {
+        const Department = require('../models/Department');
+        const name = String(departmentName).trim();
+        let dept = await Department.findOne({ ...wsFilter, name }).lean();
+        if (!dept) { const { addWorkspaceToDoc } = require('../utils/workspaceQuery'); const created = await Department.create(addWorkspaceToDoc({ user: req.user?.id, name }, req)); dept = created.toObject(); }
+        project.departmentId = dept._id;
+        project.departmentKey = normalizeDepartmentKey(name);
+      } else if (departmentId !== undefined) {
+        project.departmentId = departmentId || undefined;
+      }
     }
     if (title !== undefined) project.title = title?.trim() || undefined;
     if (goal !== undefined) project.goal = goal?.trim() || undefined;
@@ -618,10 +648,10 @@ exports.bulkCreate = async (req, res, next) => {
       });
     }
 
-    const { departmentKey, projects } = req.body;
+    const { departmentKey, departmentId, departmentName, projects } = req.body;
 
-    if (!departmentKey || !departmentKey.trim()) {
-      return res.status(400).json({ message: 'Department key is required' });
+    if ((!departmentKey || !String(departmentKey).trim()) && (!departmentId && !String(departmentName || '').trim())) {
+      return res.status(400).json({ message: 'Department is required' });
     }
 
     if (!Array.isArray(projects) || projects.length === 0) {
@@ -629,29 +659,23 @@ exports.bulkCreate = async (req, res, next) => {
     }
 
     const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
-    let normDept = normalizeDepartmentKey(String(departmentKey || ''));
-    try {
-      const existingDeptKeys = await DepartmentProject.distinct('departmentKey', { ...wsFilter, isDeleted: false });
-      const CoreProject = require('../models/CoreProject');
-      const existingCoreDeptKeys = await CoreProject.distinct('departments', { ...wsFilter, isDeleted: false });
-      const { getWorkspaceFields } = require('../services/workspaceFieldService');
-      const fields = await getWorkspaceFields(wsFilter.workspace);
-      const editable = Array.isArray(fields.editableDepts) ? fields.editableDepts : [];
-      const candidates = []
-        .concat(existingDeptKeys || [])
-        .concat(existingCoreDeptKeys || [])
-        .concat(editable.map((d) => (typeof d === 'string' ? d : (d?.key || d?.label || ''))));
-      for (const k of candidates) {
-        const nk = normalizeDepartmentKey(String(k || ''));
-        if (nk && nk === normDept) { normDept = String(k); break; }
-      }
-    } catch {}
-    const startOrder = await DepartmentProject.getNextOrder(wsFilter.workspace, normDept);
+    let normDept = departmentKey ? normalizeDepartmentKey(String(departmentKey || '')) : null;
+    let resolvedDeptId = departmentId || null;
+    if (departmentName && String(departmentName).trim()) {
+      const Department = require('../models/Department');
+      const name = String(departmentName).trim();
+      let dept = await Department.findOne({ ...wsFilter, name }).lean();
+      if (!dept) { const { addWorkspaceToDoc } = require('../utils/workspaceQuery'); const created = await Department.create(addWorkspaceToDoc({ user: userId, name }, req)); dept = created.toObject(); }
+      resolvedDeptId = dept._id; normDept = normalizeDepartmentKey(name);
+      try { const { ensureActionSections } = require('../services/workspaceFieldService'); await ensureActionSections(wsFilter.workspace, [name]); } catch {}
+    }
+    const startOrder = await DepartmentProject.getNextOrder(wsFilter.workspace, (normDept || ''));
 
     const projectDocs = projects.map((p, index) =>
       addWorkspaceToDoc({
         user: userId,
-        departmentKey: normDept,
+        departmentKey: normDept || undefined,
+        departmentId: resolvedDeptId || undefined,
         title: p.title?.trim() || undefined,
         goal: p.goal?.trim() || undefined,
         milestone: p.milestone?.trim() || undefined,
@@ -678,6 +702,12 @@ exports.bulkCreate = async (req, res, next) => {
     );
 
     const created = await DepartmentProject.insertMany(projectDocs);
+
+    // Ensure canonical departments registry includes this department
+    try {
+      const { ensureActionSections } = require('../services/workspaceFieldService');
+      await ensureActionSections(wsFilter.workspace, [normDept]);
+    } catch {}
 
     // Invalidate cache
     const workspaceId = getWorkspaceId(req) || 'default';

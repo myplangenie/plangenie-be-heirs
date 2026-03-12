@@ -80,6 +80,9 @@ router.patch(
     body('direction').optional().isIn(['increase','decrease']),
     body('startAt').optional().isISO8601(),
     body('endAt').optional().isISO8601(),
+    body('notes').optional().trim(),
+    body('ownerId').optional().isString().trim(),
+    body('ownerName').optional().isString().trim(),
   ],
   ctrl.updateKrMetrics
 );
