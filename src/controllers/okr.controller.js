@@ -1,4 +1,5 @@
 const OKR = require('../models/OKR');
+const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
 const { getWorkspaceFilter, addWorkspaceToDoc } = require('../utils/workspaceQuery');
 const {
   CANONICAL_METRICS,
@@ -173,21 +174,17 @@ exports.create = async (req, res, next) => {
     }).filter(Boolean);
 
     // Resolve department strictly by id; if name is provided, create Department and use its id
+    // Do NOT create departments from OKR flow. Only link to existing departmentId,
+    // or record a normalized departmentKey (ephemeral label) when departmentName is provided.
     if (type === 'department') {
       if (!departmentId && !(departmentName && String(departmentName).trim())) {
         return res.status(400).json({ message: 'Department OKR must include a departmentId or departmentName' });
       }
       if (!departmentId && departmentName && String(departmentName).trim()) {
         try {
-          const Department = require('../models/Department');
           const name = String(departmentName).trim();
-          let dept = await Department.findOne({ ...wsFilter, name }).lean();
-          if (!dept) {
-            const created = await Department.create(addWorkspaceToDoc({ user: userId, name }, req));
-            dept = created.toObject();
-          }
-          req._resolvedDepartmentId = dept._id;
-        } catch (e) {}
+          req._resolvedDepartmentKey = normalizeDepartmentKey(name);
+        } catch (_) {}
       }
     }
 
@@ -195,8 +192,8 @@ exports.create = async (req, res, next) => {
     const doc = addWorkspaceToDoc({
       user: userId,
       okrType: type,
-      departmentKey: undefined,
-      departmentId: type === 'department' ? (req._resolvedDepartmentId || departmentId || undefined) : undefined,
+      departmentKey: type === 'department' ? (req._resolvedDepartmentKey || undefined) : undefined,
+      departmentId: type === 'department' ? (departmentId || undefined) : undefined,
       objective: objective.trim(),
       keyResults: processedKRs,
       notes: notes?.trim() || undefined,
@@ -214,8 +211,9 @@ exports.create = async (req, res, next) => {
       }
       doc.derivedFromGoals = derived;
     } else {
-      if (!doc.departmentId) {
-        return res.status(400).json({ message: 'Department OKR must include a department id' });
+      // Allow linking by departmentId (real Department) OR by departmentKey (ephemeral label)
+      if (!doc.departmentId && !req._resolvedDepartmentKey) {
+        return res.status(400).json({ message: 'Department OKR must include a department id or department name' });
       }
       if (!anchorCoreOKR || !anchorCoreKrId) {
         return res.status(400).json({ message: 'Department OKR must anchor to one Core Key Result' });

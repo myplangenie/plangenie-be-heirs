@@ -9,7 +9,8 @@
     "lint": "echo 'No linter configured'",
     "promote-admin": "node scripts/promote-admin.js",
     "migrate:collabs": "node scripts/migrate-collaborations-to-ids.js",
-    "send:test-email": "node scripts/send-test-email.js --to eadelekeife@plangenie.com"
+    "send:test-email": "node scripts/send-test-email.js --to eadelekeife@plangenie.com",
+    "set-user-plan": "node src/scripts/setUserPlan.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.637.0",
