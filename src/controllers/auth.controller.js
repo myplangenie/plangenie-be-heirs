@@ -332,8 +332,6 @@ exports.login = async (req, res) => {
   const nextRoute = !safe.onboardingDone
     ? '/onboarding'
     : '/workspace-select';
-  const planSlug = effectivePlan(user);
-  const planName = plans[planSlug]?.name || planSlug;
   // If user is a viewer/collaborator for any accepted collaboration, include default owner to view-as
   let viewAsOwnerId = undefined;
   try {
@@ -348,6 +346,15 @@ exports.login = async (req, res) => {
       if (owners && owners.length) viewAsOwnerId = String(owners[0]._id);
     }
   } catch {}
+  // Resolve plan: collaborators inherit the plan of the owner they're viewing
+  let planSlug = effectivePlan(user);
+  if (user.isCollaborator && viewAsOwnerId) {
+    try {
+      const owner = await User.findById(viewAsOwnerId).select('hasActiveSubscription planSlug').lean();
+      if (owner) planSlug = effectivePlan(owner);
+    } catch {}
+  }
+  const planName = plans[planSlug]?.name || planSlug;
 
   // [DATA TRACKING] Log successful login
   console.log(`[auth.login] success user=${user._id} email=${email} workspace=${workspaceId || 'none'} defaultWorkspace=${user.defaultWorkspace || 'none'} nextRoute=${nextRoute}`);
@@ -374,8 +381,6 @@ exports.me = async (req, res) => {
   const nextRoute = !safe.onboardingDone
     ? '/onboarding'
     : '/workspace-select';
-  const planSlug = effectivePlan(user);
-  const planName = plans[planSlug]?.name || planSlug;
   // Provide default owner to view-as for collaborators
   let viewAsOwnerId = undefined;
   try {
@@ -390,6 +395,15 @@ exports.me = async (req, res) => {
       if (owners && owners.length) viewAsOwnerId = String(owners[0]._id);
     }
   } catch {}
+  // Resolve plan: collaborators inherit the plan of the owner they're viewing
+  let planSlug = effectivePlan(user);
+  if (user.isCollaborator && viewAsOwnerId) {
+    try {
+      const owner = await User.findById(viewAsOwnerId).select('hasActiveSubscription planSlug').lean();
+      if (owner) planSlug = effectivePlan(owner);
+    } catch {}
+  }
+  const planName = plans[planSlug]?.name || planSlug;
   return res.json({ user: safe, nextRoute, plan: { slug: planSlug, name: planName }, viewAsOwnerId });
 };
 
