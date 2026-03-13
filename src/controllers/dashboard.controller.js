@@ -30,6 +30,20 @@ const Product = require('../models/Product');
 const Competitor = require('../models/Competitor');
 const SwotEntry = require('../models/SwotEntry');
 
+// Helper: Titleize keys like marketing or peopleHR -> Marketing / People HR
+function titleize(s = '') {
+  try {
+    const spaced = String(s)
+      .replace(/[-_]+/g, ' ')
+      .replace(/([a-z])([A-Z])/g, '$1 $2');
+    return spaced
+      .split(' ')
+      .filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+  } catch { return String(s); }
+}
+
 // Helper to get workspace fields as an "answers-like" object
 // Now fetches complex data from CRUD models instead of workspace.fields
 async function getAnswersFromWorkspace(workspaceId, userId = null) {
