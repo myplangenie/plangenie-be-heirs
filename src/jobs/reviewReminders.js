@@ -413,7 +413,8 @@ async function runJob() {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const fromAddress = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
-    const dashboardUrl = process.env.DASHBOARD_URL || 'https://www.plangenie.com/dashboard';
+    const feBase = (process.env.FRONTEND_ORIGIN || 'https://plangenie.com').replace(/\/$/, '');
+    const dashboardUrl = `${feBase}/dashboard`;
 
     // Get all verified active users (exclude collaborators)
     const users = await User.find({

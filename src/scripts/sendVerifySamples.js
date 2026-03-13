@@ -1,5 +1,5 @@
 /**
- * Send sample verification emails (signup verify + email-change verify)
+ * Send sample verification emails (signup, login-resend, resend-otp)
  * Usage:
  *   node src/scripts/sendVerifySamples.js --to you@example.com
  */
@@ -39,17 +39,29 @@ async function main() {
   console.log('Sending Signup Verification sample...');
   await resend.emails.send({ from, to, subject: 'Your Plan Genie verification code', html: v1.html, text: v1.text });
 
-  // 2) Email change verification
+  // 2) Login resend (unverified login attempt)
   const otp2 = '902571';
   const v2 = generateVerifyCodeEmail({
     greetingName: 'PlanGenie User',
-    title: 'Confirm Your Email Change',
-    intro: 'We received a request to change your account email to new@example.com. Enter this verification code to confirm:',
+    title: 'Verify Your Email',
+    intro: 'We noticed you tried to sign in, but your email is not verified yet. Your verification code is:',
     otp: otp2,
-    expiresText: 'This code expires in 15 minutes.'
+    expiresText: 'This code expires in 24 hours.'
   });
-  console.log('Sending Email Change Verification sample...');
-  await resend.emails.send({ from, to, subject: 'Confirm your email change', html: v2.html, text: v2.text });
+  console.log('Sending Login Resend Verification sample...');
+  await resend.emails.send({ from, to, subject: 'Your Plan Genie verification code', html: v2.html, text: v2.text });
+
+  // 3) Resend OTP (from settings prompt)
+  const otp3 = '661204';
+  const v3 = generateVerifyCodeEmail({
+    greetingName: 'PlanGenie User',
+    title: 'Verify Your Email',
+    intro: 'Your verification code is:',
+    otp: otp3,
+    expiresText: 'This code expires in 24 hours.'
+  });
+  console.log('Sending Resend OTP sample...');
+  await resend.emails.send({ from, to, subject: 'Your Plan Genie verification code', html: v3.html, text: v3.text });
 
   console.log('Done.');
 }
@@ -58,4 +70,3 @@ main().catch((err) => {
   console.error(err?.message || err);
   process.exit(1);
 });
-

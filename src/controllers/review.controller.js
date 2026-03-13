@@ -319,7 +319,8 @@ exports.sendActions = async (req, res, next) => {
     const user = await User.findById(userId).lean().exec();
     const senderName = user?.firstName || user?.fullName || 'Plan Genie';
     const fromAddress = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
-    const dashboardUrl = process.env.DASHBOARD_URL || 'https://www.plangenie.com/dashboard';
+    const feBase = (process.env.FRONTEND_ORIGIN || 'https://plangenie.com').replace(/\/$/, '');
+    const dashboardUrl = `${feBase}/dashboard`;
 
     // Group action items by owner
     // Items with owner -> only send to that owner
@@ -612,4 +613,3 @@ function generateFallbackInsights(notes, projects, actionItems) {
 
   return insights;
 }
-

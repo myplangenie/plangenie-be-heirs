@@ -2128,7 +2128,7 @@ exports.exportPlanPdf = async (req, res, next) => {
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
-    const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
+    const frontend = (process.env.FRONTEND_ORIGIN || 'https://plangenie.com').replace(/\/$/, '');
 
     // Fetch all data server-side to avoid CORS issues in Puppeteer
     // Build the compiled plan the same way getCompiledPlan does - from Onboarding
@@ -2537,7 +2537,7 @@ exports.exportStrategyCanvasPdf = async (req, res, next) => {
       if (val.expires < Date.now()) global._printDataCache.delete(key);
     }
 
-    const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
+    const frontend = (process.env.FRONTEND_ORIGIN || 'https://plangenie.com').replace(/\/$/, '');
     const backendUrl = process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get('host')}`;
     const url = `${frontend}/print/strategy-canvas?printToken=${printToken}&apiUrl=${encodeURIComponent(backendUrl)}`;
 
@@ -2754,7 +2754,7 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
       if (val.expires < Date.now()) global._printDataCache.delete(key);
     }
 
-    const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
+    const frontend = (process.env.FRONTEND_ORIGIN || 'https://plangenie.com').replace(/\/$/, '');
     const backendUrl = process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get('host')}`;
     const url = `${frontend}/print/departments?printToken=${printToken}&apiUrl=${encodeURIComponent(backendUrl)}`;
 
@@ -2933,7 +2933,7 @@ exports.exportPlanDocx = async (req, res, next) => {
     // Optionally capture Org Chart as an image using the same token approach as PDF
     let orgB64 = null;
     try {
-      const frontend = process.env.FRONTEND_ORIGIN || process.env.APP_WEB_URL || 'http://localhost:3000';
+      const frontend = (process.env.FRONTEND_ORIGIN || 'https://plangenie.com').replace(/\/$/, '');
       const backendUrl = process.env.BACKEND_URL || process.env.API_URL || `${req.protocol}://${req.get('host')}`;
 
       // Store print data with temporary token (same approach as PDF export)

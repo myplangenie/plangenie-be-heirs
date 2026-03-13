@@ -17,7 +17,7 @@ function isValidEmail(email) {
 }
 
 function appBaseUrl() {
-  const env = (process.env.APP_URL || '').trim().replace(/\/$/, '');
+  const env = (process.env.FRONTEND_ORIGIN || '').trim().replace(/\/$/, '');
   if (env) return env;
   // Fallback to public domain
   return 'https://plangenie.com';

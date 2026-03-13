@@ -11,7 +11,7 @@ const { buildInviteStyleEmail } = require('./utils/inviteLayout');
  */
 function generateVerifyCodeEmail({ greetingName = '', title = 'Verify Your Email', intro = 'Use this one-time code to verify your email and continue:', otp = '', expiresText = 'This code expires in 24 hours.' }) {
   const greet = greetingName ? `Hi ${escapeHtml(greetingName)},` : 'Hello,';
-  const appUrl = (process.env.APP_URL || process.env.APP_WEB_URL || 'https://plangenie.com').replace(/\/$/, '');
+  const appUrl = (process.env.FRONTEND_ORIGIN || 'https://plangenie.com').replace(/\/$/, '');
   const body = [
     `<strong>${greet}</strong>`,
     escapeHtml(intro),

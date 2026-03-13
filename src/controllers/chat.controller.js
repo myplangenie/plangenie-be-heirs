@@ -2470,7 +2470,7 @@ exports.respond = async (req, res) => {
                 const ownerName = owner
                   ? ([owner.firstName, owner.lastName].filter(Boolean).join(' ') || owner.fullName || owner.email)
                   : 'A Plan Genie user';
-                const base = (process.env.APP_URL || 'https://plangenie.com').replace(/\/$/, '');
+                const base = (process.env.FRONTEND_ORIGIN || 'https://plangenie.com').replace(/\/$/, '');
                 const acceptUrl = `${base}/signup?collabToken=${encodeURIComponent(collabToken)}&email=${encodeURIComponent(email)}`;
                 const { generateCollaboratorInvite } = require('../emails/collaboratorInvite');
                 const { html, text } = generateCollaboratorInvite({ ownerName, acceptUrl });

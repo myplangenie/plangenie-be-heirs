@@ -32,13 +32,13 @@ const envOrigins = (process.env.CORS_ORIGINS || '')
   .filter(Boolean)
   .map(normalizeOrigin);
 
-// In production, default to the known public domains if not explicitly set
-const defaultProdOrigins = ['https://plangenie.com', 'https://www.plangenie.com', 'https://test.plangenie.com'];
-const allowedOrigins = new Set(
-  envOrigins.length > 0
-    ? envOrigins
-    : (process.env.NODE_ENV === 'production' ? defaultProdOrigins : [])
-);
+// Allowed origins priority:
+// 1) CORS_ORIGINS if provided (comma-separated)
+// 2) FRONTEND_ORIGIN if set
+// 3) Fallback to plangenie.com
+const feOrigin = (process.env.FRONTEND_ORIGIN || '').trim();
+const fallbackOrigins = feOrigin ? [normalizeOrigin(feOrigin)] : ['https://plangenie.com'];
+const allowedOrigins = new Set(envOrigins.length > 0 ? envOrigins : fallbackOrigins);
 
 const corsOptions = {
   origin: function (origin, cb) {

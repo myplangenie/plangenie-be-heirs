@@ -61,7 +61,7 @@ function resolvePriceId(plan, interval) {
 exports.createCheckoutSession = async (req, res) => {
   try {
     // Always prefer explicit app base URL from environment for billing return pages
-    const appWebUrl = process.env.APP_WEB_URL || 'http://localhost:3000';
+    const appWebUrl = (process.env.FRONTEND_ORIGIN || 'https://plangenie.com').replace(/\/$/, '');
     const interval = (req.body && req.body.interval) || 'month';
     const plan = String((req.body && req.body.plan) || 'pro').toLowerCase();
     const requestedPromo = String(req.body?.promoCode || '').trim();
@@ -246,7 +246,7 @@ exports.createCheckoutSession = async (req, res) => {
 exports.createPortalSession = async (req, res) => {
   try {
     const stripe = getStripe();
-    const appWebUrl = process.env.APP_WEB_URL || 'http://localhost:3000';
+    const appWebUrl = (process.env.FRONTEND_ORIGIN || 'https://plangenie.com').replace(/\/$/, '');
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (!user.stripeCustomerId) return res.status(400).json({ message: 'No Stripe customer for user' });
@@ -482,7 +482,7 @@ function resolveWorkspaceAddonPriceId(interval) {
 // Create checkout session for workspace add-on slots
 exports.createWorkspaceAddonCheckout = async (req, res) => {
   try {
-    const appWebUrl = process.env.APP_WEB_URL || 'http://localhost:3000';
+    const appWebUrl = (process.env.FRONTEND_ORIGIN || 'https://plangenie.com').replace(/\/$/, '');
     const quantity = Number(req.body?.quantity) || 1;
     const interval = (req.body?.interval) || 'month';
 
