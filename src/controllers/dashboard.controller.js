@@ -668,14 +668,7 @@ exports.createMember = async (req, res, next) => {
     if (!nm) return res.status(400).json({ message: 'Name is required' });
     const mid = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`);
     const deptName = typeof department === 'string' ? department.trim() : '';
-    if (deptName) {
-      await Department.findOneAndUpdate(
-        { workspace: workspaceId, name: deptName },
-        { $setOnInsert: { user: userId, workspace: workspaceId, name: deptName } },
-        { upsert: true }
-      ).lean().exec();
-      try { await ensureActionSections(workspaceId, [deptName]); } catch {}
-    }
+    // Do not auto-create Department here. Departments are created when projects are created in Strategy Blueprint.
     const doc = await TeamMember.create({ user: userId, workspace: workspaceId, mid, name: nm, email: String(email||''), role: String(position||''), department: deptName, status: String(status||'Active') });
     const member = { mid: doc.mid, name: doc.name, email: doc.email, position: doc.role, department: doc.department, status: doc.status };
     return res.status(201).json({ member });
@@ -1028,7 +1021,7 @@ exports.getCompiledPlan = async (req, res, next) => {
 
     // Apply department filtering for restricted collaborators
     if (hasDepartmentRestriction(req.user)) {
-      const filtered = filterCompiledPlan(plan, req.user.allowedDepartments);
+      const filtered = filterCompiledPlan(plan, req.user.allowedDeptIds || []);
       return res.json({ plan: filtered });
     }
     return res.json({ plan });
@@ -1067,7 +1060,7 @@ exports.getNotifications = async (req, res, next) => {
 
     // Filter assignments for department-restricted collaborators
     if (hasDepartmentRestriction(req.user)) {
-      assignments = filterActionAssignments(assignments, req.user.allowedDepartments);
+      assignments = filterActionAssignments(assignments, req.user.allowedDeptIds || []);
     }
     const now = new Date();
     function rel(d) {
@@ -4395,10 +4388,10 @@ exports.getBootstrap = async (req, res, next) => {
             const filter = { user: userId, deletedAt: null };
             if (wsFilter.workspace) filter.workspace = wsFilter.workspace;
             const projects = await DepartmentProject.find(filter).sort({ order: 1, createdAt: -1 }).lean().exec();
-            // Group by department
+            // Group by department id
             const grouped = {};
             for (const p of projects) {
-              const key = p.departmentKey || 'other';
+              const key = String(p.departmentId || '');
               if (!grouped[key]) grouped[key] = [];
               grouped[key].push(p);
             }

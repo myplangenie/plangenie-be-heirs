@@ -24,13 +24,19 @@ module.exports = async function viewAs(req, res, next) {
     if (!mongoose.Types.ObjectId.isValid(asId)) return res.status(400).json({ message: 'Invalid view-as user id' });
     if (String(asId) === String(req.user.id)) return next();
 
+    // Verify viewer is invited to owner
+    const row = await Collaboration.findOne({ owner: asId, $or: [{ viewer: req.user.id }, { collaborator: req.user.id }] }).exec();
+    if (!row) return res.status(403).json({ message: 'No access to requested dashboard' });
+    if (row.status !== 'accepted') {
+      return res.status(403).json({ message: row.status === 'declined' ? 'Invite declined' : 'Invite pending – please accept' });
+    }
     // Block writes for non-admin collaborators. Admin collaborators have full access.
     // Allow GET, POST, HEAD, OPTIONS - POST is used for read operations with complex bodies
     // Route handlers use requireContributor to block writes on POST endpoints
     const method = (req.method || 'GET').toUpperCase();
     if (WRITE_METHODS.has(method)) {
       // If this is an admin collaborator, allow writes
-      if (row.accessType === 'admin') {
+      if ((row.accessType || 'admin') === 'admin') {
         // proceed
       } else {
         // Allow specific PATCH endpoints that support collaborator edits
@@ -41,13 +47,6 @@ module.exports = async function viewAs(req, res, next) {
         }
       }
     }
-
-    // Verify viewer is invited to owner
-    const row = await Collaboration.findOne({ owner: asId, $or: [{ viewer: req.user.id }, { collaborator: req.user.id }] }).exec();
-    if (!row) return res.status(403).json({ message: 'No access to requested dashboard' });
-    if (row.status !== 'accepted') {
-      return res.status(403).json({ message: row.status === 'declined' ? 'Invite declined' : 'Invite pending – please accept' });
-    }
     // Stash original id and impersonate for downstream handlers
     const original = req.user.id;
     req.user = {
@@ -55,7 +54,9 @@ module.exports = async function viewAs(req, res, next) {
       viewerId: String(original),
       viewOnly: true,
       accessType: row.accessType || 'admin',
-      allowedDepartments: row.departments || [],
+      // Keys are display-only; restrict by department ids only
+      allowedDepartments: [],
+      allowedDeptIds: Array.isArray(row.departmentIds) ? row.departmentIds.map(String) : [],
     };
     return next();
   } catch (err) {

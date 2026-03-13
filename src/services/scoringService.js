@@ -312,6 +312,7 @@ async function extractItemsFromModels(userId, workspaceId) {
     if (status === 'completed') return;
 
     const dept = assignment?.departmentKey || 'general';
+    const deptId = assignment?.departmentId ? String(assignment.departmentId) : undefined;
     const owner = [assignment?.firstName, assignment?.lastName].filter(Boolean).join(' ').trim();
 
     // Get active (non-completed) deliverables
@@ -330,9 +331,11 @@ async function extractItemsFromModels(userId, workspaceId) {
           dueWhen: d?.dueWhen || null,
           goal: assignment?.goal || null,
           kpi: d?.kpi || null,
-          source: { type: 'dept_deliverable', department: dept, goalIndex: aIndex, deliverableIndex: originalIndex, projectId: assignment._id?.toString(), deliverableId: d._id?.toString() },
+          source: { type: 'dept_deliverable', department: dept, departmentId: deptId, departmentKey: dept, goalIndex: aIndex, deliverableIndex: originalIndex, projectId: assignment._id?.toString(), deliverableId: d._id?.toString() },
           projectTitle,
           owner,
+          departmentKey: dept,
+          departmentId: deptId,
         });
       });
     } else {
@@ -342,9 +345,11 @@ async function extractItemsFromModels(userId, workspaceId) {
         dueWhen: assignment?.dueWhen || null,
         goal: assignment?.goal || null,
         kpi: null,
-        source: { type: 'goal', department: dept, goalIndex: aIndex, projectId: assignment._id?.toString() },
+        source: { type: 'goal', department: dept, departmentId: deptId, departmentKey: dept, goalIndex: aIndex, projectId: assignment._id?.toString() },
         owner,
         deliverableCount: 0,
+        departmentKey: dept,
+        departmentId: deptId,
       });
     }
   });

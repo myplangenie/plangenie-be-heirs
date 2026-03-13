@@ -28,9 +28,9 @@ exports.list = async (req, res, next) => {
     let filtered = raw;
     try {
       const isLimitedCollab = !!req.user?.viewerId && String(req.user?.accessType || '').toLowerCase() === 'limited';
-      const allowedDepts = Array.isArray(req.user?.allowedDepartments) ? req.user.allowedDepartments : [];
+      const allowedDeptIds = Array.isArray(req.user?.allowedDeptIds) ? req.user.allowedDeptIds.map(String) : [];
       if (isLimitedCollab) {
-        const deptOkrs = raw.filter((o) => o.okrType === 'department' && allowedDepts.includes(String(o.departmentKey || '')));
+        const deptOkrs = raw.filter((o) => o.okrType === 'department' && allowedDeptIds.includes(String(o.departmentId || '')));
         const allowedCoreIds = new Set(deptOkrs.map((d) => String(d.anchorCoreOKR || '')).filter(Boolean));
         const coreOkrs = raw.filter((o) => o.okrType === 'core' && allowedCoreIds.has(String(o._id)));
         filtered = [...coreOkrs, ...deptOkrs];
@@ -71,9 +71,9 @@ exports.get = async (req, res, next) => {
     try {
       const isLimitedCollab = !!req.user?.viewerId && String(req.user?.accessType || '').toLowerCase() === 'limited';
       if (isLimitedCollab) {
-        const allowedDepts = Array.isArray(req.user?.allowedDepartments) ? req.user.allowedDepartments : [];
+        const allowedDeptIds = Array.isArray(req.user?.allowedDeptIds) ? req.user.allowedDeptIds.map(String) : [];
         if (okr.okrType === 'department') {
-          if (!allowedDepts.includes(String(okr.departmentKey || ''))) {
+          if (!allowedDeptIds.includes(String(okr.departmentId || ''))) {
             return res.status(404).json({ message: 'OKR not found' });
           }
         } else if (okr.okrType === 'core') {
@@ -81,7 +81,7 @@ exports.get = async (req, res, next) => {
             workspace: wsFilter.workspace,
             isDeleted: false,
             okrType: 'department',
-            departmentKey: { $in: allowedDepts },
+            departmentId: { $in: allowedDeptIds },
             anchorCoreOKR: okr._id,
           });
           if (!exists) {
@@ -110,7 +110,7 @@ exports.create = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
 
-    const { objective, keyResults, notes, timeframe, okrType, departmentKey, departmentName, derivedFromGoals, anchorCoreOKR, anchorCoreKrId, ownerId, ownerName } = req.body;
+    const { objective, keyResults, notes, timeframe, okrType, departmentId, departmentName, derivedFromGoals, anchorCoreOKR, anchorCoreKrId, ownerId, ownerName } = req.body;
 
     if (!objective || !objective.trim()) {
       return res.status(400).json({ message: 'Objective is required' });
@@ -172,33 +172,22 @@ exports.create = async (req, res, next) => {
       return { text, notes, ownerId: ownerIdKr, ownerName: ownerNameKr, metric, unit, direction, baseline, target, current, startAt, endAt, linkTag, canonicalMetric };
     }).filter(Boolean);
 
-    // Resolve department (for department OKRs) if "Other..." name was provided
-    let effectiveDeptKey = (String(departmentKey || '').trim() || undefined);
-    if (type === 'department' && departmentName && String(departmentName).trim()) {
-      try {
-        const Department = require('../models/Department');
-        const name = String(departmentName).trim();
-        // Find or create department by exact name within workspace
-        let dept = await Department.findOne({ ...wsFilter, name }).lean();
-        if (!dept) {
-          const { addWorkspaceToDoc } = require('../utils/workspaceQuery');
-          const created = await Department.create(addWorkspaceToDoc({ user: userId, name }, req));
-          dept = created.toObject();
-        }
-        const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
-        effectiveDeptKey = normalizeDepartmentKey(name);
-        // Upsert label into canonical registry
+    // Resolve department strictly by id; if name is provided, create Department and use its id
+    if (type === 'department') {
+      if (!departmentId && !(departmentName && String(departmentName).trim())) {
+        return res.status(400).json({ message: 'Department OKR must include a departmentId or departmentName' });
+      }
+      if (!departmentId && departmentName && String(departmentName).trim()) {
         try {
-          const { ensureActionSections } = require('../services/workspaceFieldService');
-          await ensureActionSections(wsFilter.workspace, [name]);
-        } catch {}
-        // Attach departmentId
-        if (dept && dept._id) {
-          // will be used below when building doc
+          const Department = require('../models/Department');
+          const name = String(departmentName).trim();
+          let dept = await Department.findOne({ ...wsFilter, name }).lean();
+          if (!dept) {
+            const created = await Department.create(addWorkspaceToDoc({ user: userId, name }, req));
+            dept = created.toObject();
+          }
           req._resolvedDepartmentId = dept._id;
-        }
-      } catch (e) {
-        // Non-fatal; fall back to provided departmentKey if any
+        } catch (e) {}
       }
     }
 
@@ -206,8 +195,8 @@ exports.create = async (req, res, next) => {
     const doc = addWorkspaceToDoc({
       user: userId,
       okrType: type,
-      departmentKey: type === 'department' ? (effectiveDeptKey || departmentKey || undefined) : undefined,
-      departmentId: type === 'department' ? (req._resolvedDepartmentId || undefined) : undefined,
+      departmentKey: undefined,
+      departmentId: type === 'department' ? (req._resolvedDepartmentId || departmentId || undefined) : undefined,
       objective: objective.trim(),
       keyResults: processedKRs,
       notes: notes?.trim() || undefined,
@@ -225,8 +214,8 @@ exports.create = async (req, res, next) => {
       }
       doc.derivedFromGoals = derived;
     } else {
-      if (!departmentKey && !(departmentName && String(departmentName).trim())) {
-        return res.status(400).json({ message: 'Department OKR must include a department' });
+      if (!doc.departmentId) {
+        return res.status(400).json({ message: 'Department OKR must include a department id' });
       }
       if (!anchorCoreOKR || !anchorCoreKrId) {
         return res.status(400).json({ message: 'Department OKR must anchor to one Core Key Result' });
@@ -236,13 +225,6 @@ exports.create = async (req, res, next) => {
     }
 
     const okr = await OKR.create(doc);
-    // If a Department OKR was created, ensure canonical registry includes the department
-    if (type === 'department') {
-      try {
-        const { ensureActionSections } = require('../services/workspaceFieldService');
-        await ensureActionSections(wsFilter.workspace, [String(departmentKey || '').trim()]);
-      } catch {}
-    }
     return res.status(201).json({ okr, message: 'OKR created' });
   } catch (err) {
     if (err && err.statusCode) return res.status(err.statusCode).json({ message: err.message });
@@ -268,7 +250,7 @@ exports.update = async (req, res, next) => {
       return res.status(404).json({ message: 'OKR not found' });
     }
 
-    const { objective, keyResults, notes, timeframe, order, departmentKey, derivedFromGoals, anchorCoreOKR, anchorCoreKrId, ownerId, ownerName } = req.body;
+    const { objective, keyResults, notes, timeframe, order, departmentId, derivedFromGoals, anchorCoreOKR, anchorCoreKrId, ownerId, ownerName } = req.body;
 
     if (objective !== undefined) okr.objective = objective.trim();
     if (notes !== undefined) okr.notes = notes?.trim() || undefined;
@@ -277,8 +259,8 @@ exports.update = async (req, res, next) => {
     if (ownerId !== undefined) okr.ownerId = ownerId ? String(ownerId).trim() : undefined;
     if (ownerName !== undefined) okr.ownerName = ownerName ? String(ownerName).trim() : undefined;
 
-    if (okr.okrType === 'department' && typeof departmentKey !== 'undefined') {
-      okr.departmentKey = String(departmentKey || '').trim() || okr.departmentKey;
+    if (okr.okrType === 'department' && typeof departmentId !== 'undefined') {
+      okr.departmentId = departmentId || okr.departmentId;
     }
     if (okr.okrType === 'core' && Array.isArray(derivedFromGoals)) {
       if (derivedFromGoals.length === 0) return res.status(400).json({ message: 'Core OKR must be derived from at least one 1-year goal' });

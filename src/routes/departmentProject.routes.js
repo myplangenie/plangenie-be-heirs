@@ -17,16 +17,13 @@ router.use(workspaceContext);
  * @route   GET /api/department-projects
  * @desc    List all department projects (optionally filtered by department)
  * @access  Viewer+
- * @query   department - Filter by department key
+ * @query   departmentId - Filter by department id
  * @query   grouped - If 'true', return projects grouped by department
  */
 router.get(
   '/',
   requireViewer,
-  [
-    query('department').optional().trim(),
-    query('grouped').optional().isIn(['true', 'false']),
-  ],
+  [ query('departmentId').optional().isMongoId(), query('grouped').optional().isIn(['true', 'false']) ],
   ctrl.list
 );
 
@@ -51,7 +48,8 @@ router.post(
   '/',
   requireContributor,
   [
-    body('departmentKey').notEmpty().trim().withMessage('Department key is required'),
+    body('departmentId').optional().isMongoId(),
+    body('departmentName').optional().isString().trim(),
     body('title').optional().trim(),
     body('goal').optional().trim(),
     body('milestone').optional().trim(),
@@ -80,7 +78,8 @@ router.post(
   '/bulk',
   requireContributor,
   [
-    body('departmentKey').notEmpty().trim().withMessage('Department key is required'),
+    body('departmentId').optional().isMongoId(),
+    body('departmentName').optional().isString().trim(),
     body('projects').isArray().withMessage('Projects array is required'),
   ],
   ctrl.bulkCreate
@@ -96,7 +95,7 @@ router.patch(
   requireContributor,
   [
     param('id').isMongoId().withMessage('Invalid project ID'),
-    body('departmentKey').optional().trim(),
+    body('departmentId').optional().isMongoId(),
     body('title').optional().trim(),
     body('goal').optional().trim(),
     body('milestone').optional().trim(),
@@ -205,7 +204,7 @@ router.post(
   '/reorder',
   requireContributor,
   [
-    body('departmentKey').notEmpty().trim().withMessage('Department key is required'),
+    body('departmentId').isMongoId().withMessage('Department id is required'),
     body('projectIds').isArray().withMessage('projectIds array is required'),
   ],
   ctrl.reorder

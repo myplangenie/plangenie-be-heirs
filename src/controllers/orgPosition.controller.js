@@ -1,7 +1,5 @@
 const OrgPosition = require('../models/OrgPosition');
 const TeamMember = require('../models/TeamMember');
-const Department = require('../models/Department');
-const { ensureActionSections } = require('../services/workspaceFieldService');
 const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
 const { getWorkspaceFilter, addWorkspaceToDoc } = require('../utils/workspaceQuery');
 
@@ -97,57 +95,10 @@ exports.create = async (req, res, next) => {
 
     const newPosition = await OrgPosition.create(positionData);
 
-    // Sync Department (ensure it exists) and TeamMember (first-class record)
+    // Upsert TeamMember linked to this OrgPosition (mid = OrgPosition._id)
     try {
-      const deptKey = normalizedDept || '';
       const deptNameRaw = department || '';
       const deptName = (deptNameRaw || '').trim();
-
-      if (deptName) {
-        // Compute department owner from org positions in this workspace/department
-        const allPositions = await OrgPosition.find({ workspace: wsFilter.workspace, isDeleted: false }).lean();
-        const byId = new Map(allPositions.map(p => [String(p._id), p]));
-        const sameDept = allPositions.filter(p => normalizeDepartmentKey(p.department || '') === deptKey);
-        const score = (title = '') => {
-          const t = String(title || '').toLowerCase();
-          if (/\bchief\b|\bvp\b|vice president/.test(t)) return 5;
-          if (/head of|\bhead\b/.test(t)) return 4;
-          if (/director/.test(t)) return 3;
-          if (/lead/.test(t)) return 2;
-          if (/manager/.test(t)) return 1;
-          return 0;
-        };
-        const canon = (s='') => String(s).trim().toLowerCase();
-        const topOfDept = sameDept.filter(p => {
-          const parentId = p.parentId ? String(p.parentId) : null;
-          if (!parentId) return true;
-          const parent = byId.get(parentId);
-          if (!parent) return true;
-          return canon(normalizeDepartmentKey(parent.department || '')) !== canon(deptKey);
-        });
-        const pool = topOfDept.length ? topOfDept : sameDept;
-        let ownerName = '';
-        if (pool.length) {
-          const sorted = pool.slice().sort((a,b)=> score(b.position)-score(a.position));
-          ownerName = (sorted[0]?.name || '').trim();
-        }
-        // If exactly one member exists in the department, make them the owner even if title scoring is inconclusive
-        if (!ownerName && sameDept.length === 1) {
-          ownerName = (sameDept[0]?.name || '').trim();
-        }
-
-        // Ensure Department doc exists/updated for this workspace/name
-        await Department.findOneAndUpdate(
-          { workspace: wsFilter.workspace, name: deptName },
-          { $setOnInsert: { user: userId, workspace: wsFilter.workspace, name: deptName }, $set: { owner: ownerName } },
-          { upsert: true, new: true }
-        ).lean();
-
-        // Ensure actionSections contains this department so it shows up in Departments view
-        await ensureActionSections(wsFilter.workspace, [deptName]);
-      }
-
-      // Upsert TeamMember linked to this OrgPosition (mid = OrgPosition._id)
       const mid = String(newPosition._id);
       await TeamMember.findOneAndUpdate(
         { user: userId, workspace: wsFilter.workspace, mid },
@@ -217,53 +168,8 @@ exports.update = async (req, res, next) => {
 
     await pos.save();
 
-    // Sync Department and TeamMember on update
+    // Sync TeamMember on update only (no Department auto-create)
     try {
-      const deptKey = normalizeDepartmentKey(pos.department || '');
-      const deptName = (pos.department ? pos.department : '').trim();
-
-      if (deptKey) {
-        // Compute owner
-        const allPositions = await OrgPosition.find({ workspace: wsFilter.workspace, isDeleted: false }).lean();
-        const byId = new Map(allPositions.map(p => [String(p._id), p]));
-        const sameDept = allPositions.filter(p => normalizeDepartmentKey(p.department || '') === deptKey);
-        const score = (title = '') => {
-          const t = String(title || '').toLowerCase();
-          if (/\bchief\b|\bvp\b|vice president/.test(t)) return 5;
-          if (/head of|\bhead\b/.test(t)) return 4;
-          if (/director/.test(t)) return 3;
-          if (/lead/.test(t)) return 2;
-          if (/manager/.test(t)) return 1;
-          return 0;
-        };
-        const canon = (s='') => String(s).trim().toLowerCase();
-        const topOfDept = sameDept.filter(p => {
-          const parentId = p.parentId ? String(p.parentId) : null;
-          if (!parentId) return true;
-          const parent = byId.get(parentId);
-          if (!parent) return true;
-          return canon(normalizeDepartmentKey(parent.department || '')) !== canon(deptKey);
-        });
-        const pool = topOfDept.length ? topOfDept : sameDept;
-        let ownerName = '';
-        if (pool.length) {
-          const sorted = pool.slice().sort((a,b)=> score(b.position)-score(a.position));
-          ownerName = (sorted[0]?.name || '').trim();
-        }
-        if (!ownerName && sameDept.length === 1) {
-          ownerName = (sameDept[0]?.name || '').trim();
-        }
-        // Try to derive a human label from actionSections if available else fallback to provided department
-        const humanLabel = deptName || deptKey;
-
-        await Department.findOneAndUpdate(
-          { workspace: wsFilter.workspace, name: humanLabel },
-          { $setOnInsert: { user: req.user?.id, workspace: wsFilter.workspace, name: humanLabel }, $set: { owner: ownerName } },
-          { upsert: true, new: true }
-        ).lean();
-        await ensureActionSections(wsFilter.workspace, [humanLabel]);
-      }
-
       const mid = String(pos._id);
       await TeamMember.findOneAndUpdate(
         { user: req.user?.id, workspace: wsFilter.workspace, mid },

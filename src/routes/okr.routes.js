@@ -49,7 +49,7 @@ router.post(
   [
     body('objective').notEmpty().trim().withMessage('Objective is required'),
     body('okrType').optional().isIn(['core','department']),
-    body('departmentKey').optional().isString().trim(),
+    body('departmentId').optional().isMongoId(),
     body('ownerId').optional().isString().trim(),
     body('ownerName').optional().isString().trim(),
     body('derivedFromGoals').optional().isArray(),
@@ -113,7 +113,7 @@ router.patch(
     param('id').isMongoId().withMessage('Invalid OKR ID'),
     body('objective').optional().trim(),
     body('okrType').optional().isIn(['core','department']),
-    body('departmentKey').optional().isString().trim(),
+    body('departmentId').optional().isMongoId(),
     body('ownerId').optional().isString().trim(),
     body('ownerName').optional().isString().trim(),
     body('derivedFromGoals').optional().isArray(),

@@ -22,7 +22,7 @@ async function loadUser(userId) {
 exports.list = async (req, res, next) => {
   try {
     const wsFilter = getWorkspaceFilter(req);
-  const { department, departmentId, grouped } = req.query;
+  const { departmentId, grouped } = req.query;
 
     // Load full user to check subscription status
     const user = await loadUser(req.user?.id);
@@ -40,21 +40,21 @@ exports.list = async (req, res, next) => {
     const userId = req.user?.id;
     const workspaceId = getWorkspaceId(req) || 'default';
     const isLimitedCollab = !!req.user?.viewerId && String(req.user?.accessType || '').toLowerCase() === 'limited';
-    const allowedDepts = Array.isArray(req.user?.allowedDepartments) ? req.user.allowedDepartments : [];
+    const allowedDeptIds = Array.isArray(req.user?.allowedDeptIds) ? req.user.allowedDeptIds.map(String) : [];
 
     // Return grouped by department
     if (grouped === 'true') {
       // For limited collaborators, bypass owner-scoped cache and filter by departments
       if (isLimitedCollab) {
-        if (!allowedDepts.length) return res.json({ projects: {} });
+        if (!allowedDeptIds.length) return res.json({ projects: {} });
         const rows = await DepartmentProject.find({
           ...wsFilter,
           isDeleted: false,
-          departmentKey: { $in: allowedDepts },
-        }).sort({ departmentKey: 1, order: 1 }).lean();
+          departmentId: { $in: allowedDeptIds },
+        }).sort({ departmentId: 1, order: 1 }).lean();
         const groupedMap = {};
         for (const p of rows) {
-          const k = p.departmentKey || 'other';
+          const k = String(p.departmentId || '');
           if (!groupedMap[k]) groupedMap[k] = [];
           groupedMap[k].push(p);
         }
@@ -75,19 +75,16 @@ exports.list = async (req, res, next) => {
     const query = { ...wsFilter, isDeleted: false };
     if (departmentId) {
       query.departmentId = departmentId;
-    } else if (department) {
-      const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
-      query.departmentKey = normalizeDepartmentKey(String(department || ''));
     }
     if (isLimitedCollab) {
       // Filter results to allowed departments only
-      query.departmentKey = query.departmentKey
-        ? query.departmentKey
-        : { $in: allowedDepts.length ? allowedDepts : ['__none__'] };
+      query.departmentId = query.departmentId
+        ? query.departmentId
+        : { $in: allowedDeptIds.length ? allowedDeptIds : ['__none__'] };
     }
 
     const projects = await DepartmentProject.find(query)
-      .sort({ departmentKey: 1, order: 1 })
+      .sort({ departmentId: 1, order: 1 })
       .populate('linkedCoreProject', 'title')
       .lean();
 
@@ -121,8 +118,8 @@ exports.get = async (req, res, next) => {
     try {
       const isLimitedCollab = !!req.user?.viewerId && String(req.user?.accessType || '').toLowerCase() === 'limited';
       if (isLimitedCollab) {
-        const allowedDepts = Array.isArray(req.user?.allowedDepartments) ? req.user.allowedDepartments : [];
-        if (!allowedDepts.includes(String(project.departmentKey || ''))) {
+        const allowedDeptIds = Array.isArray(req.user?.allowedDeptIds) ? req.user.allowedDeptIds.map(String) : [];
+        if (!allowedDeptIds.includes(String(project.departmentId || ''))) {
           return res.status(404).json({ message: 'Project not found' });
         }
       }
@@ -155,28 +152,9 @@ exports.create = async (req, res, next) => {
       });
     }
 
-    const {
-      departmentKey,
-      departmentId,
-      departmentName,
-      title,
-      goal,
-      milestone,
-      resources,
-      dueWhen,
-      cost,
-      priority,
-      firstName,
-      lastName,
-      ownerId,
-      linkedCoreProject,
-      linkedGoal,
-      linkedDeptOKR,
-      linkedDeptKrId,
-      deliverables,
-    } = req.body;
+    const { departmentId, departmentName, title, goal, milestone, resources, dueWhen, cost, priority, firstName, lastName, ownerId, linkedCoreProject, linkedGoal, linkedDeptOKR, linkedDeptKrId, deliverables } = req.body;
 
-    if ((!departmentKey || !String(departmentKey).trim()) && (!departmentId && !String(departmentName || '').trim())) {
+    if (!departmentId && !String(departmentName || '').trim()) {
       return res.status(400).json({ message: 'Department is required' });
     }
 
@@ -198,16 +176,24 @@ exports.create = async (req, res, next) => {
       const OKR = require('../models/OKR');
       const okr = await OKR.findOne({ _id: linkedDeptOKR, ...wsFilter, okrType: 'department', isDeleted: false }).lean();
       if (!okr) return res.status(400).json({ message: 'linkedDeptOKR must reference a Department OKR in this workspace' });
-      if (String(okr.departmentKey || '').toLowerCase().trim() !== String(departmentKey || '').toLowerCase().trim()) {
+      // ensure same department id
+      const targetDeptId = departmentId || (async () => {
+        if (departmentName && String(departmentName).trim()) {
+          const Department = require('../models/Department');
+          const found = await Department.findOne({ ...wsFilter, name: String(departmentName).trim() }).lean();
+          return found?._id;
+        }
+        return null;
+      })();
+      if (targetDeptId && String(okr.departmentId || '') !== String(await targetDeptId)) {
         return res.status(400).json({ message: 'Department Project must link to a Department OKR in the same department' });
       }
       const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(linkedDeptKrId));
       if (!krExists) return res.status(400).json({ message: 'linkedDeptKrId must reference a Key Result within the linked Department OKR' });
     }
-
     const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
-    let normDeptKey = departmentKey ? normalizeDepartmentKey(String(departmentKey || '')) : null;
     let resolvedDeptId = departmentId || null;
+    let normDeptKey = null;
     // If departmentName provided, find-or-create Department and resolve both id and key
     if (departmentName && String(departmentName).trim()) {
       const Department = require('../models/Department');
@@ -221,21 +207,12 @@ exports.create = async (req, res, next) => {
       resolvedDeptId = dept._id;
       normDeptKey = normalizeDepartmentKey(name);
       try { const { ensureActionSections } = require('../services/workspaceFieldService'); await ensureActionSections(wsFilter.workspace, [name]); } catch {}
-    } else if (!resolvedDeptId) {
-      // Best-effort resolve id from existing Departments by normalized key/label if available
-      try {
-        const Department = require('../models/Department');
-        const titleize = (s='') => s.replace(/[-_]+/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').replace(/\b\w/g,c=>c.toUpperCase());
-        const nameGuess = departmentKey ? titleize(String(departmentKey)) : '';
-        const found = await Department.findOne({ ...wsFilter, name: nameGuess }).lean();
-        if (found) resolvedDeptId = found._id;
-      } catch {}
     }
 
     const projectData = addWorkspaceToDoc({
       user: userId,
-      departmentKey: normDeptKey || undefined,
       departmentId: resolvedDeptId || undefined,
+      departmentKey: normDeptKey || undefined,
       title: title?.trim() || undefined,
       goal: goal?.trim() || undefined,
       milestone: milestone?.trim() || undefined,
@@ -354,7 +331,7 @@ exports.update = async (req, res, next) => {
       const OKR = require('../models/OKR');
       const okr = await OKR.findOne({ _id: project.linkedDeptOKR, ...wsFilter, okrType: 'department', isDeleted: false }).lean();
       if (!okr) return res.status(400).json({ message: 'linkedDeptOKR must reference a Department OKR in this workspace' });
-      if (String(okr.departmentKey || '').toLowerCase().trim() !== String(project.departmentKey || '').toLowerCase().trim()) {
+      if (String(okr.departmentId || '') !== String(project.departmentId || '')) {
         return res.status(400).json({ message: 'Department Project must link to a Department OKR in the same department' });
       }
       const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(project.linkedDeptKrId));
@@ -592,24 +569,20 @@ exports.deleteDeliverable = async (req, res, next) => {
 exports.reorder = async (req, res, next) => {
   try {
     const wsFilter = getWorkspaceFilter(req);
-    const { departmentKey, projectIds } = req.body;
+    const { departmentId, projectIds } = req.body;
 
-    if (!departmentKey) {
-      return res.status(400).json({ message: 'departmentKey is required' });
+    if (!departmentId) {
+      return res.status(400).json({ message: 'departmentId is required' });
     }
 
     if (!Array.isArray(projectIds)) {
       return res.status(400).json({ message: 'projectIds array is required' });
     }
 
-    // Normalize department key for matching
-    const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
-    const normDept = normalizeDepartmentKey(String(departmentKey || ''));
-
     // Update order for each project
     const updates = projectIds.map((id, index) =>
       DepartmentProject.updateOne(
-        { _id: id, ...wsFilter, departmentKey: normDept, isDeleted: false },
+        { _id: id, ...wsFilter, departmentId: departmentId, isDeleted: false },
         { $set: { order: index } }
       )
     );
@@ -648,9 +621,9 @@ exports.bulkCreate = async (req, res, next) => {
       });
     }
 
-    const { departmentKey, departmentId, departmentName, projects } = req.body;
+    const { departmentId, departmentName, projects } = req.body;
 
-    if ((!departmentKey || !String(departmentKey).trim()) && (!departmentId && !String(departmentName || '').trim())) {
+    if (!departmentId && !String(departmentName || '').trim()) {
       return res.status(400).json({ message: 'Department is required' });
     }
 
@@ -659,8 +632,8 @@ exports.bulkCreate = async (req, res, next) => {
     }
 
     const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
-    let normDept = departmentKey ? normalizeDepartmentKey(String(departmentKey || '')) : null;
     let resolvedDeptId = departmentId || null;
+    let normDept = null;
     if (departmentName && String(departmentName).trim()) {
       const Department = require('../models/Department');
       const name = String(departmentName).trim();
@@ -669,13 +642,13 @@ exports.bulkCreate = async (req, res, next) => {
       resolvedDeptId = dept._id; normDept = normalizeDepartmentKey(name);
       try { const { ensureActionSections } = require('../services/workspaceFieldService'); await ensureActionSections(wsFilter.workspace, [name]); } catch {}
     }
-    const startOrder = await DepartmentProject.getNextOrder(wsFilter.workspace, (normDept || ''));
+    const startOrder = await DepartmentProject.getNextOrder(wsFilter.workspace, (resolvedDeptId));
 
     const projectDocs = projects.map((p, index) =>
       addWorkspaceToDoc({
         user: userId,
-        departmentKey: normDept || undefined,
         departmentId: resolvedDeptId || undefined,
+        departmentKey: normDept || undefined,
         title: p.title?.trim() || undefined,
         goal: p.goal?.trim() || undefined,
         milestone: p.milestone?.trim() || undefined,

@@ -195,15 +195,14 @@ exports.create = async (req, res, next) => {
       normalizedDepartments = rows.map(r => normalizeDepartmentKey(String(r.name || ''))).filter(Boolean);
     } else if (Array.isArray(departments) && departments.length) {
       normalizedDepartments = Array.from(new Set(departments.map((d) => normalizeDepartmentKey(String(d || ''))))).filter(Boolean);
-      // Also upsert Department docs for these names to get ids
+      // Resolve to existing Department ids by name; do not create new Departments here
       try {
         const Department = require('../models/Department');
         for (const nameRaw of departments) {
           const name = String(nameRaw || '').trim();
           if (!name) continue;
-          let d = await Department.findOne({ ...getWorkspaceFilter(req), name }).lean();
-          if (!d) d = (await Department.create({ workspace: getWorkspaceId(req), user: userId, name })).toObject();
-          resolvedDepartmentIds.push(d._id);
+          const d = await Department.findOne({ ...getWorkspaceFilter(req), name }).lean();
+          if (d && d._id) resolvedDepartmentIds.push(d._id);
         }
       } catch {}
     }
@@ -239,11 +238,7 @@ exports.create = async (req, res, next) => {
 
     const project = await CoreProject.create(projectData);
 
-    // Ensure canonical departments registry includes these departments
-    try {
-      const { ensureActionSections } = require('../services/workspaceFieldService');
-      await ensureActionSections(wsFilter.workspace, normalizedDepartments);
-    } catch {}
+    // Do not upsert canonical departments registry from core projects
 
     // Invalidate cache
     const workspaceId = getWorkspaceId(req) || 'default';
@@ -330,9 +325,8 @@ exports.update = async (req, res, next) => {
         project.departments = normalized;
         for (const nameRaw of departments) {
           const name = String(nameRaw || '').trim(); if (!name) continue;
-          let d = await Department.findOne({ ...wsFilter, name }).lean();
-          if (!d) d = (await Department.create({ workspace: wsFilter.workspace, user: req.user?.id, name })).toObject();
-          ids.push(d._id);
+          const d = await Department.findOne({ ...wsFilter, name }).lean();
+          if (d && d._id) ids.push(d._id);
         }
       }
       project.departmentIds = ids;

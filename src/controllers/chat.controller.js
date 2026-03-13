@@ -827,7 +827,8 @@ function buildContextText(ob, stats, extras, wsFields = {}, financialBaseline = 
         const d = parseDate(u?.dueWhen);
         if (!d) return;
         const goal = String(u?.goal || u?.title || '').trim();
-        const dept = u?.department || u?.departmentKey || '';
+        const deptId = String(u?.departmentId || '').trim();
+        const dept = deptId ? `#${deptId.slice(-4)}` : '';
         const owner = `${String(u?.firstName||'').trim()} ${String(u?.lastName||'').trim()}`.trim();
         items.push({ when: d, label: [goal, dept && `Dept: ${dept}`, owner && `Owner: ${owner}`].filter(Boolean).join(' | ') });
       });
@@ -961,19 +962,11 @@ exports.respond = async (req, res) => {
             teamMembersCount = teamMembers.length;
           }
         } catch {}
-        // Derive departments from DepartmentProject model only - no legacy fallback
+        // Load departments from Department collection (id-only linking)
         try {
-          if ((!Array.isArray(departments) || departments.length === 0) && deptProjects && deptProjects.length > 0) {
-            // Get unique departments from DepartmentProject
-            const deptSet = new Set();
-            deptProjects.forEach((p) => {
-              const dk = String(p?.departmentKey || '').trim();
-              if (dk) deptSet.add(dk);
-            });
-            const label = (k) => ({
-              marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability'
-            }[k] || k);
-            departments = Array.from(deptSet).map((k) => ({ name: label(k) }));
+          if (!Array.isArray(departments) || departments.length === 0) {
+            const deptDocs = await Department.find(wsFilter).select('name').lean().exec();
+            departments = (deptDocs || []).map((d) => ({ name: d?.name || '' })).filter((d) => d.name);
           }
         } catch {}
 
@@ -1065,7 +1058,7 @@ exports.respond = async (req, res) => {
           { type: 'function', function: { name: 'get_core_deliverables_count', description: 'Get count of active (not completed) deliverables under core strategic projects.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_deadlines', description: 'List upcoming deadlines.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_departmental_projects_count', description: 'Get count of departmental projects (action items assigned across all departments).', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
-          { type: 'function', function: { name: 'get_departmental_projects', description: 'List departmental projects (action items assigned to departments), including their deliverables.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 }, department: { type: 'string', description: 'Optional: filter by department key' } }, additionalProperties: false } } },
+          { type: 'function', function: { name: 'get_departmental_projects', description: 'List departmental projects (action items assigned to departments), including their deliverables.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 200 }, departmentId: { type: 'string', description: 'Optional: filter by Department _id' } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_departmental_deliverables_count', description: 'Get count of active (not completed) deliverables under departmental projects.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_products', description: 'List products and services offered by the business.', parameters: { type: 'object', properties: { limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'get_products_count', description: 'Get count of products/services.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
@@ -1084,14 +1077,14 @@ exports.respond = async (req, res) => {
           { type: 'function', function: { name: 'get_pending_invites_count', description: 'Get count of pending collaborator invitations.', parameters: { type: 'object', properties: {}, additionalProperties: false } } },
           // ── Action / Mutation tools ──
           { type: 'function', function: { name: 'create_core_project', description: 'Create a new core strategic project. Requires a title, executive sponsor, responsible lead, at least one department, and must be linked to a Core OKR Key Result. Call get_okrs first to get valid linkedCoreOKR and linkedCoreKrId values.', parameters: { type: 'object', properties: { title: { type: 'string', description: 'Project title (required)' }, executiveSponsorName: { type: 'string', description: 'Name of the executive sponsor (required)' }, responsibleLeadName: { type: 'string', description: 'Name of the responsible project lead (required)' }, departments: { type: 'array', items: { type: 'string' }, description: 'Department keys involved in this project (required, e.g. ["marketing", "sales"])' }, linkedCoreOKR: { type: 'string', description: '_id of the Core OKR to link this project to (required) — use get_okrs to find' }, linkedCoreKrId: { type: 'string', description: '_id of the specific Key Result within that OKR (required) — use get_okrs to find' }, description: { type: 'string', description: 'Project description' }, goal: { type: 'string', description: 'Project goal or objective' }, dueWhen: { type: 'string', description: 'Due date in YYYY-MM-DD format' }, cost: { type: 'string', description: 'Estimated cost or budget' }, ownerName: { type: 'string', description: 'Owner full name' }, priority: { type: 'string', enum: ['high', 'medium', 'low'], description: 'Project priority level' }, linkedGoals: { type: 'array', items: { type: 'string' }, description: 'VisionGoal _ids this project is linked to — get from get_vision_and_goals' } }, required: ['title', 'executiveSponsorName', 'responsibleLeadName', 'departments', 'linkedCoreOKR', 'linkedCoreKrId'], additionalProperties: false } } },
-          { type: 'function', function: { name: 'create_department_project', description: 'Create a new departmental project for a specific department. Must be linked to a Department OKR Key Result in the same department. Call get_okrs first to get valid linkedDeptOKR and linkedDeptKrId values.', parameters: { type: 'object', properties: { title: { type: 'string', description: 'Project title (required)' }, department: { type: 'string', description: 'Department key (required). E.g. marketing, sales, operations, financeAdmin, peopleHR, technology, partnerships, communityImpact.' }, linkedDeptOKR: { type: 'string', description: '_id of the Department OKR to link this project to (required) — use get_okrs to find' }, linkedDeptKrId: { type: 'string', description: '_id of the Key Result within that Department OKR (required) — use get_okrs to find' }, description: { type: 'string', description: 'Project description' }, goal: { type: 'string', description: 'Project goal or objective' }, dueWhen: { type: 'string', description: 'Due date in YYYY-MM-DD format' }, cost: { type: 'string', description: 'Estimated cost or budget' }, ownerName: { type: 'string', description: 'Full name of the person responsible' }, milestone: { type: 'string', description: 'Key milestone' }, resources: { type: 'string', description: 'Resources needed' }, kpi: { type: 'string', description: 'Key performance indicator' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'department', 'linkedDeptOKR', 'linkedDeptKrId'], additionalProperties: false } } },
+          { type: 'function', function: { name: 'create_department_project', description: 'Create a new departmental project for a specific department. Must be linked to a Department OKR Key Result in the same department. Call get_okrs first to get valid linkedDeptOKR and linkedDeptKrId values.', parameters: { type: 'object', properties: { title: { type: 'string', description: 'Project title (required)' }, departmentId: { type: 'string', description: 'Department _id (required)' }, linkedDeptOKR: { type: 'string', description: '_id of the Department OKR to link this project to (required) — use get_okrs to find' }, linkedDeptKrId: { type: 'string', description: '_id of the Key Result within that Department OKR (required) — use get_okrs to find' }, description: { type: 'string', description: 'Project description' }, goal: { type: 'string', description: 'Project goal or objective' }, dueWhen: { type: 'string', description: 'Due date in YYYY-MM-DD format' }, cost: { type: 'string', description: 'Estimated cost or budget' }, ownerName: { type: 'string', description: 'Full name of the person responsible' }, milestone: { type: 'string', description: 'Key milestone' }, resources: { type: 'string', description: 'Resources needed' }, kpi: { type: 'string', description: 'Key performance indicator' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] } }, required: ['title', 'departmentId', 'linkedDeptOKR', 'linkedDeptKrId'], additionalProperties: false } } },
           { type: 'function', function: { name: 'add_deliverable', description: 'Add a deliverable, task, or milestone to an existing project. Call this when the user wants to add a task or deliverable to a project.', parameters: { type: 'object', properties: { projectType: { type: 'string', enum: ['core', 'department'], description: 'Whether to add to a core project or department project' }, projectId: { type: 'string', description: 'The project _id (use if available from get_core_projects or get_departmental_projects)' }, projectTitle: { type: 'string', description: 'Project title to find by (used if projectId not known)' }, text: { type: 'string', description: 'The deliverable text or task name (required)' }, dueWhen: { type: 'string', description: 'Due date in YYYY-MM-DD format' }, ownerName: { type: 'string', description: 'Name of the person responsible' }, kpi: { type: 'string', description: 'KPI for this deliverable' } }, required: ['projectType', 'text'], additionalProperties: false } } },
           { type: 'function', function: { name: 'update_project', description: 'Update an existing project\'s fields. Call this when user wants to edit, change, rename, or update a project.', parameters: { type: 'object', properties: { projectType: { type: 'string', enum: ['core', 'department'] }, projectId: { type: 'string', description: 'Project _id if known' }, projectTitle: { type: 'string', description: 'Project title to find by' }, newTitle: { type: 'string', description: 'New title for the project' }, goal: { type: 'string', description: 'New goal text' }, dueWhen: { type: 'string', description: 'New due date (YYYY-MM-DD)' }, priority: { type: 'string', enum: ['high', 'medium', 'low'] }, ownerName: { type: 'string', description: 'New owner name' }, executiveSponsorName: { type: 'string', description: 'Executive sponsor name (core projects only)' }, responsibleLeadName: { type: 'string', description: 'Responsible project lead name (core projects only)' }, departments: { type: 'array', items: { type: 'string' }, description: 'Department keys involved (core projects only)' }, linkedCoreOKR: { type: 'string', description: 'Core OKR _id to link/change (core projects only)' }, linkedCoreKrId: { type: 'string', description: 'Core KR _id to link/change (core projects only)' }, milestone: { type: 'string', description: 'Key milestone (department projects only)' }, resources: { type: 'string', description: 'Resources needed (department projects only)' }, linkedDeptOKR: { type: 'string', description: 'Department OKR _id to link/change (department projects only)' }, linkedDeptKrId: { type: 'string', description: 'Department KR _id to link/change (department projects only)' }, description: { type: 'string', description: 'Project description' }, cost: { type: 'string', description: 'Estimated cost or budget' }, linkedGoals: { type: 'array', items: { type: 'string' }, description: 'VisionGoal _ids (core projects only)' } }, required: ['projectType'], additionalProperties: false } } },
           { type: 'function', function: { name: 'mark_deliverable_complete', description: 'Mark a specific deliverable or task as complete. Call this when user says something is done, finished, or completed.', parameters: { type: 'object', properties: { projectType: { type: 'string', enum: ['core', 'department'] }, projectId: { type: 'string', description: 'Project _id if known' }, projectTitle: { type: 'string', description: 'Project title to find by' }, deliverableText: { type: 'string', description: 'The text or title of the deliverable to mark complete (required)' } }, required: ['projectType', 'deliverableText'], additionalProperties: false } } },
           { type: 'function', function: { name: 'reschedule_item', description: 'Change the due date of a project or one of its deliverables. Call this when user wants to reschedule, push back, or move a deadline.', parameters: { type: 'object', properties: { projectType: { type: 'string', enum: ['core', 'department'] }, projectId: { type: 'string', description: 'Project _id if known' }, projectTitle: { type: 'string', description: 'Project title to find by' }, deliverableText: { type: 'string', description: 'Deliverable text if rescheduling a specific deliverable (omit to reschedule the whole project)' }, newDate: { type: 'string', description: 'New due date in YYYY-MM-DD format (required)' } }, required: ['projectType', 'newDate'], additionalProperties: false } } },
           { type: 'function', function: { name: 'assign_owner', description: 'Assign an owner to a project or one of its deliverables. Call this when user wants to assign, delegate, or give someone responsibility.', parameters: { type: 'object', properties: { projectType: { type: 'string', enum: ['core', 'department'] }, projectId: { type: 'string', description: 'Project _id if known' }, projectTitle: { type: 'string', description: 'Project title to find by' }, deliverableText: { type: 'string', description: 'Deliverable text if assigning to a specific deliverable (omit to assign to the whole project)' }, ownerName: { type: 'string', description: 'Full name of the owner to assign (required)' } }, required: ['projectType', 'ownerName'], additionalProperties: false } } },
           { type: 'function', function: { name: 'delete_project', description: 'Soft-delete a project. Only call this when user explicitly and clearly asks to delete or remove a project.', parameters: { type: 'object', properties: { projectType: { type: 'string', enum: ['core', 'department'] }, projectId: { type: 'string', description: 'Project _id if known' }, projectTitle: { type: 'string', description: 'Project title to find by' } }, required: ['projectType'], additionalProperties: false } } },
-          { type: 'function', function: { name: 'create_okr', description: 'Create a new OKR (Objective and Key Results). Core OKRs need 2-4 key results and derivedFromGoals (get goal IDs via get_vision_and_goals). Department OKRs need departmentKey, anchorCoreOKR, and anchorCoreKrId (get via get_okrs).', parameters: { type: 'object', properties: { objective: { type: 'string', description: 'The objective statement (required)' }, okrType: { type: 'string', enum: ['core', 'department'], description: 'Core OKR or department OKR (default: core)' }, departmentKey: { type: 'string', description: 'Department key — required for department OKRs' }, derivedFromGoals: { type: 'array', items: { type: 'string' }, description: 'Array of VisionGoal _ids this core OKR is derived from. Get IDs via get_vision_and_goals.' }, anchorCoreOKR: { type: 'string', description: '_id of the Core OKR this department OKR anchors to — required for department OKRs' }, anchorCoreKrId: { type: 'string', description: '_id of the Core KR this department OKR anchors to — required for department OKRs' }, keyResults: { type: 'array', description: 'Key results (2-4 required for core OKRs)', items: { type: 'object', properties: { text: { type: 'string' }, metric: { type: 'string' }, unit: { type: 'string' }, direction: { type: 'string', enum: ['increase', 'decrease'] }, baseline: { type: 'number' }, target: { type: 'number' }, current: { type: 'number' }, startAt: { type: 'string', description: 'ISO date string' }, endAt: { type: 'string', description: 'ISO date string' }, linkTag: { type: 'string', enum: ['driver', 'enablement', 'operational'], description: 'Required for department KRs' } }, required: ['text'], additionalProperties: false } }, notes: { type: 'string' } }, required: ['objective'], additionalProperties: false } } },
+          { type: 'function', function: { name: 'create_okr', description: 'Create a new OKR (Objective and Key Results). Core OKRs need 2–4 key results and derivedFromGoals (get goal IDs via get_vision_and_goals). Department OKRs need departmentId, anchorCoreOKR, and anchorCoreKrId (get via get_okrs).', parameters: { type: 'object', properties: { objective: { type: 'string', description: 'The objective statement (required)' }, okrType: { type: 'string', enum: ['core', 'department'], description: 'Core OKR or department OKR (default: core)' }, departmentId: { type: 'string', description: 'Department _id — required for department OKRs' }, derivedFromGoals: { type: 'array', items: { type: 'string' }, description: 'Array of VisionGoal _ids this core OKR is derived from. Get IDs via get_vision_and_goals.' }, anchorCoreOKR: { type: 'string', description: '_id of the Core OKR this department OKR anchors to — required for department OKRs' }, anchorCoreKrId: { type: 'string', description: '_id of the Core KR this department OKR anchors to — required for department OKRs' }, keyResults: { type: 'array', description: 'Key results (2–4 required for core OKRs)', items: { type: 'object', properties: { text: { type: 'string' }, metric: { type: 'string' }, unit: { type: 'string' }, direction: { type: 'string', enum: ['increase', 'decrease'] }, baseline: { type: 'number' }, target: { type: 'number' }, current: { type: 'number' }, startAt: { type: 'string', description: 'ISO date string' }, endAt: { type: 'string', description: 'ISO date string' }, linkTag: { type: 'string', enum: ['driver', 'enablement', 'operational'], description: 'Required for department KRs' } }, required: ['text'], additionalProperties: false } }, notes: { type: 'string' } }, required: ['objective'], additionalProperties: false } } },
           { type: 'function', function: { name: 'add_swot_entry', description: 'Add a new entry to the SWOT analysis. Call this when the user wants to add a strength, weakness, opportunity, or threat.', parameters: { type: 'object', properties: { entryType: { type: 'string', enum: ['strength', 'weakness', 'opportunity', 'threat'], description: 'Type of SWOT entry (required)' }, text: { type: 'string', description: 'The entry text (required)' }, notes: { type: 'string', description: 'Optional additional notes' }, priority: { type: 'string', enum: ['low', 'medium', 'high'], description: 'Priority level' } }, required: ['entryType', 'text'], additionalProperties: false } } },
           { type: 'function', function: { name: 'get_okrs', description: 'List existing OKRs and their key results. Use this to find OKR IDs or key result text before updating progress.', parameters: { type: 'object', properties: { okrType: { type: 'string', enum: ['core', 'department'], description: 'Filter by type (optional)' }, limit: { type: 'number', minimum: 1, maximum: 50 } }, additionalProperties: false } } },
           { type: 'function', function: { name: 'create_vision_goal', description: 'Create an individual 1-year or 3-year goal item. Call this when the user wants to add a specific goal to their 1-year or 3-5 year goals list.', parameters: { type: 'object', properties: { goalType: { type: 'string', enum: ['1y', '3y'], description: 'Goal type: 1y for one-year, 3y for three-year (required)' }, text: { type: 'string', description: 'Goal text (required)' }, notes: { type: 'string', description: 'Optional notes for the goal' } }, required: ['goalType', 'text'], additionalProperties: false } } },
@@ -1181,7 +1174,8 @@ exports.respond = async (req, res) => {
               const d = parseDate(p?.dueWhen); if (!d) return;
               const goal = String(p?.title || '').trim();
               const owner = `${String(p?.firstName||'').trim()} ${String(p?.lastName||'').trim()}`.trim();
-              const dept = p?.departmentKey || '';
+              const deptId = p?.departmentId ? String(p.departmentId) : '';
+              const dept = deptId ? `#${deptId.slice(-4)}` : '';
               items.push({ when: d, label: [goal, dept && `Dept: ${dept}`, owner && `Owner: ${owner}`].filter(Boolean).join(' | ') });
               // Also add deliverables
               (Array.isArray(p?.deliverables) ? p.deliverables : []).forEach((del) => {
@@ -1325,17 +1319,17 @@ exports.respond = async (req, res) => {
             }
             case 'get_departmental_projects': {
               const limit = limitNum(args?.limit, 20, 200);
-              const filterDept = args?.department ? String(args.department).trim().toLowerCase() : null;
+              const filterDeptId = args?.departmentId ? String(args.departmentId).trim() : null;
               const list = [];
               // Use new DepartmentProject model only - no legacy fallback
               (crudData.deptProjects || []).forEach((p) => {
-                const dept = p?.departmentKey || '';
-                if (filterDept && dept.toLowerCase() !== filterDept) return;
+                const deptId = p?.departmentId ? String(p.departmentId) : '';
+                if (filterDeptId && String(deptId) !== filterDeptId) return;
                 const goal = String(p?.title || '').trim();
                 if (!goal) return;
                 list.push({
                   id: p?._id?.toString() || '',
-                  department: dept,
+                  departmentId: deptId,
                   goal,
                   owner: `${String(p?.firstName||'').trim()} ${String(p?.lastName||'').trim()}`.trim() || undefined,
                   milestone: String(p?.milestone || '').trim() || undefined,
@@ -1697,8 +1691,8 @@ exports.respond = async (req, res) => {
               const dpOwner = await User.findById(wsFilter.user).lean();
               const { hasFeature } = require('../config/entitlements');
               if (!hasFeature(dpOwner, 'departmentPlans')) return { error: 'Department projects require a Pro plan. Upgrade to create department projects.' };
-              const { normalizeDepartmentKey: _normDeptKeyMatch } = require('../utils/departmentNormalize');
               const { normalizeDepartmentKey: _normDeptKey } = require('../utils/departmentNormalize');
+              const { normalizeDepartmentKey: _normDeptKeyMatch } = require('../utils/departmentNormalize');
               let normalizedDept = _normDeptKey(department);
               try {
                 const DepartmentProject = require('../models/DepartmentProject');
@@ -1753,8 +1747,8 @@ exports.respond = async (req, res) => {
                 deptOkr = await OKR.findOne({ _id: linkedDeptOKR, workspace: wsFilter.workspace, okrType: 'department', isDeleted: { $ne: true } }).lean();
                 if (!deptOkr) return { error: `Department OKR "${linkedDeptOKR}" not found. Use get_okrs to list available Department OKRs.` };
               }
-              if (_normDeptKeyMatch(String(deptOkr.departmentKey || '')) !== _normDeptKeyMatch(String(normalizedDept || ''))) {
-                return { error: `The linked OKR belongs to department "${deptOkr.departmentKey}" but the project is for "${normalizedDept}". They must match.` };
+              if (String(deptOkr.departmentId || '') !== String(departmentId)) {
+                return { error: 'The linked OKR belongs to a different department than the provided departmentId.' };
               }
               const deptKrExists = (deptOkr.keyResults || []).some((kr) => String(kr._id) === String(linkedDeptKrId));
               if (!deptKrExists) return { error: `Key Result "${linkedDeptKrId}" not found in that OKR. Use get_okrs to list key result IDs.` };
@@ -1771,11 +1765,11 @@ exports.respond = async (req, res) => {
               // Estimate budget if missing
               let inferredCost = _sanitizeCurrency(args.cost);
               if (!inferredCost) {
-                const hint = `Department: ${normalizedDept} | Project: ${title}${args.goal ? ` | Goal: ${String(args.goal).trim()}` : ''}`;
+                const hint = `Department: ${departmentName || `#${departmentId.slice(-4)}`} | Project: ${title}${args.goal ? ` | Goal: ${String(args.goal).trim()}` : ''}`;
                 inferredCost = await _aiEstimateBudget(String(wsFilter.user || ''), String(wsFilter.workspace || ''), context, hint);
               }
               let deliverableTitles = await _aiSuggestDeliverables(String(wsFilter.user || ''), String(wsFilter.workspace || ''), context, {
-                departmentLabel: normalizedDept,
+                departmentLabel: departmentName || '',
                 projectTitle: title,
                 goal: String(args.goal || ''),
                 count: 6,
@@ -1784,11 +1778,11 @@ exports.respond = async (req, res) => {
                 deliverableTitles = ['Define scope and requirements', 'Implement core tasks', 'QA and finalize'];
               }
               const spacedDates = _spreadDueDates(new Date(), inferredDueWhen || new Date(Date.now() + 90*24*60*60*1000), Math.max(3, deliverableTitles.length || 6));
-              const defaultOwner = await _pickAssignee(wsFilter.workspace, normalizedDept);
+              const defaultOwner = await _pickAssignee(wsFilter.workspace, departmentName || '');
               const richDeliverables = [];
               for (let i = 0; i < deliverableTitles.length; i++) {
                 const text = deliverableTitles[i];
-                const kpi = await _aiSuggestKPI(String(wsFilter.user || ''), String(wsFilter.workspace || ''), context, text, normalizedDept);
+                const kpi = await _aiSuggestKPI(String(wsFilter.user || ''), String(wsFilter.workspace || ''), context, text, departmentName || '');
                 richDeliverables.push({
                   text,
                   kpi: kpi || undefined,
@@ -1802,7 +1796,8 @@ exports.respond = async (req, res) => {
               const deptProject = new DepartmentProject({
                 workspace: wsFilter.workspace,
                 user: wsFilter.user,
-                departmentKey: normalizedDept,
+                departmentId: departmentId,
+                departmentKey: departmentName ? _normDeptKey(departmentName) : undefined,
                 title,
                 description: String(args.description || '').trim() || undefined,
                 linkedDeptOKR: linkedDeptOKR,
@@ -1822,10 +1817,10 @@ exports.respond = async (req, res) => {
               // Ensure canonical registry includes this department
               try {
                 const { ensureActionSections } = require('../services/workspaceFieldService');
-                await ensureActionSections(wsFilter.workspace, [normalizedDept]);
+                if (departmentName) await ensureActionSections(wsFilter.workspace, [departmentName]);
               } catch {}
               try { await agents.invalidateCache(String(wsFilter.user || ''), null, String(wsFilter.workspace || '')); } catch {}
-              return { success: true, id: deptProject._id.toString(), title: deptProject.title, department: deptProject.departmentKey, message: `Department project "${deptProject.title}" created with budget and deliverables for ${deptProject.departmentKey}.` };
+              return { success: true, id: deptProject._id.toString(), title: deptProject.title, departmentId: departmentId, message: `Department project "${deptProject.title}" created with budget and deliverables${departmentName ? ` for ${departmentName}` : ''}.` };
             }
             case 'add_deliverable': {
               const text = String(args.text || '').trim();
@@ -3386,7 +3381,8 @@ exports.respond = async (req, res) => {
             role: 'system',
             content: 'MENTIONED PROJECTS — the user referenced these with @ so use this data directly without needing to call tools:\n\n' +
               mentionedProjects.map((p) => {
-                const lines = [`[${p.title}] (${p.type === 'core' ? 'Core project' : `${p.departmentKey || 'Department'} project`})`];
+                const deptLabel = p.departmentName || (p.departmentId ? `Department ${String(p.departmentId).slice(-4)}` : 'Department');
+                const lines = [`[${p.title}] (${p.type === 'core' ? 'Core project' : `${deptLabel} project`})`];
                 if (p.goal) lines.push(`  Goal: ${p.goal}`);
                 if (p.ownerName) lines.push(`  Owner: ${p.ownerName}`);
                 if (p.dueWhen) lines.push(`  Due: ${p.dueWhen}`);

@@ -434,8 +434,15 @@ async function getProgressStatus(userId, options = {}) {
       const viewerName = u ? (`${u.firstName || ''} ${u.lastName || ''}`.trim() || u.fullName || '') : '';
       const nameLower = String(viewerName || '').trim().toLowerCase();
       const ownerMatches = (p) => String(p?.ownerName || p?.ownerId || '')?.trim()?.toLowerCase() === nameLower;
-      const allowed = Array.isArray(viewerContext.allowedDepartments) ? viewerContext.allowedDepartments : [];
-      const inDept = (p) => allowed.length > 0 && String(p?.departmentKey || p?.department || '')?.trim() && allowed.includes(String(p.departmentKey || p.department));
+      const allowedKeys = Array.isArray(viewerContext.allowedDepartments) ? viewerContext.allowedDepartments : [];
+      const allowedIds = Array.isArray(viewerContext.allowedDeptIds) ? viewerContext.allowedDeptIds.map(String) : [];
+      const inDept = (p) => {
+        const key = String(p?.departmentKey || p?.department || '').trim();
+        const id = p?.departmentId ? String(p.departmentId).trim() : '';
+        if (allowedIds.length > 0 && id && allowedIds.includes(id)) return true;
+        if (allowedKeys.length > 0 && key && allowedKeys.includes(key)) return true;
+        return false;
+      };
 
       if (viewerContext.accessType === 'limited') {
         const core = (context.coreProjects || []).filter(ownerMatches);
@@ -461,7 +468,12 @@ async function getProgressStatus(userId, options = {}) {
     overdueCount: deliveryStats.overdueCount,
     blockedCount: dependencyStats.blockedCount,
     timeHorizon,
-    viewerScope: viewerContext ? { type: viewerContext.accessType, depts: viewerContext.allowedDepartments || [], viewer: viewerContext.viewerId || '' } : null,
+    viewerScope: viewerContext ? {
+      type: viewerContext.accessType,
+      depts: viewerContext.allowedDepartments || [],
+      deptIds: viewerContext.allowedDeptIds || [],
+      viewer: viewerContext.viewerId || ''
+    } : null,
   });
 
   // Check cache

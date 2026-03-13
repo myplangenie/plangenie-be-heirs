@@ -42,7 +42,12 @@ async function generateGuidance(userId, options = {}) {
     projects: context.coreProjectDetails?.map(p => ({ title: p.title, dueWhen: p.dueWhen })),
     assignments: Object.keys(context.actionAssignments || {}),
     timeHorizon,
-    viewerScope: viewerContext ? { type: viewerContext.accessType, depts: viewerContext.allowedDepartments || [], viewer: viewerContext.viewerId || '' } : null,
+    viewerScope: viewerContext ? {
+      type: viewerContext.accessType,
+      depts: viewerContext.allowedDepartments || [],
+      deptIds: viewerContext.allowedDeptIds || [],
+      viewer: viewerContext.viewerId || ''
+    } : null,
     updatedAt: new Date().toISOString().split('T')[0], // Daily cache
   });
 
@@ -68,8 +73,15 @@ async function generateGuidance(userId, options = {}) {
         const filtered = items.filter(ownerMatches);
         if (filtered.length > 0) items = filtered;
       } else if (viewerContext.accessType === 'admin') {
-        const allowed = Array.isArray(viewerContext.allowedDepartments) ? viewerContext.allowedDepartments : [];
-        const inDept = (it) => allowed.length > 0 && String(it.departmentKey || '').trim() && allowed.includes(String(it.departmentKey));
+        const allowedKeys = Array.isArray(viewerContext.allowedDepartments) ? viewerContext.allowedDepartments : [];
+        const allowedIds = Array.isArray(viewerContext.allowedDeptIds) ? viewerContext.allowedDeptIds.map(String) : [];
+        const inDept = (it) => {
+          const key = String(it?.departmentKey || it?.source?.department || '').trim();
+          const id = String(it?.departmentId || it?.source?.departmentId || '').trim();
+          if (allowedIds.length > 0 && id && allowedIds.includes(id)) return true;
+          if (allowedKeys.length > 0 && key && allowedKeys.includes(key)) return true;
+          return false;
+        };
         const filtered = items.filter((it) => ownerMatches(it) || inDept(it));
         if (filtered.length > 0) items = filtered; // fallback to universal if none
       }
@@ -115,7 +127,11 @@ async function generateGuidance(userId, options = {}) {
     // Check if this item's linked core project matches top priority
     if (topPriority && item.linkedCoreProject === topPriority._id) return true;
     // Check if same department
-    if (topPriority && item.departmentKey === topPriority.departmentKey && item._id !== topPriority._id) return true;
+    if (topPriority) {
+      const aKey = String(item?.departmentKey || item?.source?.department || '');
+      const bKey = String(topPriority?.departmentKey || topPriority?.source?.department || '');
+      if (aKey && bKey && aKey === bKey && item._id !== topPriority._id) return true;
+    }
     return false;
   });
 

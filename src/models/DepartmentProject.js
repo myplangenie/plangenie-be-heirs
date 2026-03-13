@@ -57,8 +57,8 @@ const DepartmentProjectSchema = new mongoose.Schema({
 });
 
 // Compound indexes for efficient queries
-DepartmentProjectSchema.index({ workspace: 1, departmentKey: 1, isDeleted: 1, order: 1 });
 DepartmentProjectSchema.index({ workspace: 1, departmentId: 1, isDeleted: 1, order: 1 });
+DepartmentProjectSchema.index({ workspace: 1, departmentKey: 1, isDeleted: 1, order: 1 });
 DepartmentProjectSchema.index({ workspace: 1, isDeleted: 1, createdAt: -1 });
 DepartmentProjectSchema.index({ linkedCoreProject: 1 });
 
@@ -90,28 +90,28 @@ DepartmentProjectSchema.methods.restore = function() {
 };
 
 // Static method to find active projects for a workspace
-DepartmentProjectSchema.statics.findActiveByWorkspace = function(workspaceId, departmentKey = null) {
+DepartmentProjectSchema.statics.findActiveByWorkspace = function(workspaceId, departmentId = null) {
   const query = { workspace: workspaceId, isDeleted: false };
-  if (departmentKey) {
-    query.departmentKey = departmentKey;
+  if (departmentId) {
+    query.departmentId = departmentId;
   }
-  return this.find(query).sort({ departmentKey: 1, order: 1 });
+  return this.find(query).sort({ departmentId: 1, order: 1 });
 };
 
 // Static method to find active projects by department
-DepartmentProjectSchema.statics.findActiveByDepartment = function(workspaceId, departmentKey) {
+DepartmentProjectSchema.statics.findActiveByDepartment = function(workspaceId, departmentId) {
   return this.find({
     workspace: workspaceId,
-    departmentKey: departmentKey,
+    departmentId: departmentId,
     isDeleted: false,
   }).sort({ order: 1 });
 };
 
 // Static method to get next order number within a department
-DepartmentProjectSchema.statics.getNextOrder = async function(workspaceId, departmentKey) {
+DepartmentProjectSchema.statics.getNextOrder = async function(workspaceId, departmentId) {
   const last = await this.findOne({
     workspace: workspaceId,
-    departmentKey: departmentKey,
+    departmentId: departmentId,
     isDeleted: false,
   })
     .sort({ order: -1 })
@@ -125,14 +125,13 @@ DepartmentProjectSchema.statics.findGroupedByDepartment = async function(workspa
   const projects = await this.find({
     workspace: workspaceId,
     isDeleted: false,
-  }).sort({ departmentKey: 1, order: 1 }).lean();
+  }).sort({ departmentId: 1, order: 1 }).lean();
 
   const grouped = {};
   for (const project of projects) {
-    if (!grouped[project.departmentKey]) {
-      grouped[project.departmentKey] = [];
-    }
-    grouped[project.departmentKey].push(project);
+    const k = String(project.departmentId || '');
+    if (!grouped[k]) grouped[k] = [];
+    grouped[k].push(project);
   }
   return grouped;
 };
@@ -140,7 +139,7 @@ DepartmentProjectSchema.statics.findGroupedByDepartment = async function(workspa
 // Pre-save hook to set order if not provided
 DepartmentProjectSchema.pre('save', async function(next) {
   if (this.isNew && (this.order === undefined || this.order === null)) {
-    this.order = await this.constructor.getNextOrder(this.workspace, this.departmentKey);
+    this.order = await this.constructor.getNextOrder(this.workspace, this.departmentId);
   }
   next();
 });

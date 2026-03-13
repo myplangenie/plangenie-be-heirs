@@ -58,6 +58,7 @@ router.post('/plan-guidance', requireViewer, async (req, res) => {
       viewerId: String(req.user.viewerId),
       accessType: String(req.user.accessType || 'admin').toLowerCase(),
       allowedDepartments: Array.isArray(req.user.allowedDepartments) ? req.user.allowedDepartments : [],
+      allowedDeptIds: Array.isArray(req.user.allowedDeptIds) ? req.user.allowedDeptIds.map(String) : [],
     } : null;
     const result = await agents.generateGuidance(userId, {
       forceRefresh,
@@ -133,6 +134,7 @@ router.post('/financial-validate', requireViewer, async (req, res) => {
       viewerId: String(req.user.viewerId),
       accessType: String(req.user.accessType || 'admin').toLowerCase(),
       allowedDepartments: Array.isArray(req.user.allowedDepartments) ? req.user.allowedDepartments : [],
+      allowedDeptIds: Array.isArray(req.user.allowedDeptIds) ? req.user.allowedDeptIds.map(String) : [],
     } : null;
     const result = await agents.validateFinancials(userId, { forceRefresh, workspaceId, viewerContext });
 
@@ -218,6 +220,7 @@ router.post('/progress-status', requireViewer, async (req, res) => {
       viewerId: String(req.user.viewerId),
       accessType: String(req.user.accessType || 'admin').toLowerCase(),
       allowedDepartments: Array.isArray(req.user.allowedDepartments) ? req.user.allowedDepartments : [],
+      allowedDeptIds: Array.isArray(req.user.allowedDeptIds) ? req.user.allowedDeptIds.map(String) : [],
     } : null;
     const result = await agents.getProgressStatus(userId, {
       forceRefresh,
@@ -263,6 +266,7 @@ router.post('/strategic-integrate', requireViewer, async (req, res) => {
       viewerId: String(req.user.viewerId),
       accessType: String(req.user.accessType || 'admin').toLowerCase(),
       allowedDepartments: Array.isArray(req.user.allowedDepartments) ? req.user.allowedDepartments : [],
+      allowedDeptIds: Array.isArray(req.user.allowedDeptIds) ? req.user.allowedDeptIds.map(String) : [],
     } : null;
     const result = await agents.getStrategicIntegration(userId, { forceRefresh, workspaceId, viewerContext });
 

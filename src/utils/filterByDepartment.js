@@ -17,19 +17,19 @@ const VALID_DEPARTMENTS = [
  * Check if user has restricted department access
  */
 function hasDepartmentRestriction(user) {
-  return user?.viewOnly && user?.accessType === 'department' && Array.isArray(user?.allowedDepartments) && user.allowedDepartments.length > 0;
+  return user?.viewOnly && user?.accessType === 'department' && Array.isArray(user?.allowedDeptIds) && user.allowedDeptIds.length > 0;
 }
 
 /**
  * Filter action assignments/plans object by allowed departments
  * actionAssignments: { marketing: [...], sales: [...], ... }
  */
-function filterActionAssignments(actionAssignments, allowedDepartments) {
+function filterActionAssignments(actionAssignments, allowedDeptIds) {
   if (!actionAssignments || typeof actionAssignments !== 'object') return actionAssignments;
-  if (!Array.isArray(allowedDepartments) || allowedDepartments.length === 0) return actionAssignments;
+  if (!Array.isArray(allowedDeptIds) || allowedDeptIds.length === 0) return actionAssignments;
 
   return Object.fromEntries(
-    Object.entries(actionAssignments).filter(([key]) => allowedDepartments.includes(key))
+    Object.entries(actionAssignments).filter(([key]) => allowedDeptIds.includes(String(key)))
   );
 }
 
@@ -82,14 +82,15 @@ function filterCoreProjectDetails(coreProjectDetails, allowedDepartments) {
 /**
  * Apply department filtering to a compiled plan object
  */
-function filterCompiledPlan(plan, allowedDepartments) {
-  if (!plan || !Array.isArray(allowedDepartments) || allowedDepartments.length === 0) return plan;
+function filterCompiledPlan(plan, allowedDeptIds) {
+  if (!plan || !Array.isArray(allowedDeptIds) || allowedDeptIds.length === 0) return plan;
 
   return {
     ...plan,
-    actionPlans: filterActionAssignments(plan.actionPlans, allowedDepartments),
-    org: filterOrg(plan.org, allowedDepartments),
-    coreProjectDetails: filterCoreProjectDetails(plan.coreProjectDetails, allowedDepartments),
+    // Only filter action plans (id-keyed). Other sections may use legacy text labels and are left intact.
+    actionPlans: filterActionAssignments(plan.actionPlans, allowedDeptIds),
+    org: plan.org,
+    coreProjectDetails: plan.coreProjectDetails,
   };
 }
 

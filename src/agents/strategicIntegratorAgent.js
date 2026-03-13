@@ -249,7 +249,12 @@ async function getStrategicIntegration(userId, options = {}) {
       overallProgress: progressData.overallProgress,
     } : null,
     coreProjects: context.coreProjects?.length || 0,
-    viewerScope: viewerContext ? { type: viewerContext.accessType, depts: viewerContext.allowedDepartments || [], viewer: viewerContext.viewerId || '' } : null,
+    viewerScope: viewerContext ? {
+      type: viewerContext.accessType,
+      depts: viewerContext.allowedDepartments || [],
+      deptIds: viewerContext.allowedDeptIds || [],
+      viewer: viewerContext.viewerId || ''
+    } : null,
   });
 
   // Check cache
