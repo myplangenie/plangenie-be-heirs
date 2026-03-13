@@ -174,15 +174,9 @@ exports.requestEmailChange = async (req, res) => {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
       const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
-      const html = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color:#1D4374;">Confirm Your Email Change</h2>
-          <p>We received a request to change your account email to <strong>${newEmailRaw}</strong>.</p>
-          <p>Enter this verification code to confirm:</p>
-          <div style="font-size: 28px; font-weight: bold; letter-spacing: 6px; background:#F3F4F6; padding:12px; text-align:center; border-radius:8px; color:#1D4374;">${otp}</div>
-          <p style="color:#6B7280; font-size: 13px;">This code expires in 15 minutes.</p>
-        </div>`;
-      await resend.emails.send({ from, to: user.email, subject: 'Confirm your email change', html, text: `Your code is ${otp}. It expires in 15 minutes.` });
+      const { generateVerifyCodeEmail } = require('../emails/verifyCode');
+      const { html, text } = generateVerifyCodeEmail({ greetingName: user.firstName || user.fullName || '', title: 'Confirm Your Email Change', intro: `We received a request to change your account email to ${newEmailRaw}. Enter this verification code to confirm:`, otp, expiresText: 'This code expires in 15 minutes.' });
+      await resend.emails.send({ from, to: user.email, subject: 'Confirm your email change', html, text });
     } catch (mailErr) {
       console.error('[email-change] Failed to send OTP email:', mailErr?.message || mailErr);
     }

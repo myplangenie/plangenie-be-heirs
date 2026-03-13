@@ -6,7 +6,8 @@
 const PRIMARY_COLOR = '#1D4374';
 const ACCENT_COLOR = '#F59E0B';
 const BG_COLOR = '#F8FAFC';
-const LOGO_URL = 'https://logos.plangenie.com/logo-white.7ee85271.png';
+const LOGO_URL = 'https://logos.plangenie.com/logo.png';
+const { renderMjml } = require('./utils/mjmlRenderer');
 
 // Category colors and icons
 const CATEGORY_STYLES = {
@@ -46,154 +47,8 @@ function generateDailyWish(data) {
     day: 'numeric',
   });
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daily Wish - Plan Genie</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: ${BG_COLOR}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${BG_COLOR};">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #2563EB 100%); padding: 32px; border-radius: 12px 12px 0 0;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <img src="${LOGO_URL}" alt="Plan Genie" style="height: 20px; width: auto; display: block;" />
-                    <p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.8); font-size: 14px;">
-                      Your Weekly Recommendation
-                    </p>
-                  </td>
-                  <td align="right">
-                    <div style="background-color: rgba(255, 255, 255, 0.2); border-radius: 50%; width: 48px; height: 48px; display: inline-block; text-align: center; line-height: 48px;">
-                      <span style="font-size: 24px;">✨</span>
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Date -->
-          <tr>
-            <td style="padding: 24px 32px 0 32px;">
-              <p style="margin: 0; color: #9CA3AF; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-                ${escapeHtml(today)}
-              </p>
-            </td>
-          </tr>
-
-          <!-- Greeting -->
-          <tr>
-            <td style="padding: 16px 32px;">
-              <h2 style="margin: 0; color: #1F2937; font-size: 20px; font-weight: 600;">
-                Good day, ${escapeHtml(firstName)}!
-              </h2>
-              <p style="margin: 12px 0 0 0; color: #6B7280; font-size: 15px; line-height: 1.6;">
-                Here's your personalized recommendation for ${businessName ? `<strong>${escapeHtml(businessName)}</strong>` : 'your business'} today:
-              </p>
-            </td>
-          </tr>
-
-          <!-- Main Content Card -->
-          <tr>
-            <td style="padding: 0 32px 24px 32px;">
-              <div style="background-color: ${categoryStyle.bgColor}; border: 1px solid ${categoryStyle.color}20; border-radius: 12px; padding: 24px; border-left: 4px solid ${categoryStyle.color};">
-                <!-- Category Badge -->
-                <div style="margin-bottom: 16px;">
-                  <span style="display: inline-block; background-color: ${categoryStyle.color}15; color: ${categoryStyle.color}; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 16px;">
-                    ${categoryStyle.icon} ${escapeHtml(categoryLabel)}
-                  </span>
-                </div>
-
-                <!-- Title -->
-                <h3 style="margin: 0 0 12px 0; color: #1F2937; font-size: 18px; font-weight: 600;">
-                  ${escapeHtml(title)}
-                </h3>
-
-                <!-- Message -->
-                <p style="margin: 0; color: #4B5563; font-size: 15px; line-height: 1.7;">
-                  ${escapeHtml(message)}
-                </p>
-              </div>
-            </td>
-          </tr>
-
-          <!-- CTA Button -->
-          <tr>
-            <td style="padding: 0 32px 32px 32px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center">
-                    <a href="${dashboardUrl}" style="display: inline-block; background-color: ${PRIMARY_COLOR}; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 14px; padding: 14px 32px; border-radius: 8px;">
-                      Open Your Dashboard
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Motivational Footer -->
-          <tr>
-            <td style="padding: 0 32px 24px 32px;">
-              <div style="text-align: center; padding: 16px; background-color: #FFFBEB; border-radius: 8px; border: 1px solid #FDE68A;">
-                <p style="margin: 0; color: #92400E; font-size: 14px; font-style: italic;">
-                  "Small consistent actions lead to remarkable results."
-                </p>
-              </div>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 24px 32px; background-color: #F9FAFB; border-radius: 0 0 12px 12px; border-top: 1px solid #E5E7EB;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <p style="margin: 0; color: #9CA3AF; font-size: 12px; line-height: 1.5;">
-                      Your weekly recommendation is personalized based on your business profile and goals.
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding-top: 12px;">
-                    <p style="margin: 0; color: #9CA3AF; font-size: 11px; line-height: 1.6;">
-                      Plan Genie Inc. · Vancouver, Canada<br>
-                      You're receiving this because you signed up for Plan Genie.<br>
-                      <a href="${unsubscribeUrl || dashboardUrl + '/settings'}" style="color: #6B7280; text-decoration: underline;">Manage email preferences</a> or <a href="${unsubscribeUrl || dashboardUrl + '/settings'}" style="color: #6B7280; text-decoration: underline;">unsubscribe</a>
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding-top: 12px;">
-                    <p style="margin: 0; color: #9CA3AF; font-size: 11px;">
-                      &copy; ${new Date().getFullYear()} Plan Genie. All rights reserved.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `.trim();
-
-  // Plain text version
-  const text = `
-PLAN GENIE - YOUR WEEKLY RECOMMENDATION
+  const textPlain = (
+`PLAN GENIE - YOUR WEEKLY RECOMMENDATION
 ${today}
 
 Good day, ${firstName}!
@@ -216,11 +71,68 @@ Your weekly recommendation is personalized based on your business profile and go
 
 Manage email preferences: ${unsubscribeUrl || dashboardUrl + '/settings'}
 
-© ${new Date().getFullYear()} Plan Genie. All rights reserved.
-  `.trim();
+© ${new Date().getFullYear()} Plan Genie. All rights reserved.`).trim();
 
-  const subject = `Weekly Tip: ${title}`;  // Removed emoji - can trigger spam filters
+  const mjml = `
+  <mjml>
+    <mj-head>
+      <mj-attributes>
+        <mj-all font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" />
+        <mj-text font-size="14px" line-height="1.6" color="#334155" />
+        <mj-section padding="0px" />
+        <mj-column padding="0px" />
+        <mj-button inner-padding="14px 32px" background-color="#1D4374" color="#ffffff" font-weight="600" border-radius="8px" />
+      </mj-attributes>
+      <mj-preview>${escapeHtml(title)}</mj-preview>
+    </mj-head>
+    <mj-body background-color="#F8FAFC">
+      <mj-section>
+        <mj-column>
+          <mj-spacer height="24px" />
+          <mj-image src="${LOGO_URL}" alt="PlanGenie" align="center" padding="0 0 8px 0" width="180px" />
+        </mj-column>
+      </mj-section>
 
+      <mj-section background-color="#ffffff" border-radius="12px">
+        <mj-column padding="24px 24px 0 24px">
+          <mj-text align="center" color="#1D4374" font-size="20px" font-weight="600" padding="0">Your Recommendation</mj-text>
+        </mj-column>
+        <mj-column padding="12px 24px 0 24px">
+          <mj-text color="#9CA3AF" font-size="12px" padding="0">${escapeHtml(today)}</mj-text>
+        </mj-column>
+        <mj-column padding="12px 24px 0 24px">
+          <mj-text font-size="20px" color="#1F2937" font-weight="600" padding="0">Good day, ${escapeHtml(firstName)}!</mj-text>
+          <mj-text padding="8px 0 0 0" color="#6B7280">Here's your personalized recommendation for ${businessName ? escapeHtml(businessName) : 'your business'} today:</mj-text>
+        </mj-column>
+        <mj-column padding="16px 24px 24px 24px">
+          <mj-text padding="0 0 8px 0"><span style="display:inline-block;background-color:${categoryStyle.color}15;color:${categoryStyle.color};font-size:12px;font-weight:600;padding:4px 12px;border-radius:16px;">${categoryStyle.icon} ${escapeHtml(categoryLabel)}</span></mj-text>
+          <mj-text font-size="18px" color="#1F2937" font-weight="600" padding="0 0 8px 0">${escapeHtml(title)}</mj-text>
+          <mj-text color="#4B5563">${escapeHtml(message)}</mj-text>
+          <mj-spacer height="12px" />
+          <mj-button href="${dashboardUrl}" align="center">Open Your Dashboard</mj-button>
+          <mj-spacer height="12px" />
+          <mj-text align="center" color="#92400E" font-size="14px" padding="0">"Small consistent actions lead to remarkable results."</mj-text>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column>
+          <mj-spacer height="12px" />
+          <mj-text align="center" color="#9CA3AF" font-size="12px">Your weekly recommendation is personalized based on your business profile and goals.</mj-text>
+          <mj-text align="center" color="#9CA3AF" font-size="11px">
+            Plan Genie Inc. · Vancouver, Canada<br/>
+            You're receiving this because you signed up for Plan Genie.<br/>
+            <a href="${unsubscribeUrl || dashboardUrl + '/settings'}" style="color:#6B7280; text-decoration:underline;">Manage email preferences</a> or <a href="${unsubscribeUrl || dashboardUrl + '/settings'}" style="color:#6B7280; text-decoration:underline;">unsubscribe</a>
+          </mj-text>
+          <mj-text align="center" color="#9CA3AF" font-size="11px">© ${new Date().getFullYear()} Plan Genie. All rights reserved.</mj-text>
+          <mj-spacer height="16px" />
+        </mj-column>
+      </mj-section>
+    </mj-body>
+  </mjml>`;
+
+  const { html, text } = renderMjml(mjml, { textFallback: textPlain });
+  const subject = `Weekly Tip: ${title}`;
   return { html, text, subject };
 }
 

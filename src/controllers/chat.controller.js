@@ -2472,6 +2472,8 @@ exports.respond = async (req, res) => {
                   : 'A Plan Genie user';
                 const base = (process.env.APP_URL || 'https://plangenie.com').replace(/\/$/, '');
                 const acceptUrl = `${base}/signup?collabToken=${encodeURIComponent(collabToken)}&email=${encodeURIComponent(email)}`;
+                const { generateCollaboratorInvite } = require('../emails/collaboratorInvite');
+                const { html, text } = generateCollaboratorInvite({ ownerName, acceptUrl });
                 await resend.emails.send({
                   from: process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>',
                   to: email,

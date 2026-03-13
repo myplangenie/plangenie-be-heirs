@@ -6,7 +6,8 @@
 const PRIMARY_COLOR = '#1D4374';
 const ACCENT_COLOR = '#EDAE40';
 const BG_COLOR = '#F8FAFC';
-const LOGO_URL = 'https://logos.plangenie.com/logo-white.7ee85271.png';
+const LOGO_URL = 'https://logos.plangenie.com/logo.png';
+const { renderMjml } = require('./utils/mjmlRenderer');
 
 /**
  * Generate the review reminder email HTML
@@ -74,133 +75,16 @@ function generateReviewReminder(data) {
     </div>
   ` : '';
 
-  const subjectLine = `Time for Your ${cadenceLabel} Review`;  // Removed emoji - can trigger spam filters
+  const subjectLine = `Time for Your ${cadenceLabel} Review`;
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${cadenceLabel} Review Reminder - Plan Genie</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: ${BG_COLOR}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${BG_COLOR};">
-    <tr>
-      <td align="center" style="padding: 40px 20px;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #FFFFFF; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
-
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, ${PRIMARY_COLOR} 0%, #2563EB 100%); padding: 32px; border-radius: 12px 12px 0 0;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <img src="${LOGO_URL}" alt="Plan Genie" style="height: 20px; width: auto; display: block;" />
-                    <p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.8); font-size: 14px;">
-                      ${cadenceLabel} Review Reminder
-                    </p>
-                  </td>
-                  <td align="right">
-                    <div style="background-color: ${ACCENT_COLOR}; border-radius: 50%; width: 48px; height: 48px; display: inline-block; text-align: center; line-height: 48px;">
-                      <span style="font-size: 24px;">📋</span>
-                    </div>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Greeting -->
-          <tr>
-            <td style="padding: 32px 32px 16px 32px;">
-              <h2 style="margin: 0; color: #1F2937; font-size: 20px; font-weight: 600;">
-                Hi ${escapeHtml(firstName)},
-              </h2>
-              <p style="margin: 12px 0 0 0; color: #6B7280; font-size: 15px; line-height: 1.6;">
-                ${cadenceMessage} Take a few minutes to reflect on your progress, update project statuses, and plan for the next period.
-              </p>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 0 32px 24px 32px;">
-              ${openReviewsHtml}
-              ${deliverablesHtml}
-
-              <!-- Review tips -->
-              <div style="background-color: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 16px;">
-                <h4 style="margin: 0 0 12px 0; color: #166534; font-size: 14px; font-weight: 600;">
-                  💡 Review Session Tips
-                </h4>
-                <ul style="margin: 0; padding: 0 0 0 20px; color: #166534; font-size: 13px; line-height: 1.6;">
-                  <li>Review progress on your strategic projects</li>
-                  <li>Update deliverable statuses and due dates</li>
-                  <li>Identify blockers and create action items</li>
-                  <li>Use AI insights to spot trends and risks</li>
-                </ul>
-              </div>
-            </td>
-          </tr>
-
-          <!-- CTA Button -->
-          <tr>
-            <td style="padding: 0 32px 32px 32px;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center">
-                    <a href="${reviewUrl}" style="display: inline-block; background-color: ${ACCENT_COLOR}; color: #FFFFFF; text-decoration: none; font-weight: 600; font-size: 14px; padding: 14px 32px; border-radius: 8px;">
-                      Start Your Review
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 24px 32px; background-color: #F9FAFB; border-radius: 0 0 12px 12px; border-top: 1px solid #E5E7EB;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td>
-                    <p style="margin: 0; color: #9CA3AF; font-size: 11px; line-height: 1.6;">
-                      Plan Genie Inc. · Vancouver, Canada<br>
-                      You're receiving this because you signed up for Plan Genie.<br>
-                      <a href="${reviewUrl.replace('/reviews', '/settings')}?tab=notifications" style="color: #6B7280; text-decoration: underline;">Manage email preferences</a> or <a href="${reviewUrl.replace('/reviews', '/settings')}?tab=notifications" style="color: #6B7280; text-decoration: underline;">unsubscribe</a>
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding-top: 12px;">
-                    <p style="margin: 0; color: #9CA3AF; font-size: 11px;">
-                      &copy; ${new Date().getFullYear()} Plan Genie. All rights reserved.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `.trim();
-
-  // Plain text version
-  const text = `
-Hi ${firstName},
+  const textPlain = (
+`Hi ${firstName},
 
 ${cadenceMessage}
 
 Take a few minutes to reflect on your progress, update project statuses, and plan for the next period.
 
-${openReviewCount > 0 ? `Note: You have ${openReviewCount} open review${openReviewCount > 1 ? 's' : ''} that may need to be closed.\n` : ''}
-${upcomingDeliverables.length > 0 ? `
+${openReviewCount > 0 ? `Note: You have ${openReviewCount} open review${openReviewCount > 1 ? 's' : ''} that may need to be closed.\n` : ''}${upcomingDeliverables.length > 0 ? `
 UPCOMING DELIVERABLES:
 ${upcomingDeliverables.slice(0, 5).map(item => `- ${item.title} (due: ${item.dueWhen || 'Not set'})`).join('\n')}
 ${upcomingDeliverables.length > 5 ? `...and ${upcomingDeliverables.length - 5} more` : ''}
@@ -219,9 +103,72 @@ Plan Genie Inc. · Vancouver, Canada
 You're receiving this because you signed up for Plan Genie.
 Manage email preferences or unsubscribe: ${reviewUrl.replace('/reviews', '/settings')}?tab=notifications
 
-© ${new Date().getFullYear()} Plan Genie. All rights reserved.
-  `.trim();
+© ${new Date().getFullYear()} Plan Genie. All rights reserved.`).trim();
 
+  const rows = upcomingDeliverables.slice(0, 5).map((it) => `
+    <tr>
+      <td style="padding:8px 0; width:10px;">•</td>
+      <td style="padding:8px 0; font-weight:500; color:#1F2937;">${escapeHtml(it.title)}</td>
+      <td style="padding:8px 0; font-size:12px; color:#6B7280; text-align:right;">Due: ${it.dueWhen || 'Not set'}${it.projectTitle ? ` | ${escapeHtml(it.projectTitle)}` : ''}</td>
+    </tr>
+  `).join('');
+
+  const mjml = `
+  <mjml>
+    <mj-head>
+      <mj-attributes>
+        <mj-all font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" />
+        <mj-text font-size="14px" line-height="1.6" color="#334155" />
+        <mj-section padding="0px" />
+        <mj-column padding="0px" />
+        <mj-button inner-padding="14px 32px" background-color="#EDAE40" color="#ffffff" font-weight="600" border-radius="8px" />
+      </mj-attributes>
+      <mj-preview>${cadenceLabel} Review Reminder</mj-preview>
+    </mj-head>
+    <mj-body background-color="#F8FAFC">
+      <mj-section>
+        <mj-column>
+          <mj-spacer height="24px" />
+          <mj-image src="${LOGO_URL}" alt="PlanGenie" align="center" padding="0 0 8px 0" width="180px" />
+        </mj-column>
+      </mj-section>
+
+      <mj-section background-color="#ffffff" border-radius="12px">
+        <mj-column padding="24px 24px 0 24px">
+          <mj-text align="center" color="#1D4374" font-size="20px" font-weight="600" padding="0">${cadenceLabel} Review Reminder</mj-text>
+        </mj-column>
+        <mj-column padding="16px 24px 0 24px">
+          <mj-text font-size="20px" color="#1F2937" font-weight="600" padding="0">Hi ${escapeHtml(firstName)},</mj-text>
+          <mj-text padding="8px 0 0 0" color="#6B7280">${cadenceMessage} Take a few minutes to reflect on your progress, update project statuses, and plan for the next period.</mj-text>
+        </mj-column>
+        <mj-column padding="16px 24px 24px 24px">
+          ${openReviewCount > 0 ? `<mj-text color="#2C5282" padding="0 0 12px 0"><strong>Note:</strong> You have ${openReviewCount} open review${openReviewCount > 1 ? 's' : ''} that may need to be closed.</mj-text>` : ''}
+          ${upcomingDeliverables.length ? `<mj-text color="#1D4374" font-size="16px" font-weight="600" padding="0 0 8px 0">Upcoming Deliverables to Review</mj-text>
+          <mj-table cellpadding="0" cellspacing="0" width="100%">${rows}${upcomingDeliverables.length > 5 ? `<tr><td colspan="3" style="padding-top:8px; font-size:12px; color:#6B7280;">...and ${upcomingDeliverables.length - 5} more deliverables</td></tr>` : ''}</mj-table>
+          <mj-spacer height="12px" />` : ''}
+          <mj-text color="#166534" font-weight="600" padding="0 0 6px 0">Review Session Tips</mj-text>
+          <mj-text color="#166534">• Review progress on your strategic projects<br/>• Update deliverable statuses and due dates<br/>• Identify blockers and create action items<br/>• Use AI insights to spot trends and risks</mj-text>
+          <mj-spacer height="12px" />
+          <mj-button href="${reviewUrl}" align="center">Start Your Review</mj-button>
+        </mj-column>
+      </mj-section>
+
+      <mj-section>
+        <mj-column>
+          <mj-spacer height="12px" />
+          <mj-text align="center" color="#9CA3AF" font-size="11px">
+            Plan Genie Inc. · Vancouver, Canada<br/>
+            You're receiving this because you signed up for Plan Genie.<br/>
+            <a href="${reviewUrl.replace('/reviews', '/settings')}?tab=notifications" style="color:#6B7280; text-decoration:underline;">Manage email preferences</a> or <a href="${reviewUrl.replace('/reviews', '/settings')}?tab=notifications" style="color:#6B7280; text-decoration:underline;">unsubscribe</a>
+          </mj-text>
+          <mj-text align="center" color="#9CA3AF" font-size="11px">© ${new Date().getFullYear()} Plan Genie. All rights reserved.</mj-text>
+          <mj-spacer height="16px" />
+        </mj-column>
+      </mj-section>
+    </mj-body>
+  </mjml>`;
+
+  const { html, text } = renderMjml(mjml, { textFallback: textPlain });
   return { html, text, subject: subjectLine };
 }
 

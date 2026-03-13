@@ -232,29 +232,15 @@ exports.register = async (req, res) => {
   try {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
-    const result = await resend.emails.send({
-      from,
-      to: user.email,
-      subject: 'Your Plan Genie verification code',
-      html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="text-align: center; margin-bottom: 24px;">
-            <img src="https://logos.plangenie.com/logo-white.7ee85271.png" alt="Plan Genie" style="height: 20px;" />
-          </div>
-          <p style="color: #1F2937; font-size: 16px;">Hello${(user.firstName || user.fullName) ? ' ' + (user.firstName || user.fullName) : ''},</p>
-          <p style="color: #4B5563; font-size: 15px;">Thanks for signing up for Plan Genie.</p>
-          <p style="color: #4B5563; font-size: 15px;">Your verification code is:</p>
-          <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; text-align: center; color: #1D4374; background-color: #F3F4F6; padding: 16px; border-radius: 8px; margin: 24px 0;">${otp}</p>
-          <p style="color: #6B7280; font-size: 14px;">This code expires in 24 hours.</p>
-          <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 32px 0;" />
-          <p style="color: #9CA3AF; font-size: 12px; text-align: center;">
-            Plan Genie Inc. · Vancouver, Canada<br />
-            You're receiving this because you signed up for Plan Genie.
-          </p>
-        </div>
-      `,
-      text: `Your Plan Genie verification code is ${otp}. It expires in 24 hours.\n\n---\nPlan Genie Inc. · Vancouver, Canada`,
+    const { generateVerifyCodeEmail } = require('../emails/verifyCode');
+    const { html, text } = generateVerifyCodeEmail({
+      greetingName: user.firstName || user.fullName || '',
+      title: 'Verify Your Email',
+      intro: 'Thanks for signing up for Plan Genie. Your verification code is:',
+      otp,
+      expiresText: 'This code expires in 24 hours.',
     });
+    const result = await resend.emails.send({ from, to: user.email, subject: 'Your Plan Genie verification code', html, text });
     if (result && result.error) {
       console.error('[email] Resend send error:', result.error?.message || result.error);
     }
@@ -303,29 +289,15 @@ exports.login = async (req, res) => {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
         const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
-        const result = await resend.emails.send({
-          from,
-          to: user.email,
-          subject: 'Your Plan Genie verification code',
-          html: `
-            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <div style="text-align: center; margin-bottom: 24px;">
-                <img src="https://logos.plangenie.com/logo-white.7ee85271.png" alt="Plan Genie" style="height: 20px;" />
-              </div>
-              <p style="color: #1F2937; font-size: 16px;">Hello${(user.firstName || user.fullName) ? ' ' + (user.firstName || user.fullName) : ''},</p>
-              <p style="color: #4B5563; font-size: 15px;">We noticed you tried to sign in, but your email is not verified yet.</p>
-              <p style="color: #4B5563; font-size: 15px;">Your verification code is:</p>
-              <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; text-align: center; color: #1D4374; background-color: #F3F4F6; padding: 16px; border-radius: 8px; margin: 24px 0;">${otp}</p>
-              <p style="color: #6B7280; font-size: 14px;">This code expires in 24 hours.</p>
-              <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 32px 0;" />
-              <p style="color: #9CA3AF; font-size: 12px; text-align: center;">
-                Plan Genie Inc.<br />
-                You're receiving this because you signed up for Plan Genie.
-              </p>
-            </div>
-          `,
-          text: `Your Plan Genie verification code is ${otp}. It expires in 24 hours.\n\n---\nPlan Genie Inc. · Vancouver, Canada`,
+        const { generateVerifyCodeEmail } = require('../emails/verifyCode');
+        const { html, text } = generateVerifyCodeEmail({
+          greetingName: user.firstName || user.fullName || '',
+          title: 'Verify Your Email',
+          intro: 'We noticed you tried to sign in, but your email is not verified yet. Your verification code is:',
+          otp,
+          expiresText: 'This code expires in 24 hours.',
         });
+        const result = await resend.emails.send({ from, to: user.email, subject: 'Your Plan Genie verification code', html, text });
         if (result && result.error) {
           console.error('[email] Resend send error:', result.error?.message || result.error);
         }
@@ -530,28 +502,15 @@ exports.resendOtp = async (req, res) => {
     try {
       const resend = new Resend(process.env.RESEND_API_KEY);
       const from = process.env.RESEND_FROM || 'Plan Genie <no-reply@plangenie.com>';
-      const result = await resend.emails.send({
-        from,
-        to: user.email,
-        subject: 'Your Plan Genie verification code',
-        html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 24px;">
-              <img src="https://logos.plangenie.com/logo-white.7ee85271.png" alt="Plan Genie" style="height: 20px;" />
-            </div>
-            <p style="color: #1F2937; font-size: 16px;">Hello${(user.firstName || user.fullName) ? ' ' + (user.firstName || user.fullName) : ''},</p>
-            <p style="color: #4B5563; font-size: 15px;">Your verification code is:</p>
-            <p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; text-align: center; color: #1D4374; background-color: #F3F4F6; padding: 16px; border-radius: 8px; margin: 24px 0;">${otp}</p>
-            <p style="color: #6B7280; font-size: 14px;">This code expires in 24 hours.</p>
-            <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 32px 0;" />
-            <p style="color: #9CA3AF; font-size: 12px; text-align: center;">
-              Plan Genie Inc.<br />
-              You're receiving this because you signed up for Plan Genie.
-            </p>
-          </div>
-        `,
-        text: `Your Plan Genie verification code is ${otp}. It expires in 24 hours.\n\n---\nPlan Genie Inc. · Vancouver, Canada`,
+      const { generateVerifyCodeEmail } = require('../emails/verifyCode');
+      const { html, text } = generateVerifyCodeEmail({
+        greetingName: user.firstName || user.fullName || '',
+        title: 'Verify Your Email',
+        intro: 'Your verification code is:',
+        otp,
+        expiresText: 'This code expires in 24 hours.',
       });
+      const result = await resend.emails.send({ from, to: user.email, subject: 'Your Plan Genie verification code', html, text });
       if (result && result.error) {
         console.error('[email] Resend send error:', result.error?.message || result.error);
       }

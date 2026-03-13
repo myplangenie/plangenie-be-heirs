@@ -18,7 +18,7 @@ async function sendAdminNotificationEmail({ user, request }) {
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #F8FAFC;">
         <div style="background-color: #FFFFFF; border-radius: 12px; padding: 32px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
           <div style="text-align: center; margin-bottom: 24px;">
-            <img src="https://logos.plangenie.com/logo-white.7ee85271.png" alt="Plan Genie" style="height: 20px;" />
+            <img src="https://logos.plangenie.com/logo.png" alt="PlanGenie" style="height: 24px; max-width: 180px; object-fit: contain;" />
           </div>
           <h2 style="color: #1D4374; font-size: 20px; font-weight: 600; margin: 0 0 16px 0; text-align: center;">New Integration Request</h2>
 
@@ -209,7 +209,7 @@ exports.contactExpert = async (req, res, next) => {
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #F8FAFC;">
         <div style="background-color: #FFFFFF; border-radius: 12px; padding: 32px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
           <div style="text-align: center; margin-bottom: 24px;">
-            <img src="https://logos.plangenie.com/logo-white.7ee85271.png" alt="Plan Genie" style="height: 20px;" />
+            <img src="https://logos.plangenie.com/logo.png" alt="PlanGenie" style="height: 24px; max-width: 180px; object-fit: contain;" />
           </div>
           <h2 style="color: #1D4374; font-size: 20px; font-weight: 600; margin: 0 0 16px 0; text-align: center;">Integration Support Request</h2>
 

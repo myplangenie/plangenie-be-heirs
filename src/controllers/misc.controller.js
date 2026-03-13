@@ -10,7 +10,10 @@ exports.requestDemo = async (req, res, next) => {
 
     const subject = `New Demo Request${offering ? ` – ${offering}` : ''}`;
     const html = `
-      <h2>New Demo Request</h2>
+      <div style="text-align:center;margin-bottom:16px">
+        <img src="https://logos.plangenie.com/logo.png" alt="PlanGenie" style="height:24px;max-width:180px;object-fit:contain" />
+      </div>
+      <h2 style="margin:8px 0 16px 0;color:#1D4374">New Demo Request</h2>
       <p><strong>Name:</strong> ${name || ''}</p>
       <p><strong>Email:</strong> ${email || ''}</p>
       <p><strong>Phone:</strong> ${phone || ''}</p>
@@ -48,7 +51,10 @@ exports.bookCall = async (req, res, next) => {
     const resend = new Resend(process.env.RESEND_API_KEY);
     const subject = 'Talk with Us – Call booking request';
     const html = `
-      <h2>Call Booking</h2>
+      <div style="text-align:center;margin-bottom:16px">
+        <img src="https://logos.plangenie.com/logo.png" alt="PlanGenie" style="height:24px;max-width:180px;object-fit:contain" />
+      </div>
+      <h2 style="margin:8px 0 16px 0;color:#1D4374">Call Booking</h2>
       <p><strong>Name:</strong> ${name || ''}</p>
       <p><strong>Email:</strong> ${email || ''}</p>
       <p><strong>Reason:</strong> ${reason || ''}</p>

@@ -145,6 +145,7 @@ exports.saveBusinessProfile = async (req, res) => {
   }
   const {
     businessName,
+    businessWebsite,
     businessStage,
     industry,
     industryOther,
@@ -189,6 +190,7 @@ exports.saveBusinessProfile = async (req, res) => {
   // Patch only provided business fields; do not clear others
   const bp = ob.businessProfile || {};
   if (Object.prototype.hasOwnProperty.call(req.body, 'businessName')) bp.businessName = businessName;
+  if (Object.prototype.hasOwnProperty.call(req.body, 'businessWebsite')) bp.businessWebsite = businessWebsite;
   if (Object.prototype.hasOwnProperty.call(req.body, 'businessStage')) bp.businessStage = businessStage;
   if (Object.prototype.hasOwnProperty.call(req.body, 'industry')) bp.industry = industry;
   if (Object.prototype.hasOwnProperty.call(req.body, 'industryOther')) bp.industryOther = industryOther;
@@ -231,6 +233,17 @@ exports.saveBusinessProfile = async (req, res) => {
       }
     } catch (wsErr) {
       console.error('[onboarding] Failed to sync workspace:', wsErr?.message || wsErr);
+    }
+  }
+  // Also sync User.companyName so collaborator-facing flows reflect the latest name
+  if (businessName) {
+    try {
+      const name = String(businessName || '').trim();
+      if (name) {
+        await User.findByIdAndUpdate(userId, { companyName: name }).exec();
+      }
+    } catch (userErr) {
+      console.error('[onboarding] Failed to sync user.companyName:', userErr?.message || userErr);
     }
   }
   // Update workspace lastActivityAt

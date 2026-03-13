@@ -45,6 +45,7 @@ router.post(
   requireContributor,
   [
     body('businessName').optional().isString().trim(),
+    body('businessWebsite').optional().isString().trim(),
     body('businessStage').optional().isString().trim(),
     body('industry').optional().isString().trim(),
     body('country').optional().isString().trim(),
@@ -54,6 +55,7 @@ router.post(
     body('funding').optional(),
     body('tools').optional().isArray(),
     body('connectTools').optional(),
+    body('description').optional().isString().trim(),
   ],
   ctrl.saveBusinessProfile
 );

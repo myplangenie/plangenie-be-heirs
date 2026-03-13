@@ -22,6 +22,7 @@ const UserProfileSchema = new mongoose.Schema(
 const BusinessProfileSchema = new mongoose.Schema(
   {
     businessName: { type: String, trim: true },
+    businessWebsite: { type: String, trim: true },
     businessStage: { type: String, trim: true },
     industry: { type: String },
     industryOther: { type: String },
