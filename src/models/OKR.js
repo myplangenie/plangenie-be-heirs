@@ -59,8 +59,12 @@ const OKRSchema = new mongoose.Schema({
     index: true,
   },
   // Department ownership for department OKRs
+  // departmentId is set when linked to a real Department document
   departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department', index: true },
+  // departmentKey is a normalized key (used for scoping/filters) and may exist even when departmentId is unset
   departmentKey: { type: String, trim: true, index: true },
+  // departmentLabel is the human-friendly label to display when departmentId is not set
+  departmentLabel: { type: String, trim: true },
   // The Objective
   objective: {
     type: String,

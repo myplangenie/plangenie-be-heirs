@@ -184,6 +184,16 @@ exports.create = async (req, res, next) => {
         try {
           const name = String(departmentName).trim();
           req._resolvedDepartmentKey = normalizeDepartmentKey(name);
+          req._resolvedDepartmentLabel = name;
+        } catch (_) {}
+      } else if (departmentId) {
+        try {
+          const Department = require('../models/Department');
+          const dep = await Department.findOne({ ...wsFilter, _id: departmentId }).select('name').lean();
+          if (dep && dep.name) {
+            req._resolvedDepartmentLabel = dep.name;
+            req._resolvedDepartmentKey = normalizeDepartmentKey(dep.name);
+          }
         } catch (_) {}
       }
     }
@@ -193,6 +203,7 @@ exports.create = async (req, res, next) => {
       user: userId,
       okrType: type,
       departmentKey: type === 'department' ? (req._resolvedDepartmentKey || undefined) : undefined,
+      departmentLabel: type === 'department' ? (req._resolvedDepartmentLabel || undefined) : undefined,
       departmentId: type === 'department' ? (departmentId || undefined) : undefined,
       objective: objective.trim(),
       keyResults: processedKRs,
@@ -259,6 +270,17 @@ exports.update = async (req, res, next) => {
 
     if (okr.okrType === 'department' && typeof departmentId !== 'undefined') {
       okr.departmentId = departmentId || okr.departmentId;
+      // Refresh label/key when departmentId is changed
+      if (departmentId) {
+        try {
+          const Department = require('../models/Department');
+          const dep = await Department.findOne({ ...wsFilter, _id: departmentId }).select('name').lean();
+          if (dep && dep.name) {
+            okr.departmentLabel = dep.name;
+            okr.departmentKey = normalizeDepartmentKey(dep.name);
+          }
+        } catch (_) {}
+      }
     }
     if (okr.okrType === 'core' && Array.isArray(derivedFromGoals)) {
       if (derivedFromGoals.length === 0) return res.status(400).json({ message: 'Core OKR must be derived from at least one 1-year goal' });
