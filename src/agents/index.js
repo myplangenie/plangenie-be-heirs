@@ -19,6 +19,7 @@ const financialValidation = require('./financialValidationAgent');
 const strategySuggestion = require('./strategySuggestionAgent');
 const progressStatus = require('./progressStatusAgent');
 const strategicIntegrator = require('./strategicIntegratorAgent');
+const okrStrategicIntegrator = require('./okrStrategicIntegratorAgent');
 const base = require('./base');
 const registry = require('./registry');
 
@@ -38,6 +39,9 @@ module.exports = {
 
   // Strategic Integrator
   getStrategicIntegration: strategicIntegrator.getStrategicIntegration,
+
+  // OKR Strategic Integrator
+  getOKRStrategicIntegration: okrStrategicIntegrator.getOKRStrategicIntegration,
 
   // Utilities
   invalidateCache: base.invalidateCache,

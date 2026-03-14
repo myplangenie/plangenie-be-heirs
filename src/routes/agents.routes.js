@@ -284,6 +284,31 @@ router.post('/strategic-integrate', requireViewer, async (req, res) => {
 });
 
 /**
+ * OKR Strategic Integrator Agent
+ * POST /api/agents/okr-strategic-integrate
+ * Returns OKR-level coherence analysis: core health, KR metrics, dept coverage
+ */
+router.post('/okr-strategic-integrate', requireViewer, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const workspaceId = req.workspace?._id;
+    const { forceRefresh } = req.body;
+
+    console.log('[Agent] okr-strategic-integrate - userId:', userId, 'workspaceId:', workspaceId);
+
+    const result = await agents.getOKRStrategicIntegration(userId, { forceRefresh, workspaceId });
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error('[Agent] OKR Strategic Integration error:', err.message);
+    res.status(500).json({
+      success: false,
+      error: err.message || 'Failed to get OKR strategic integration',
+    });
+  }
+});
+
+/**
  * Invalidate Cache
  * POST /api/agents/invalidate-cache
  * Clears cached agent responses for the user
