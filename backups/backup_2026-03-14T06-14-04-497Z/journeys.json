@@ -1,0 +1,26 @@
+[
+  {
+    "_id": "6944fcce37d5de2791d64f45",
+    "user": "6916186423f83e5b9bae0f22",
+    "jid": "j_bx5hdw9i",
+    "name": "ife",
+    "description": "",
+    "status": "active",
+    "defaultJourney": true,
+    "reviewCadence": {
+      "weekly": true,
+      "monthly": false,
+      "quarterly": false,
+      "dayOfWeek": 1,
+      "dayOfMonth": 1
+    },
+    "links": {
+      "onboardingId": null,
+      "planId": null
+    },
+    "startedAt": "2025-12-19T07:20:46.872Z",
+    "createdAt": "2025-12-19T07:20:46.878Z",
+    "updatedAt": "2025-12-19T07:20:46.878Z",
+    "__v": 0
+  }
+]

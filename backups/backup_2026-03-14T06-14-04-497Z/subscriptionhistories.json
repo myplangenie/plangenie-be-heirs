@@ -1,0 +1,693 @@
+[
+  {
+    "_id": "69376d7968de3d9da1615d92",
+    "user": "6916186423f83e5b9bae0f22",
+    "subscription": "69376d7868de3d9da1615d8e",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-09T00:29:45.344Z",
+    "updatedAt": "2025-12-09T00:29:45.344Z",
+    "__v": 0
+  },
+  {
+    "_id": "693792af99a2a068c7fe6c37",
+    "user": "6937922c99a2a068c7fe6c28",
+    "subscription": "693792af99a2a068c7fe6c33",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-09T03:08:31.528Z",
+    "updatedAt": "2025-12-09T03:08:31.528Z",
+    "__v": 0
+  },
+  {
+    "_id": "6937ed1b6f2bac8490e46327",
+    "user": "6937ecb06f2bac8490e46318",
+    "subscription": "6937ed1b6f2bac8490e46323",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-09T09:34:19.527Z",
+    "updatedAt": "2025-12-09T09:34:19.527Z",
+    "__v": 0
+  },
+  {
+    "_id": "6937efd36f2bac8490e46368",
+    "user": "69232b349536cb98c29df1ec",
+    "subscription": "6937efd36f2bac8490e46364",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-09T09:45:55.228Z",
+    "updatedAt": "2025-12-09T09:45:55.228Z",
+    "__v": 0
+  },
+  {
+    "_id": "6939b76514b5b2cb3d995c7f",
+    "user": "693855799689ae7c71aff2b9",
+    "subscription": "6939b76414b5b2cb3d995c7d",
+    "event": "initialized",
+    "stripeSessionId": "cs_live_b1lFuwjWdHKyaHYh44Ibl8PkEWqtRcoHfxCt0vx12bWMh6aaxYB2S7t9Bl",
+    "stripeCustomerId": "cus_Ta1tqw9uWGlcJv",
+    "createdAt": "2025-12-10T18:09:41.827Z",
+    "updatedAt": "2025-12-10T18:09:41.827Z",
+    "__v": 0
+  },
+  {
+    "_id": "693a3b6744262267ca7e553e",
+    "user": "693a3a79217ec1e63c2ac4ec",
+    "subscription": "693a3b6644262267ca7e553c",
+    "event": "initialized",
+    "stripeSessionId": "cs_live_b1hrmQ07TN8Puj9UCzEkSnj0ItOPMuGY09PxVIweyw8lSXdEDR2t8oubnA",
+    "stripeCustomerId": "cus_TaAyHcgsW3vJWm",
+    "createdAt": "2025-12-11T03:32:55.619Z",
+    "updatedAt": "2025-12-11T03:32:55.619Z",
+    "__v": 0
+  },
+  {
+    "_id": "693a3b9344262267ca7e5547",
+    "user": "693a3a79217ec1e63c2ac4ec",
+    "subscription": "693a3b6644262267ca7e553c",
+    "event": "initialized",
+    "stripeSessionId": "cs_live_b1KFqnrmezPZSWa5tlid87ZLZI8mssbjJzlxWHldifLawXECa6Sb4IsFGc",
+    "stripeCustomerId": "cus_TaAyHcgsW3vJWm",
+    "createdAt": "2025-12-11T03:33:39.950Z",
+    "updatedAt": "2025-12-11T03:33:39.950Z",
+    "__v": 0
+  },
+  {
+    "_id": "693a3bf8c75f65b0685300ea",
+    "user": "693a3a79217ec1e63c2ac4ec",
+    "subscription": "693a3b6644262267ca7e553c",
+    "event": "initialized",
+    "stripeSessionId": "cs_live_b1fOBQOGpfdsSTKq2ytJOiKKkKtPHgcpjH4ZYidSwjPlmDOEtGQLu8NYjG",
+    "stripeCustomerId": "cus_TaAyHcgsW3vJWm",
+    "createdAt": "2025-12-11T03:35:20.420Z",
+    "updatedAt": "2025-12-11T03:35:20.420Z",
+    "__v": 0
+  },
+  {
+    "_id": "693a998c9e4f4f1e5288fa06",
+    "user": "693a99029e4f4f1e5288f9e7",
+    "subscription": "693a998b9e4f4f1e5288fa02",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-11T10:14:36.248Z",
+    "updatedAt": "2025-12-11T10:14:36.248Z",
+    "__v": 0
+  },
+  {
+    "_id": "693a9a579e4f4f1e5288fa6e",
+    "user": "6914be3b4a5b21ac61c18282",
+    "subscription": "693a9a579e4f4f1e5288fa6a",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-11T10:17:59.361Z",
+    "updatedAt": "2025-12-11T10:17:59.361Z",
+    "__v": 0
+  },
+  {
+    "_id": "693aa96b9e4f4f1e528bbd8c",
+    "user": "693aa8e09e4f4f1e528bb90b",
+    "subscription": "693aa96a9e4f4f1e528bbd88",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-11T11:22:19.162Z",
+    "updatedAt": "2025-12-11T11:22:19.162Z",
+    "__v": 0
+  },
+  {
+    "_id": "693aa9de9e4f4f1e528bbda3",
+    "user": "693aa8e09e4f4f1e528bb90b",
+    "subscription": "693aa96a9e4f4f1e528bbd88",
+    "event": "initialized",
+    "stripeSessionId": "cs_live_b1hR0IZToDqituvQN2vhUBdv4KkVOoUZIe8cMj2zrMvVQbTIEmLjBIgHAv",
+    "stripeCustomerId": "cus_TaIZqHMq2NTPKU",
+    "createdAt": "2025-12-11T11:24:14.375Z",
+    "updatedAt": "2025-12-11T11:24:14.375Z",
+    "__v": 0
+  },
+  {
+    "_id": "693aa9ef9e4f4f1e528bbdac",
+    "user": "693aa8e09e4f4f1e528bb90b",
+    "subscription": "693aa96a9e4f4f1e528bbd88",
+    "event": "initialized",
+    "stripeSessionId": "cs_live_b16UduQmxAizRtYiNKHaTjeQnbCURJniZxu1vOHJbs851XXaD0Tab2SfMg",
+    "stripeCustomerId": "cus_TaIZqHMq2NTPKU",
+    "createdAt": "2025-12-11T11:24:31.273Z",
+    "updatedAt": "2025-12-11T11:24:31.273Z",
+    "__v": 0
+  },
+  {
+    "_id": "693aaa199e4f4f1e528bbdb7",
+    "user": "693aa8e09e4f4f1e528bb90b",
+    "subscription": "693aa96a9e4f4f1e528bbd88",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-11T11:25:13.153Z",
+    "updatedAt": "2025-12-11T11:25:13.153Z",
+    "__v": 0
+  },
+  {
+    "_id": "693aabb79e4f4f1e528bbde1",
+    "user": "693aa8b29e4f4f1e528bb608",
+    "subscription": "693aabb69e4f4f1e528bbddf",
+    "event": "initialized",
+    "stripeSessionId": "cs_live_b1ctVugyHvr5L6JM2aEBjRTWl0QFkSQNxx19KnPW5QGea6U5vGosAVKuhy",
+    "stripeCustomerId": "cus_TaIhXhyU496fkt",
+    "createdAt": "2025-12-11T11:32:07.218Z",
+    "updatedAt": "2025-12-11T11:32:07.218Z",
+    "__v": 0
+  },
+  {
+    "_id": "693aabd79e4f4f1e528bbdec",
+    "user": "693aa8b29e4f4f1e528bb608",
+    "subscription": "693aabb69e4f4f1e528bbddf",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-11T11:32:39.112Z",
+    "updatedAt": "2025-12-11T11:32:39.112Z",
+    "__v": 0
+  },
+  {
+    "_id": "6947954dd884ac60680703af",
+    "user": "694793f4d884ac6068070395",
+    "subscription": "6947954dd884ac60680703ab",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-21T06:35:57.658Z",
+    "updatedAt": "2025-12-21T06:35:57.658Z",
+    "__v": 0
+  },
+  {
+    "_id": "6949d9e48d013b0739c9fb48",
+    "user": "6949d99d8d013b0739c9fb2b",
+    "subscription": "6949d9e48d013b0739c9fb44",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-22T23:53:08.757Z",
+    "updatedAt": "2025-12-22T23:53:08.757Z",
+    "__v": 0
+  },
+  {
+    "_id": "6951c161fdfc7a5e3a82c798",
+    "user": "6951c115fdfc7a5e3a82c77b",
+    "subscription": "6951c160fdfc7a5e3a82c794",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2025-12-28T23:46:41.241Z",
+    "updatedAt": "2025-12-28T23:46:41.241Z",
+    "__v": 0
+  },
+  {
+    "_id": "695b742df10a85ddc095fae2",
+    "user": "695b73b1f10a85ddc095fac5",
+    "subscription": "695b742df10a85ddc095fade",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-05T08:19:57.549Z",
+    "updatedAt": "2026-01-05T08:19:57.549Z",
+    "__v": 0
+  },
+  {
+    "_id": "695c2d67e32bf19ca90418ac",
+    "user": "695c2c8ee32bf19ca9041886",
+    "subscription": "695c2d67e32bf19ca90418a8",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-05T21:30:15.914Z",
+    "updatedAt": "2026-01-05T21:30:15.914Z",
+    "__v": 0
+  },
+  {
+    "_id": "695db72adb01be6299712285",
+    "user": "695db6fedb01be6299712265",
+    "subscription": "695db729db01be6299712281",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-07T01:30:18.024Z",
+    "updatedAt": "2026-01-07T01:30:18.024Z",
+    "__v": 0
+  },
+  {
+    "_id": "695db770db01be6299712298",
+    "user": "695db6fedb01be6299712265",
+    "subscription": "695db729db01be6299712281",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-07T01:31:28.614Z",
+    "updatedAt": "2026-01-07T01:31:28.614Z",
+    "__v": 0
+  },
+  {
+    "_id": "695dba713577214989df7ff1",
+    "user": "695dba2a3577214989df7fd1",
+    "subscription": "695dba713577214989df7fed",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-07T01:44:17.345Z",
+    "updatedAt": "2026-01-07T01:44:17.345Z",
+    "__v": 0
+  },
+  {
+    "_id": "695e29baf15d20ef28b852a4",
+    "user": "695e24e53932b44a07110322",
+    "subscription": "695e29baf15d20ef28b852a0",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-07T09:39:06.984Z",
+    "updatedAt": "2026-01-07T09:39:06.984Z",
+    "__v": 0
+  },
+  {
+    "_id": "695e4912335e8ed061f7a1f8",
+    "user": "695e48d3335e8ed061f7a1de",
+    "subscription": "695e4911335e8ed061f7a1f4",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-07T11:52:50.040Z",
+    "updatedAt": "2026-01-07T11:52:50.040Z",
+    "__v": 0
+  },
+  {
+    "_id": "695e7eeaf0d126a92c7efa30",
+    "user": "695e7ebaf0d126a92c7efa16",
+    "subscription": "695e7eeaf0d126a92c7efa2c",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-07T15:42:34.259Z",
+    "updatedAt": "2026-01-07T15:42:34.259Z",
+    "__v": 0
+  },
+  {
+    "_id": "695fe95c24ad03a594e2afc8",
+    "user": "695fe8ce24ad03a594e2afb3",
+    "subscription": "695fe95c24ad03a594e2afc4",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-08T17:29:00.865Z",
+    "updatedAt": "2026-01-08T17:29:00.865Z",
+    "__v": 0
+  },
+  {
+    "_id": "696a8da2aa4e6a9951a0ed77",
+    "user": "696a8d23aa4e6a9951a0ed62",
+    "subscription": "696a8da2aa4e6a9951a0ed73",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-16T19:12:34.827Z",
+    "updatedAt": "2026-01-16T19:12:34.827Z",
+    "__v": 0
+  },
+  {
+    "_id": "69726183cd7477a69d513360",
+    "user": "6972612ecd7477a69d51333a",
+    "subscription": "69726183cd7477a69d513359",
+    "event": "initialized",
+    "stripeSessionId": "cs_live_b1698NfOETaTWliGfWziOxOxM9a7nxqUWzHtZabYcOUmLe9cUcLPNJJuuI",
+    "stripeCustomerId": "cus_Tq8Ab21yQrnoKn",
+    "createdAt": "2026-01-22T17:42:27.555Z",
+    "updatedAt": "2026-01-22T17:42:27.555Z",
+    "__v": 0
+  },
+  {
+    "_id": "697261ca11da3e0887421d3f",
+    "user": "6972612ecd7477a69d51333a",
+    "subscription": "69726183cd7477a69d513359",
+    "event": "completed",
+    "stripeSessionId": "cs_live_b1698NfOETaTWliGfWziOxOxM9a7nxqUWzHtZabYcOUmLe9cUcLPNJJuuI",
+    "stripeCustomerId": "cus_Tq8Ab21yQrnoKn",
+    "stripeSubscriptionId": "sub_0SsRuJUfPibL9nfOUFrgkzoM",
+    "createdAt": "2026-01-22T17:43:38.112Z",
+    "updatedAt": "2026-01-22T17:43:38.112Z",
+    "__v": 0
+  },
+  {
+    "_id": "697261cf11da3e0887421d45",
+    "user": "6972612ecd7477a69d51333a",
+    "subscription": "69726183cd7477a69d513359",
+    "event": "completed",
+    "stripeSessionId": "cs_live_b1698NfOETaTWliGfWziOxOxM9a7nxqUWzHtZabYcOUmLe9cUcLPNJJuuI",
+    "stripeCustomerId": "cus_Tq8Ab21yQrnoKn",
+    "stripeSubscriptionId": "sub_0SsRuJUfPibL9nfOUFrgkzoM",
+    "createdAt": "2026-01-22T17:43:43.149Z",
+    "updatedAt": "2026-01-22T17:43:43.149Z",
+    "__v": 0
+  },
+  {
+    "_id": "6972624acd7477a69d513382",
+    "user": "6972612ecd7477a69d51333a",
+    "subscription": "69726183cd7477a69d513359",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-22T17:45:46.974Z",
+    "updatedAt": "2026-01-22T17:45:46.974Z",
+    "__v": 0
+  },
+  {
+    "_id": "69731ff83732d26375456819",
+    "user": "69731f973732d26375456804",
+    "subscription": "69731ff83732d26375456815",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-01-23T07:15:04.381Z",
+    "updatedAt": "2026-01-23T07:15:04.381Z",
+    "__v": 0
+  },
+  {
+    "_id": "6984e506dcb290222c21e0fc",
+    "user": "6984405a899642c866c794ce",
+    "subscription": "6984e505dcb290222c21e0f8",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-02-05T18:44:22.088Z",
+    "updatedAt": "2026-02-05T18:44:22.088Z",
+    "__v": 0
+  },
+  {
+    "_id": "698cb32e47b02e4a9619fa90",
+    "user": "698cb22d47b02e4a9619fa7b",
+    "subscription": "698cb32e47b02e4a9619fa8c",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-02-11T16:49:50.825Z",
+    "updatedAt": "2026-02-11T16:49:50.825Z",
+    "__v": 0
+  },
+  {
+    "_id": "698e6d934455c1177406b3b3",
+    "user": "698e6d104455c1177406b39c",
+    "subscription": "698e6d934455c1177406b3af",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-02-13T00:17:23.892Z",
+    "updatedAt": "2026-02-13T00:17:23.892Z",
+    "__v": 0
+  },
+  {
+    "_id": "69960207bd773746b09a8bab",
+    "user": "6995ffc3bd773746b09a8b8e",
+    "subscription": "69960207bd773746b09a8ba5",
+    "event": "activated",
+    "reason": "promo_code_free_trial",
+    "meta": {
+      "promoCode": "WORKSHOP14",
+      "planType": "Lite",
+      "durationDays": 14
+    },
+    "createdAt": "2026-02-18T18:16:39.436Z",
+    "updatedAt": "2026-02-18T18:16:39.436Z",
+    "__v": 0
+  },
+  {
+    "_id": "69960a4fbd773746b09a8d31",
+    "user": "69960978bd773746b09a8d10",
+    "subscription": "69960a4fbd773746b09a8d2b",
+    "event": "activated",
+    "reason": "promo_code_free_trial",
+    "meta": {
+      "promoCode": "WORKSHOP14",
+      "planType": "Lite",
+      "durationDays": 14
+    },
+    "createdAt": "2026-02-18T18:51:59.565Z",
+    "updatedAt": "2026-02-18T18:51:59.565Z",
+    "__v": 0
+  },
+  {
+    "_id": "69962647bd773746b09a9460",
+    "user": "6996260fbd773746b09a943f",
+    "subscription": "69962646bd773746b09a945a",
+    "event": "activated",
+    "reason": "promo_code_free_trial",
+    "meta": {
+      "promoCode": "WORKSHOP14",
+      "planType": "Lite",
+      "durationDays": 14
+    },
+    "createdAt": "2026-02-18T20:51:19.236Z",
+    "updatedAt": "2026-02-18T20:51:19.236Z",
+    "__v": 0
+  },
+  {
+    "_id": "69966210bd773746b09aa48b",
+    "user": "699661b1bd773746b09aa468",
+    "subscription": "6996620fbd773746b09aa485",
+    "event": "activated",
+    "reason": "promo_code_free_trial",
+    "meta": {
+      "promoCode": "WORKSHOP14",
+      "planType": "Lite",
+      "durationDays": 14
+    },
+    "createdAt": "2026-02-19T01:06:24.202Z",
+    "updatedAt": "2026-02-19T01:06:24.202Z",
+    "__v": 0
+  },
+  {
+    "_id": "6996d418bd773746b09abeca",
+    "user": "6996d3c3bd773746b09abea5",
+    "subscription": "6996d418bd773746b09abec4",
+    "event": "activated",
+    "reason": "promo_code_free_trial",
+    "meta": {
+      "promoCode": "WORKSHOP14",
+      "planType": "Lite",
+      "durationDays": 14
+    },
+    "createdAt": "2026-02-19T09:12:56.842Z",
+    "updatedAt": "2026-02-19T09:12:56.842Z",
+    "__v": 0
+  },
+  {
+    "_id": "6996f3b196fc1e63bfd64632",
+    "user": "6916186423f83e5b9bae0f22",
+    "subscription": "69376d7868de3d9da1615d8e",
+    "event": "activated",
+    "reason": "promo_code_free_trial",
+    "meta": {
+      "promoCode": "WORKSHOP14",
+      "planType": "Lite",
+      "durationDays": 14
+    },
+    "createdAt": "2026-02-19T11:27:45.908Z",
+    "updatedAt": "2026-02-19T11:27:45.908Z",
+    "__v": 0
+  },
+  {
+    "_id": "69973d34f776d11a006db7c8",
+    "user": "69973ad7f776d11a006db79c",
+    "subscription": "69973d33f776d11a006db7c2",
+    "event": "activated",
+    "reason": "promo_code_free_trial",
+    "meta": {
+      "promoCode": "WORKSHOP14",
+      "planType": "Lite",
+      "durationDays": 14
+    },
+    "createdAt": "2026-02-19T16:41:24.041Z",
+    "updatedAt": "2026-02-19T16:41:24.041Z",
+    "__v": 0
+  },
+  {
+    "_id": "69975f27d931fe23ade6d24e",
+    "user": "69975330d931fe23ade6c3ef",
+    "subscription": "69975f27d931fe23ade6d248",
+    "event": "activated",
+    "reason": "promo_code_free_trial",
+    "meta": {
+      "promoCode": "WORKSHOP14",
+      "planType": "Lite",
+      "durationDays": 14
+    },
+    "createdAt": "2026-02-19T19:06:15.789Z",
+    "updatedAt": "2026-02-19T19:06:15.789Z",
+    "__v": 0
+  },
+  {
+    "_id": "69975fb1d931fe23ade6d29d",
+    "user": "69975f34d931fe23ade6d26c",
+    "subscription": "69975fb1d931fe23ade6d297",
+    "event": "activated",
+    "reason": "promo_code_free_trial",
+    "meta": {
+      "promoCode": "WORKSHOP14",
+      "planType": "Lite",
+      "durationDays": 14
+    },
+    "createdAt": "2026-02-19T19:08:33.719Z",
+    "updatedAt": "2026-02-19T19:08:33.719Z",
+    "__v": 0
+  },
+  {
+    "_id": "699764d9d931fe23ade6d4af",
+    "user": "69961c33bd773746b09a9434",
+    "subscription": "699764d9d931fe23ade6d4a9",
+    "event": "activated",
+    "reason": "promo_code_free_trial",
+    "meta": {
+      "promoCode": "WORKSHOP14",
+      "planType": "Lite",
+      "durationDays": 14
+    },
+    "createdAt": "2026-02-19T19:30:33.903Z",
+    "updatedAt": "2026-02-19T19:30:33.903Z",
+    "__v": 0
+  },
+  {
+    "_id": "699ee0f6d931fe23ade8d9d9",
+    "user": "6916186423f83e5b9bae0f22",
+    "subscription": "69376d7868de3d9da1615d8e",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-02-25T11:45:58.246Z",
+    "updatedAt": "2026-02-25T11:45:58.246Z",
+    "__v": 0
+  },
+  {
+    "_id": "69a21aa12fc861794d59e547",
+    "user": "69a21a702fc861794d59e530",
+    "subscription": "69a21aa12fc861794d59e543",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-02-27T22:28:49.791Z",
+    "updatedAt": "2026-02-27T22:28:49.791Z",
+    "__v": 0
+  },
+  {
+    "_id": "69a4bddf2fc861794d5a9a5a",
+    "user": "69a4bdb62fc861794d5a9a43",
+    "subscription": "69a4bddf2fc861794d5a9a56",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-03-01T22:29:51.577Z",
+    "updatedAt": "2026-03-01T22:29:51.577Z",
+    "__v": 0
+  },
+  {
+    "_id": "69aaf71ecc74eb9d6c0c043e",
+    "user": "6996d3c3bd773746b09abea5",
+    "subscription": "6996d418bd773746b09abec4",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-03-06T15:47:42.208Z",
+    "updatedAt": "2026-03-06T15:47:42.208Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b4129ee7309f98a475910b",
+    "user": "69b4123de7309f98a47590f4",
+    "subscription": "69b4129ee7309f98a4759107",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-03-13T13:35:26.417Z",
+    "updatedAt": "2026-03-13T13:35:26.417Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b4839e2fc861794d5ef84a",
+    "user": "69b482ed2fc861794d5ef828",
+    "subscription": "69b4839e2fc861794d5ef846",
+    "event": "activated",
+    "reason": "bypass_code",
+    "meta": {
+      "promoCode": "PG-PROD-BYPASS-100"
+    },
+    "createdAt": "2026-03-13T21:37:34.799Z",
+    "updatedAt": "2026-03-13T21:37:34.799Z",
+    "__v": 0
+  }
+]

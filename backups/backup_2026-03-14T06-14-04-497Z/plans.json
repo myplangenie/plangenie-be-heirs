@@ -1,0 +1,263 @@
+[
+  {
+    "_id": "69030af5e82840a744748977",
+    "user": "6902f6e58d0d3a49714de018",
+    "companyLogoUrl": "",
+    "createdAt": "2025-10-30T06:51:33.959Z",
+    "updatedAt": "2026-01-03T15:17:07.310Z",
+    "__v": 0,
+    "workspace": "695932f25c7dd36581e83cd0"
+  },
+  {
+    "_id": "69038a31a6c2e2916c54e26b",
+    "user": "690386eda6c2e2916c54e226",
+    "companyLogoUrl": "",
+    "createdAt": "2025-10-30T15:54:25.415Z",
+    "updatedAt": "2026-01-03T15:17:10.648Z",
+    "__v": 0,
+    "workspace": "695932f65c7dd36581e83cdd"
+  },
+  {
+    "_id": "6908ee0e5734a7104a47762d",
+    "user": "6908d6fe5734a7104a4775a5",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-03T18:01:50.541Z",
+    "updatedAt": "2026-01-03T15:17:14.002Z",
+    "__v": 0,
+    "workspace": "695932f95c7dd36581e83cea"
+  },
+  {
+    "_id": "690e97f94137786ffb04ab23",
+    "user": "690e971b4137786ffb04ab19",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-08T01:08:09.708Z",
+    "updatedAt": "2026-01-03T15:17:17.391Z",
+    "__v": 0,
+    "workspace": "695932fc5c7dd36581e83cf7"
+  },
+  {
+    "_id": "6911b9e58d77c2bd86c86a79",
+    "user": "6911b9248d77c2bd86c86a6c",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-10T10:09:41.318Z",
+    "updatedAt": "2026-01-03T15:17:21.044Z",
+    "__v": 0,
+    "workspace": "695933005c7dd36581e83d04"
+  },
+  {
+    "_id": "6911bc891a7f673046cc55e9",
+    "user": "6911bc651a7f673046cc55dd",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-10T10:20:57.716Z",
+    "updatedAt": "2026-01-03T15:17:24.737Z",
+    "__v": 0,
+    "workspace": "695933045c7dd36581e83d11"
+  },
+  {
+    "_id": "69121fa4fcc9679d5cccd35c",
+    "user": "69121f44fcc9679d5cccd34d",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-10T17:23:48.709Z",
+    "updatedAt": "2026-01-03T15:17:28.451Z",
+    "__v": 0,
+    "workspace": "695933075c7dd36581e83d1e"
+  },
+  {
+    "_id": "6914c81c4a5b21ac61c1836b",
+    "user": "6914c08d4a5b21ac61c18296",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-12T17:47:08.948Z",
+    "updatedAt": "2026-01-03T15:17:35.317Z",
+    "__v": 0,
+    "workspace": "6959330e5c7dd36581e83d38"
+  },
+  {
+    "_id": "69161eb923f83e5b9bae0fe3",
+    "user": "6916186423f83e5b9bae0f22",
+    "companyLogoUrl": "https://logos.plangenie.com/1764912589224.png",
+    "createdAt": "2025-11-13T18:08:57.293Z",
+    "updatedAt": "2026-01-03T15:17:38.785Z",
+    "__v": 0,
+    "workspace": "695130344db73e493a55c301"
+  },
+  {
+    "_id": "691667c75453e2cc1d00d7cd",
+    "user": "691656389b78850187cfb550",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-13T23:20:39.239Z",
+    "updatedAt": "2026-01-03T15:17:42.850Z",
+    "__v": 0,
+    "workspace": "695933165c7dd36581e83d4f"
+  },
+  {
+    "_id": "691762de57bf6af046cb2c00",
+    "user": "691762ae57bf6af046cb2be0",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-14T17:11:58.688Z",
+    "updatedAt": "2026-01-03T15:17:46.676Z",
+    "__v": 0,
+    "workspace": "695933195c7dd36581e83d5c"
+  },
+  {
+    "_id": "6917af5decc82674cfa7b7cb",
+    "user": "6917af15ecc82674cfa7b7ab",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-14T22:38:21.163Z",
+    "updatedAt": "2026-01-03T15:17:50.004Z",
+    "__v": 0,
+    "workspace": "6959331d5c7dd36581e83d69"
+  },
+  {
+    "_id": "6917b042ecc82674cfa7b820",
+    "user": "6917b020ecc82674cfa7b7fc",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-14T22:42:10.393Z",
+    "updatedAt": "2026-01-03T15:17:53.250Z",
+    "__v": 0,
+    "workspace": "695933205c7dd36581e83d76"
+  },
+  {
+    "_id": "6917b285ecc82674cfa7b937",
+    "user": "6917b25eecc82674cfa7b914",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-14T22:51:49.690Z",
+    "updatedAt": "2026-01-03T15:17:56.916Z",
+    "__v": 0,
+    "workspace": "695933245c7dd36581e83d83"
+  },
+  {
+    "_id": "691882547c34250cfede9f1c",
+    "user": "691882347c34250cfede9ef8",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-15T13:38:28.513Z",
+    "updatedAt": "2026-01-03T15:18:00.372Z",
+    "__v": 0,
+    "workspace": "695933275c7dd36581e83d90"
+  },
+  {
+    "_id": "69188a747c34250cfedea0bc",
+    "user": "6918875e7c34250cfede9f6d",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-15T14:13:08.439Z",
+    "updatedAt": "2026-01-03T15:18:10.136Z",
+    "__v": 0,
+    "workspace": "695933315c7dd36581e83d9d"
+  },
+  {
+    "_id": "6918d60c5b2c76b30b0c9ccc",
+    "user": "6918d5ba5b2c76b30b0c9cb2",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-15T19:35:40.835Z",
+    "updatedAt": "2026-01-03T15:18:17.061Z",
+    "__v": 0,
+    "workspace": "695933385c7dd36581e83daa"
+  },
+  {
+    "_id": "691d0eff27288b8df62f6407",
+    "user": "691b68e7ec4e53ba70f95019",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-19T00:27:43.318Z",
+    "updatedAt": "2026-01-03T15:18:30.923Z",
+    "__v": 0,
+    "workspace": "695933465c7dd36581e83dd1"
+  },
+  {
+    "_id": "69267e36ead01782d63373ba",
+    "user": "6924e87d9601b2cbdbd90fd7",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-26T04:12:38.789Z",
+    "updatedAt": "2026-01-03T15:18:58.542Z",
+    "__v": 0,
+    "workspace": "695933615c7dd36581e83e2c"
+  },
+  {
+    "_id": "69288eefad92c429c71ea8b2",
+    "user": "6928862ead92c429c71ea718",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-27T17:48:31.450Z",
+    "updatedAt": "2026-01-03T15:19:05.565Z",
+    "__v": 0,
+    "workspace": "695933685c7dd36581e83e46"
+  },
+  {
+    "_id": "6929744c0eb4a4cb6c06c8d3",
+    "user": "692965ec0eb4a4cb6c06c7a3",
+    "companyLogoUrl": "",
+    "createdAt": "2025-11-28T10:07:08.059Z",
+    "updatedAt": "2026-01-03T15:19:12.821Z",
+    "__v": 0,
+    "workspace": "695933705c7dd36581e83e60"
+  },
+  {
+    "_id": "6935fa46e2d793cc6e9f98c3",
+    "user": "69232b349536cb98c29df1ec",
+    "companyLogoUrl": "",
+    "createdAt": "2025-12-07T22:05:58.472Z",
+    "updatedAt": "2026-01-03T15:18:54.548Z",
+    "__v": 0,
+    "workspace": "6959335e5c7dd36581e83e1f"
+  },
+  {
+    "_id": "6935fe11e2d793cc6e9f99ec",
+    "user": "693501e815e5d205196dc169",
+    "companyLogoUrl": "",
+    "createdAt": "2025-12-07T22:22:09.021Z",
+    "updatedAt": "2026-01-03T15:19:19.410Z",
+    "__v": 0,
+    "workspace": "695933765c7dd36581e83e7a"
+  },
+  {
+    "_id": "6937ec8d6f2bac8490e46300",
+    "user": "6937922c99a2a068c7fe6c28",
+    "companyLogoUrl": "",
+    "createdAt": "2025-12-09T09:31:57.531Z",
+    "updatedAt": "2026-01-03T15:19:22.707Z",
+    "__v": 0,
+    "workspace": "6959337a5c7dd36581e83e87"
+  },
+  {
+    "_id": "6937f0216f2bac8490e463d8",
+    "user": "6937ecb06f2bac8490e46318",
+    "companyLogoUrl": "",
+    "createdAt": "2025-12-09T09:47:13.193Z",
+    "updatedAt": "2026-01-03T15:19:26.238Z",
+    "__v": 0,
+    "workspace": "6959337d5c7dd36581e83e94"
+  },
+  {
+    "_id": "693839989e14dd0b5976631b",
+    "user": "693839929e14dd0b597662e0",
+    "companyLogoUrl": "",
+    "createdAt": "2025-12-09T15:00:40.694Z",
+    "updatedAt": "2026-01-03T15:19:29.522Z",
+    "__v": 0,
+    "workspace": "695933815c7dd36581e83ea1"
+  },
+  {
+    "_id": "6939b75d14b5b2cb3d995c63",
+    "user": "693855799689ae7c71aff2b9",
+    "companyLogoUrl": "",
+    "createdAt": "2025-12-10T18:09:33.160Z",
+    "updatedAt": "2026-01-03T15:19:32.805Z",
+    "__v": 0,
+    "workspace": "695933845c7dd36581e83eae"
+  },
+  {
+    "_id": "693a9a5f9e4f4f1e5288fa8a",
+    "user": "6914be3b4a5b21ac61c18282",
+    "companyLogoUrl": "",
+    "createdAt": "2025-12-11T10:18:07.114Z",
+    "updatedAt": "2026-01-03T15:17:31.988Z",
+    "__v": 0,
+    "workspace": "6959330b5c7dd36581e83d2b"
+  },
+  {
+    "_id": "6949ef660e788ff5de8ced68",
+    "user": "6949d99d8d013b0739c9fb2b",
+    "companyLogoUrl": "https://logos.plangenie.com/1766453174188.png",
+    "createdAt": "2025-12-23T01:24:54.021Z",
+    "updatedAt": "2026-01-03T15:19:53.586Z",
+    "__v": 0,
+    "workspace": "695933985c7dd36581e83ef9"
+  }
+]

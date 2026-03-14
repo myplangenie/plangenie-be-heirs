@@ -1,0 +1,85 @@
+[
+  {
+    "_id": "699560ab4acae6571aa8858f",
+    "code": "WORKSHOP14",
+    "type": "free_trial",
+    "planType": "Lite",
+    "durationDays": 14,
+    "discountPercent": 100,
+    "usageLimit": null,
+    "usageCount": 13,
+    "expiresAt": null,
+    "isActive": true,
+    "description": "Workshop 14-day free trial for Plan Genie Lite",
+    "redemptions": [
+      {
+        "user": "698b76c547b02e4a961996d9",
+        "redeemedAt": "2026-02-18T07:54:49.960Z",
+        "_id": "69957049bd773746b09a6285"
+      },
+      {
+        "user": "6995ffc3bd773746b09a8b8e",
+        "redeemedAt": "2026-02-18T18:16:39.364Z",
+        "_id": "69960207bd773746b09a8ba9"
+      },
+      {
+        "user": "69960978bd773746b09a8d10",
+        "redeemedAt": "2026-02-18T18:51:59.497Z",
+        "_id": "69960a4fbd773746b09a8d2f"
+      },
+      {
+        "user": "6996260fbd773746b09a943f",
+        "redeemedAt": "2026-02-18T20:51:19.166Z",
+        "_id": "69962647bd773746b09a945e"
+      },
+      {
+        "user": "699661b1bd773746b09aa468",
+        "redeemedAt": "2026-02-19T01:06:24.132Z",
+        "_id": "69966210bd773746b09aa489"
+      },
+      {
+        "user": "6996d3c3bd773746b09abea5",
+        "redeemedAt": "2026-02-19T09:12:56.767Z",
+        "_id": "6996d418bd773746b09abec8"
+      },
+      {
+        "user": "6916186423f83e5b9bae0f22",
+        "redeemedAt": "2026-02-19T11:27:45.656Z",
+        "_id": "6996f3b196fc1e63bfd64630"
+      },
+      {
+        "user": "6997323bbd773746b09ad748",
+        "redeemedAt": "2026-02-19T15:56:33.865Z",
+        "_id": "699732b1bd773746b09ad76f"
+      },
+      {
+        "user": "69973ad7f776d11a006db79c",
+        "redeemedAt": "2026-02-19T16:41:23.966Z",
+        "_id": "69973d33f776d11a006db7c6"
+      },
+      {
+        "user": "69973fffd931fe23ade6b499",
+        "redeemedAt": "2026-02-19T16:55:29.882Z",
+        "_id": "69974081d931fe23ade6b4c8"
+      },
+      {
+        "user": "69975330d931fe23ade6c3ef",
+        "redeemedAt": "2026-02-19T19:06:15.713Z",
+        "_id": "69975f27d931fe23ade6d24c"
+      },
+      {
+        "user": "69975f34d931fe23ade6d26c",
+        "redeemedAt": "2026-02-19T19:08:33.645Z",
+        "_id": "69975fb1d931fe23ade6d29b"
+      },
+      {
+        "user": "69961c33bd773746b09a9434",
+        "redeemedAt": "2026-02-19T19:30:33.652Z",
+        "_id": "699764d9d931fe23ade6d4ad"
+      }
+    ],
+    "createdAt": "2026-02-18T06:48:11.539Z",
+    "updatedAt": "2026-02-19T19:30:33.654Z",
+    "__v": 13
+  }
+]

@@ -1,0 +1,214 @@
+[
+  {
+    "_id": "6954d5438963895087437fa7",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": "695130344db73e493a55c301",
+    "rid": "r_tecsyuil",
+    "cadence": "weekly",
+    "status": "closed",
+    "notes": "This is a nice review",
+    "attendees": [],
+    "actionItems": [],
+    "decisions": [],
+    "startedAt": "2025-12-31T07:48:19.563Z",
+    "createdAt": "2025-12-31T07:48:19.564Z",
+    "updatedAt": "2026-01-29T07:16:42.431Z",
+    "__v": 1,
+    "endedAt": "2026-01-29T07:16:42.430Z",
+    "projects": []
+  },
+  {
+    "_id": "696a579f3dd75e6710b5edbe",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": "695130344db73e493a55c301",
+    "rid": "r_mxtzexov",
+    "cadence": "weekly",
+    "status": "closed",
+    "notes": "Review finance budget",
+    "attendees": [
+      {
+        "id": "82e650a9-b4ae-41fd-ac12-6a752943a3ee",
+        "name": "A",
+        "email": ""
+      },
+      {
+        "id": "7612763d-b682-413c-87c4-a4ad3bf5695d",
+        "name": "C",
+        "email": ""
+      },
+      {
+        "id": "8dc8f4f9-9535-4dc8-8915-32125b815627",
+        "name": "D",
+        "email": ""
+      }
+    ],
+    "actionItems": [],
+    "decisions": [],
+    "startedAt": "2026-01-16T15:22:07.917Z",
+    "createdAt": "2026-01-16T15:22:07.919Z",
+    "updatedAt": "2026-01-29T07:40:05.487Z",
+    "__v": 3,
+    "projects": [
+      {
+        "index": 0,
+        "title": "User Feedback"
+      },
+      {
+        "index": 1,
+        "title": "Partnership Outreach"
+      }
+    ],
+    "endedAt": "2026-01-29T07:16:37.962Z"
+  },
+  {
+    "_id": "6973ecab9f3aa066cb79b308",
+    "user": "69731f973732d26375456804",
+    "workspace": "69731f973732d26375456806",
+    "rid": "r_07zezgyz",
+    "cadence": "weekly",
+    "status": "open",
+    "notes": "",
+    "projects": [
+      {
+        "index": 0,
+        "title": "Client Onboarding"
+      }
+    ],
+    "attendees": [
+      {
+        "id": "697323ed3732d26375456b6d",
+        "name": "Chike Okwara",
+        "email": ""
+      }
+    ],
+    "actionItems": [],
+    "decisions": [],
+    "startedAt": "2026-01-23T21:48:27.924Z",
+    "createdAt": "2026-01-23T21:48:27.924Z",
+    "updatedAt": "2026-01-23T21:48:27.924Z",
+    "__v": 0
+  },
+  {
+    "_id": "6977c5c23dba2dcd3ad25e49",
+    "user": "69731f973732d26375456804",
+    "workspace": "69731f973732d26375456806",
+    "rid": "r_ych4pri7",
+    "cadence": "monthly",
+    "status": "open",
+    "notes": "Need to be done asap",
+    "projects": [
+      {
+        "index": 1,
+        "title": "User Training Program"
+      },
+      {
+        "index": 3,
+        "title": "Partnership Expansion"
+      }
+    ],
+    "attendees": [
+      {
+        "id": "697323ed3732d26375456b6d",
+        "name": "Chike Okwara",
+        "email": ""
+      },
+      {
+        "id": "697323ee3732d26375456b73",
+        "name": "John Doe",
+        "email": ""
+      }
+    ],
+    "actionItems": [
+      {
+        "text": "Send email to group.",
+        "owner": "Chike Okwara",
+        "dueWhen": "2026-01-28",
+        "status": "Not started"
+      }
+    ],
+    "decisions": [],
+    "startedAt": "2026-01-26T19:51:30.473Z",
+    "createdAt": "2026-01-26T19:51:30.474Z",
+    "updatedAt": "2026-01-26T19:58:16.767Z",
+    "__v": 1,
+    "endedAt": "2026-01-26T19:56:54.247Z"
+  },
+  {
+    "_id": "697bb8fd8decbda72ad8884d",
+    "user": "69731f973732d26375456804",
+    "workspace": "69731f973732d26375456806",
+    "rid": "r_fqmkbm67",
+    "cadence": "monthly",
+    "status": "open",
+    "notes": "",
+    "projects": [
+      {
+        "index": 4,
+        "title": "Platform Functionality Enhancement"
+      },
+      {
+        "index": 5,
+        "title": "Partnership Development Initiative"
+      }
+    ],
+    "attendees": [],
+    "actionItems": [],
+    "decisions": [],
+    "startedAt": "2026-01-29T19:46:05.364Z",
+    "createdAt": "2026-01-29T19:46:05.365Z",
+    "updatedAt": "2026-01-29T19:46:05.365Z",
+    "__v": 0
+  },
+  {
+    "_id": "697cf24080c24e98fac8745a",
+    "user": "69731f973732d26375456804",
+    "workspace": "69731f973732d26375456806",
+    "rid": "r_jzsrkrez",
+    "cadence": "monthly",
+    "status": "open",
+    "notes": "",
+    "projects": [
+      {
+        "index": 1,
+        "title": "User Training Program"
+      }
+    ],
+    "attendees": [],
+    "actionItems": [
+      {
+        "text": "John is going to create the curricula",
+        "owner": "John Doe",
+        "dueWhen": "2026-01-31",
+        "status": "Completed"
+      }
+    ],
+    "decisions": [],
+    "startedAt": "2026-01-30T18:02:40.989Z",
+    "createdAt": "2026-01-30T18:02:40.991Z",
+    "updatedAt": "2026-01-30T18:04:32.783Z",
+    "__v": 1
+  },
+  {
+    "_id": "6994abb086420be3cb4c9e79",
+    "user": "6984405a899642c866c794ce",
+    "workspace": "6984405b899642c866c794d0",
+    "rid": "r_ad85xt2q",
+    "cadence": "weekly",
+    "status": "open",
+    "notes": "",
+    "projects": [],
+    "attendees": [
+      {
+        "id": "6984405a899642c866c794ce",
+        "name": "John Smith",
+        "email": "test@plangenie.com"
+      }
+    ],
+    "actionItems": [],
+    "decisions": [],
+    "startedAt": "2026-02-17T17:56:00.005Z",
+    "createdAt": "2026-02-17T17:56:00.005Z",
+    "updatedAt": "2026-02-17T17:56:00.005Z",
+    "__v": 0
+  }
+]

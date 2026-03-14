@@ -1,0 +1,34 @@
+[
+  {
+    "_id": "69ad3e2d75890c6db930207c",
+    "workspace": "695130344db73e493a55c301",
+    "user": null,
+    "email": "community.manager@centralearn.com",
+    "role": "contributor",
+    "status": "pending",
+    "inviteToken": "96bbf2c61afcdb02a8f7e6da663e9b3b191dea02e77506d00d5468eabd774cc2",
+    "inviteTokenExpires": "2026-03-15T09:15:25.360Z",
+    "invitedBy": "6916186423f83e5b9bae0f22",
+    "invitedAt": "2026-03-08T09:15:25.360Z",
+    "departments": [],
+    "createdAt": "2026-03-08T09:15:25.370Z",
+    "updatedAt": "2026-03-08T09:15:25.370Z",
+    "__v": 0
+  },
+  {
+    "_id": "69ad43ab08864776ac57b479",
+    "workspace": "695130344db73e493a55c301",
+    "user": "69973fffd931fe23ade6b499",
+    "email": "eadelekeife@yahoo.com",
+    "role": "viewer",
+    "status": "pending",
+    "inviteToken": "8b52bd837324a67ef9cc0b4ca3dab9305521e554d88255b4520a40b47aeb903a",
+    "inviteTokenExpires": "2026-03-15T09:38:51.613Z",
+    "invitedBy": "6916186423f83e5b9bae0f22",
+    "invitedAt": "2026-03-08T09:38:51.613Z",
+    "departments": [],
+    "createdAt": "2026-03-08T09:38:51.617Z",
+    "updatedAt": "2026-03-08T09:38:51.617Z",
+    "__v": 0
+  }
+]

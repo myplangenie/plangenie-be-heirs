@@ -1,0 +1,54 @@
+[
+  {
+    "_id": "6944fce137d5de2791d64f4e",
+    "user": "6916186423f83e5b9bae0f22",
+    "journey": "6944fcce37d5de2791d64f45",
+    "aid": "a_iutonsd2",
+    "key": "600",
+    "label": "600",
+    "category": "revenue",
+    "unit": "",
+    "currentValue": "",
+    "source": "manual",
+    "history": [
+      {
+        "version": 1,
+        "value": "",
+        "changedBy": "6916186423f83e5b9bae0f22",
+        "changedAt": "2025-12-19T07:21:05.131Z"
+      }
+    ],
+    "createdAt": "2025-12-19T07:21:05.133Z",
+    "updatedAt": "2025-12-19T07:21:05.133Z",
+    "__v": 0
+  },
+  {
+    "_id": "6946c2644a2b4fff5703b6a4",
+    "user": "6916186423f83e5b9bae0f22",
+    "journey": "6944fcce37d5de2791d64f45",
+    "aid": "a_jcxajmmm",
+    "key": "50",
+    "label": "Marker 1",
+    "category": "revenue",
+    "unit": "72",
+    "currentValue": "5000",
+    "source": "manual",
+    "history": [
+      {
+        "version": 1,
+        "value": "5000",
+        "changedBy": "6916186423f83e5b9bae0f22",
+        "changedAt": "2025-12-20T15:36:04.818Z"
+      },
+      {
+        "version": 2,
+        "value": "5000",
+        "changedAt": "2025-12-20T15:36:11.011Z",
+        "changedBy": "6916186423f83e5b9bae0f22"
+      }
+    ],
+    "createdAt": "2025-12-20T15:36:04.820Z",
+    "updatedAt": "2025-12-20T15:36:11.013Z",
+    "__v": 1
+  }
+]

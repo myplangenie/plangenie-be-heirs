@@ -1,0 +1,6832 @@
+[
+  {
+    "_id": "69674ad68057a56f6d5a641a",
+    "user": "6916186423f83e5b9bae0f22",
+    "workspace": "695130344db73e493a55c301",
+    "revenue": {
+      "totalMonthlyRevenue": 46033.33,
+      "totalMonthlyDeliveryCost": 4166.67,
+      "streamCount": 4,
+      "lastSyncedAt": "2026-03-14T04:55:26.998Z"
+    },
+    "workRelatedCosts": {
+      "total": 4000,
+      "contractors": 1000,
+      "materials": 1000,
+      "commissions": 1000,
+      "shipping": 500,
+      "other": 500,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 11000,
+      "salaries": 2000,
+      "rent": 4000,
+      "software": 2000,
+      "insurance": 1000,
+      "utilities": 1000,
+      "marketing": 1000,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 500,
+      "expectedFunding": 500000,
+      "fundingDate": "2026-01-14T00:00:00.000Z"
+    },
+    "metrics": {
+      "monthlyNetSurplus": 26866.66,
+      "operatingResult": 26866.66,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 19166.67,
+      "monthlyBurnRate": 0,
+      "grossProfit": 37866.66,
+      "grossMarginPercent": 82.26,
+      "netMarginPercent": 58.36
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 27366.66,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3ef"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 54233.32,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3f0"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 81099.98,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3f1"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 107966.64,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3f2"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 134833.3,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3f3"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 161699.96,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3f4"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 188566.62,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3f5"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 215433.28,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3f6"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 242299.94,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3f7"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 269166.6,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3f8"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 296033.26,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3f9"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 46033.33,
+        "costs": 19166.67,
+        "cashBalance": 322899.92,
+        "netSurplus": 26866.66,
+        "_id": "69b4ea3f6d84dcac70b4a3fa"
+      }
+    ],
+    "createdAt": "2026-01-14T07:50:46.646Z",
+    "updatedAt": "2026-03-14T04:55:27.000Z",
+    "__v": 205
+  },
+  {
+    "_id": "696a60c1d304cd277cb6715a",
+    "user": "696a6020d304cd277cb66e12",
+    "workspace": "696a6020d304cd277cb66e14",
+    "revenue": {
+      "totalMonthlyRevenue": 2333333.33,
+      "totalMonthlyDeliveryCost": 166.67,
+      "streamCount": 2,
+      "lastSyncedAt": "2026-01-16T16:05:41.537Z"
+    },
+    "workRelatedCosts": {
+      "total": 2500,
+      "contractors": 500,
+      "materials": 1000,
+      "commissions": 500,
+      "shipping": 200,
+      "other": 300
+    },
+    "fixedCosts": {
+      "total": 6700,
+      "salaries": 2000,
+      "rent": 2000,
+      "software": 200,
+      "insurance": 500,
+      "utilities": 500,
+      "marketing": 1000,
+      "other": 500
+    },
+    "cash": {
+      "currentBalance": 800000,
+      "expectedFunding": 2000000,
+      "fundingDate": "2026-10-01T00:00:00.000Z"
+    },
+    "metrics": {
+      "monthlyNetSurplus": 2323966.66,
+      "operatingResult": 2323966.66,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 9366.67,
+      "monthlyBurnRate": 0,
+      "grossProfit": 2330666.66,
+      "grossMarginPercent": 99.89,
+      "netMarginPercent": 99.6
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 3123966.66,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb6731d"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 5447933.32,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb6731e"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 7771899.98,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb6731f"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 10095866.64,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb67320"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 12419833.3,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb67321"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 14743799.96,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb67322"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 17067766.62,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb67323"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 19391733.28,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb67324"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 21715699.94,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb67325"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 26039666.6,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb67326"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 28363633.26,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb67327"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 2333333.33,
+        "costs": 9366.67,
+        "cashBalance": 30687599.92,
+        "netSurplus": 2323966.66,
+        "_id": "696a621dd304cd277cb67328"
+      }
+    ],
+    "createdAt": "2026-01-16T16:01:05.884Z",
+    "updatedAt": "2026-01-16T16:06:53.015Z",
+    "__v": 4
+  },
+  {
+    "_id": "696a6e0a806bc42ba566f99f",
+    "user": "695ff74924ad03a594e2bbae",
+    "workspace": "695ff74924ad03a594e2bbb0",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-01-16T16:57:46.300Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9a2"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9a3"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9a4"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9a5"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9a6"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9a7"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9a8"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9a9"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9aa"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9ab"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9ac"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696a6e0a806bc42ba566f9ad"
+      }
+    ],
+    "createdAt": "2026-01-16T16:57:46.301Z",
+    "updatedAt": "2026-01-16T16:57:46.301Z",
+    "__v": 0
+  },
+  {
+    "_id": "696a70cc806bc42ba566fed4",
+    "user": "696a6f44806bc42ba566fe52",
+    "workspace": "696a6f44806bc42ba566fe54",
+    "revenue": {
+      "totalMonthlyRevenue": 20000000,
+      "totalMonthlyDeliveryCost": 40000,
+      "streamCount": 1,
+      "lastSyncedAt": "2026-01-16T17:23:24.121Z"
+    },
+    "workRelatedCosts": {
+      "total": 6400,
+      "contractors": 5000,
+      "materials": 200,
+      "commissions": 300,
+      "shipping": 500,
+      "other": 400
+    },
+    "fixedCosts": {
+      "total": 15700,
+      "salaries": 10000,
+      "rent": 2000,
+      "software": 200,
+      "insurance": 500,
+      "utilities": 500,
+      "marketing": 2000,
+      "other": 500
+    },
+    "cash": {
+      "currentBalance": 3000000,
+      "expectedFunding": 0,
+      "fundingDate": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 19937900,
+      "operatingResult": 19937900,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 62100,
+      "monthlyBurnRate": 0,
+      "grossProfit": 19953600,
+      "grossMarginPercent": 99.77,
+      "netMarginPercent": 99.69
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 22937900,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba5670084"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 42875800,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba5670085"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 62813700,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba5670086"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 82751600,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba5670087"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 102689500,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba5670088"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 122627400,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba5670089"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 142565300,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba567008a"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 162503200,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba567008b"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 182441100,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba567008c"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 202379000,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba567008d"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 222316900,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba567008e"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 20000000,
+        "costs": 62100,
+        "cashBalance": 242254800,
+        "netSurplus": 19937900,
+        "_id": "696a743d806bc42ba567008f"
+      }
+    ],
+    "createdAt": "2026-01-16T17:09:32.882Z",
+    "updatedAt": "2026-01-16T17:24:13.356Z",
+    "__v": 4
+  },
+  {
+    "_id": "696a8c79aa4e6a9951a0ecdd",
+    "user": "696a8bfbaa4e6a9951a0ec4b",
+    "workspace": "696a8bfbaa4e6a9951a0ec4d",
+    "revenue": {
+      "totalMonthlyRevenue": 42833.33,
+      "totalMonthlyDeliveryCost": 5000,
+      "streamCount": 4,
+      "lastSyncedAt": "2026-01-19T18:32:15.206Z"
+    },
+    "workRelatedCosts": {
+      "total": 100,
+      "contractors": 100,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0
+    },
+    "fixedCosts": {
+      "total": 1000,
+      "salaries": 1000,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0
+    },
+    "cash": {
+      "currentBalance": 4554,
+      "expectedFunding": 444,
+      "fundingDate": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 36733.33,
+      "operatingResult": 36733.33,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 6100,
+      "monthlyBurnRate": 0,
+      "grossProfit": 37733.33,
+      "grossMarginPercent": 88.09,
+      "netMarginPercent": 85.76
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 41287.33,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b91"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 78020.66,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b92"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 114753.99,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b93"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 151487.32,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b94"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 188220.65,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b95"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 224953.98,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b96"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 261687.31,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b97"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 298420.64,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b98"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 335153.97,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b99"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 371887.3,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b9a"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 408620.63,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b9b"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 42833.33,
+        "costs": 6100,
+        "cashBalance": 445353.96,
+        "netSurplus": 36733.33,
+        "_id": "696e78afcd7477a69d502b9c"
+      }
+    ],
+    "createdAt": "2026-01-16T19:07:37.349Z",
+    "updatedAt": "2026-01-19T18:32:15.208Z",
+    "__v": 21
+  },
+  {
+    "_id": "696a8e33aa4e6a9951a0ede7",
+    "user": "696a8d23aa4e6a9951a0ed62",
+    "workspace": "696a8d23aa4e6a9951a0ed64",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-01-16T19:14:59.597Z"
+    },
+    "workRelatedCosts": {
+      "total": 3050,
+      "contractors": 0,
+      "materials": 50,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 3000,
+      "otherTitle": "Deferred sales fees"
+    },
+    "fixedCosts": {
+      "total": 16150,
+      "salaries": 12000,
+      "rent": 0,
+      "software": 1000,
+      "insurance": 500,
+      "utilities": 800,
+      "marketing": 1000,
+      "other": 850,
+      "otherTitle": "transportation"
+    },
+    "cash": {
+      "currentBalance": 600000,
+      "expectedFunding": 0,
+      "fundingDate": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": -19200,
+      "operatingResult": -19200,
+      "cashRunwayMonths": 31,
+      "breakEvenRevenue": 19200,
+      "monthlyBurnRate": 19200,
+      "grossProfit": -3050,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 580800,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1bdf7"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 561600,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1bdf8"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 542400,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1bdf9"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 523200,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1bdfa"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 504000,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1bdfb"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 484800,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1bdfc"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 465600,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1bdfd"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 446400,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1bdfe"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 427200,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1bdff"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 408000,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1be00"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 388800,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1be01"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 19200,
+        "cashBalance": 369600,
+        "netSurplus": -19200,
+        "_id": "6973b17d3fc337bc0bc1be02"
+      }
+    ],
+    "createdAt": "2026-01-16T19:14:59.598Z",
+    "updatedAt": "2026-01-23T17:35:57.207Z",
+    "__v": 3
+  },
+  {
+    "_id": "696a9352aa4e6a9951a0f0eb",
+    "user": "696a929daa4e6a9951a0f044",
+    "workspace": "696a929daa4e6a9951a0f046",
+    "revenue": {
+      "totalMonthlyRevenue": 120000000,
+      "totalMonthlyDeliveryCost": 6000,
+      "streamCount": 1,
+      "lastSyncedAt": "2026-01-16T19:41:19.144Z"
+    },
+    "workRelatedCosts": {
+      "total": 10000,
+      "contractors": 2000,
+      "materials": 2000,
+      "commissions": 2000,
+      "shipping": 2000,
+      "other": 2000
+    },
+    "fixedCosts": {
+      "total": 14000,
+      "salaries": 2000,
+      "rent": 2000,
+      "software": 2000,
+      "insurance": 2000,
+      "utilities": 2000,
+      "marketing": 2000,
+      "other": 2000
+    },
+    "cash": {
+      "currentBalance": 10000000,
+      "expectedFunding": 0,
+      "fundingDate": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 119970000,
+      "operatingResult": 119970000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 30000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 119984000,
+      "grossMarginPercent": 99.99,
+      "netMarginPercent": 99.98
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 129970000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2b3"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 249940000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2b4"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 369910000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2b5"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 489880000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2b6"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 609850000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2b7"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 729820000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2b8"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 849790000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2b9"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 969760000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2ba"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 1089730000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2bb"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 1209700000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2bc"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 1329670000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2bd"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 120000000,
+        "costs": 30000,
+        "cashBalance": 1449640000,
+        "netSurplus": 119970000,
+        "_id": "696a9488aa4e6a9951a0f2be"
+      }
+    ],
+    "createdAt": "2026-01-16T19:36:50.959Z",
+    "updatedAt": "2026-01-16T19:42:00.770Z",
+    "__v": 4
+  },
+  {
+    "_id": "696bd28caa4e6a9951a17144",
+    "user": "6944590ab324dc2baa58aadd",
+    "workspace": "695933915c7dd36581e83edf",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-01-17T18:18:52.763Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a17147"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a17148"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a17149"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a1714a"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a1714b"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a1714c"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a1714d"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a1714e"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a1714f"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a17150"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a17151"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "696bd28caa4e6a9951a17152"
+      }
+    ],
+    "createdAt": "2026-01-17T18:18:52.764Z",
+    "updatedAt": "2026-01-17T18:18:52.764Z",
+    "__v": 0
+  },
+  {
+    "_id": "696e4ed9bdd5d5ad20231e26",
+    "user": "696e4e2fbdd5d5ad20231c2d",
+    "workspace": "696e4e2fbdd5d5ad20231c2f",
+    "revenue": {
+      "totalMonthlyRevenue": 30000000,
+      "totalMonthlyDeliveryCost": 1000000,
+      "streamCount": 1,
+      "lastSyncedAt": "2026-01-19T15:38:23.643Z"
+    },
+    "workRelatedCosts": {
+      "total": 5000,
+      "contractors": 5000,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0
+    },
+    "fixedCosts": {
+      "total": 5000,
+      "salaries": 0,
+      "rent": 5000,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0
+    },
+    "cash": {
+      "currentBalance": 2000000,
+      "expectedFunding": 1000000,
+      "fundingDate": "2026-01-30T00:00:00.000Z",
+      "fundingType": "investment"
+    },
+    "metrics": {
+      "monthlyNetSurplus": 28990000,
+      "operatingResult": 28990000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 1010000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 28995000,
+      "grossMarginPercent": 96.65,
+      "netMarginPercent": 96.63
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 31990000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad20232527"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 60980000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad20232528"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 89970000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad20232529"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 118960000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad2023252a"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 147950000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad2023252b"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 176940000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad2023252c"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 205930000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad2023252d"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 234920000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad2023252e"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 263910000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad2023252f"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 292900000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad20232530"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 321890000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad20232531"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 30000000,
+        "costs": 1010000,
+        "cashBalance": 350880000,
+        "netSurplus": 28990000,
+        "_id": "696e501fbdd5d5ad20232532"
+      }
+    ],
+    "createdAt": "2026-01-19T15:33:45.996Z",
+    "updatedAt": "2026-01-19T15:39:11.220Z",
+    "__v": 4
+  },
+  {
+    "_id": "6971bebe45d6ff840162b1f7",
+    "user": "6971be3445d6ff840162b1c0",
+    "workspace": "6971be3545d6ff840162b1c2",
+    "revenue": {
+      "totalMonthlyRevenue": 100000000,
+      "totalMonthlyDeliveryCost": 100000,
+      "streamCount": 1,
+      "lastSyncedAt": "2026-01-22T08:24:50.745Z"
+    },
+    "workRelatedCosts": {
+      "total": 2000,
+      "contractors": 1000,
+      "materials": 0,
+      "commissions": 1000,
+      "shipping": 0,
+      "other": 0
+    },
+    "fixedCosts": {
+      "total": 5000,
+      "salaries": 0,
+      "rent": 5000,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0
+    },
+    "cash": {
+      "currentBalance": 500000,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 99893000,
+      "operatingResult": 99893000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 107000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 99898000,
+      "grossMarginPercent": 99.9,
+      "netMarginPercent": 99.89
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 100393000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1f4"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 200286000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1f5"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 300179000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1f6"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 400072000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1f7"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 499965000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1f8"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 599858000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1f9"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 699751000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1fa"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 799644000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1fb"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 899537000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1fc"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 999430000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1fd"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 1099323000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1fe"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 100000000,
+        "costs": 107000,
+        "cashBalance": 1199216000,
+        "netSurplus": 99893000,
+        "_id": "6971dee10905c53f5ea4d1ff"
+      }
+    ],
+    "createdAt": "2026-01-22T06:07:59.020Z",
+    "updatedAt": "2026-01-22T08:24:50.750Z",
+    "__v": 8
+  },
+  {
+    "_id": "697250dfcd7477a69d5124c9",
+    "user": "69725021cd7477a69d512446",
+    "workspace": "69725021cd7477a69d512448",
+    "revenue": {
+      "totalMonthlyRevenue": 250000000,
+      "totalMonthlyDeliveryCost": 50000,
+      "streamCount": 1,
+      "lastSyncedAt": "2026-01-22T16:37:09.729Z"
+    },
+    "workRelatedCosts": {
+      "total": 1000,
+      "contractors": 1000,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0
+    },
+    "fixedCosts": {
+      "total": 2000,
+      "salaries": 0,
+      "rent": 2000,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0
+    },
+    "cash": {
+      "currentBalance": 500000,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 249947000,
+      "operatingResult": 249947000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 53000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 249949000,
+      "grossMarginPercent": 99.98,
+      "netMarginPercent": 99.98
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 250447000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d512662"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 500394000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d512663"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 750341000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d512664"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 1000288000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d512665"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 1250235000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d512666"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 1500182000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d512667"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 1750129000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d512668"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 2000076000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d512669"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 2250023000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d51266a"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 2499970000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d51266b"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 2749917000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d51266c"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 250000000,
+        "costs": 53000,
+        "cashBalance": 2999864000,
+        "netSurplus": 249947000,
+        "_id": "6972525acd7477a69d51266d"
+      }
+    ],
+    "createdAt": "2026-01-22T16:31:28.020Z",
+    "updatedAt": "2026-01-22T16:37:46.966Z",
+    "__v": 4
+  },
+  {
+    "_id": "6973093bae583cb12e6e8fcb",
+    "user": "69730810ae583cb12e6e8ed9",
+    "workspace": "69730810ae583cb12e6e8edb",
+    "revenue": {
+      "totalMonthlyRevenue": 50666666.67,
+      "totalMonthlyDeliveryCost": 50000,
+      "streamCount": 2,
+      "lastSyncedAt": "2026-01-23T13:21:32.663Z"
+    },
+    "workRelatedCosts": {
+      "total": 4500,
+      "contractors": 0,
+      "materials": 1000,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 3500,
+      "otherTitle": "Money Man"
+    },
+    "fixedCosts": {
+      "total": 9000,
+      "salaries": 2000,
+      "rent": 3000,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 4000,
+      "otherTitle": "Money Guy"
+    },
+    "cash": {
+      "currentBalance": 1000000,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 50603166.67,
+      "operatingResult": 50603166.67,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 63500,
+      "monthlyBurnRate": 0,
+      "grossProfit": 50612166.67,
+      "grossMarginPercent": 99.89,
+      "netMarginPercent": 99.87
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 51603166.67,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e128"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 102206333.34,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e129"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 152809500.01,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e12a"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 203412666.68,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e12b"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 254015833.35,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e12c"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 304619000.02,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e12d"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 355222166.69,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e12e"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 405825333.36,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e12f"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 456428500.03,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e130"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 507031666.7,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e131"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 557634833.37,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e132"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 50666666.67,
+        "costs": 63500,
+        "cashBalance": 608238000.04,
+        "netSurplus": 50603166.67,
+        "_id": "69737a7ac0c68c440e79e133"
+      }
+    ],
+    "createdAt": "2026-01-23T05:38:03.889Z",
+    "updatedAt": "2026-01-23T13:29:22.882Z",
+    "__v": 9
+  },
+  {
+    "_id": "6973206c3732d263754568d2",
+    "user": "69731f973732d26375456804",
+    "workspace": "69731f973732d26375456806",
+    "revenue": {
+      "totalMonthlyRevenue": 8000,
+      "totalMonthlyDeliveryCost": 15000,
+      "streamCount": 2,
+      "lastSyncedAt": "2026-03-09T04:17:33.176Z"
+    },
+    "workRelatedCosts": {
+      "total": 21000,
+      "contractors": 1000,
+      "materials": 20000,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 1000,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 1000,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 5000,
+      "expectedFunding": 12000,
+      "fundingDate": "2026-01-31T00:00:00.000Z",
+      "fundingType": "grant"
+    },
+    "metrics": {
+      "monthlyNetSurplus": -29000,
+      "operatingResult": -29000,
+      "cashRunwayMonths": 0,
+      "breakEvenRevenue": 37000,
+      "monthlyBurnRate": 29000,
+      "grossProfit": -28000,
+      "grossMarginPercent": -350,
+      "netMarginPercent": -362.5
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -24000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4ca"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -53000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4cb"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -82000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4cc"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -111000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4cd"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -140000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4ce"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -169000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4cf"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -198000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4d0"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -227000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4d1"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -256000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4d2"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -285000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4d3"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -314000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4d4"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 8000,
+        "costs": 37000,
+        "cashBalance": -343000,
+        "netSurplus": -29000,
+        "_id": "69ae49ddc31fc789952ab4d5"
+      }
+    ],
+    "createdAt": "2026-01-23T07:17:00.745Z",
+    "updatedAt": "2026-03-09T04:17:33.180Z",
+    "__v": 51
+  },
+  {
+    "_id": "6973ab333fc337bc0bc1acc5",
+    "user": "6973aa233fc337bc0bc1abfd",
+    "workspace": "6973aa233fc337bc0bc1abff",
+    "revenue": {
+      "totalMonthlyRevenue": 20000000,
+      "totalMonthlyDeliveryCost": 20000,
+      "streamCount": 1,
+      "lastSyncedAt": "2026-01-23T17:15:53.810Z"
+    },
+    "workRelatedCosts": {
+      "total": 2000,
+      "contractors": 2000,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "cash": {
+      "currentBalance": 1000000,
+      "expectedFunding": 2000000,
+      "fundingDate": "2026-01-30T00:00:00.000Z",
+      "fundingType": "grant"
+    },
+    "metrics": {
+      "monthlyNetSurplus": 19978000,
+      "operatingResult": 19978000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 22000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 19978000,
+      "grossMarginPercent": 99.89,
+      "netMarginPercent": 99.89
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 22978000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b483"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 42956000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b484"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 62934000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b485"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 82912000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b486"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 102890000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b487"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 122868000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b488"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 142846000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b489"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 162824000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b48a"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 182802000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b48b"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 202780000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b48c"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 222758000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b48d"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 20000000,
+        "costs": 22000,
+        "cashBalance": 242736000,
+        "netSurplus": 19978000,
+        "_id": "6973ace93fc337bc0bc1b48e"
+      }
+    ],
+    "createdAt": "2026-01-23T17:09:08.061Z",
+    "updatedAt": "2026-01-23T17:16:25.282Z",
+    "__v": 5
+  },
+  {
+    "_id": "6973d6049f3aa066cb799fc2",
+    "user": "6973d5649f3aa066cb799eff",
+    "workspace": "6973d5649f3aa066cb799f01",
+    "revenue": {
+      "totalMonthlyRevenue": 50000000,
+      "totalMonthlyDeliveryCost": 25000,
+      "streamCount": 1,
+      "lastSyncedAt": "2026-01-23T20:15:16.641Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "fixedCosts": {
+      "total": 5000,
+      "salaries": 0,
+      "rent": 5000,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "cash": {
+      "currentBalance": 5000,
+      "expectedFunding": 1000000,
+      "fundingDate": "2026-01-23T00:00:00.000Z",
+      "fundingType": "grant"
+    },
+    "metrics": {
+      "monthlyNetSurplus": 49970000,
+      "operatingResult": 49970000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 30000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 49975000,
+      "grossMarginPercent": 99.95,
+      "netMarginPercent": 99.94
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Jan 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 50975000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a2f9"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Feb 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 100945000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a2fa"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Mar 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 150915000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a2fb"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Apr 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 200885000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a2fc"
+      },
+      {
+        "month": 5,
+        "monthLabel": "May 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 250855000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a2fd"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jun 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 300825000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a2fe"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Jul 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 350795000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a2ff"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Aug 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 400765000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a300"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Sep 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 450735000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a301"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Oct 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 500705000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a302"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Nov 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 550675000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a303"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Dec 2026",
+        "revenue": 50000000,
+        "costs": 30000,
+        "cashBalance": 600645000,
+        "netSurplus": 49970000,
+        "_id": "6973d6f69f3aa066cb79a304"
+      }
+    ],
+    "createdAt": "2026-01-23T20:11:48.173Z",
+    "updatedAt": "2026-01-23T20:15:50.736Z",
+    "__v": 4
+  },
+  {
+    "_id": "6974ad1067d9a44d4550f14c",
+    "user": "6974ac0867d9a44d4550f082",
+    "workspace": "6974ac0967d9a44d4550f084",
+    "revenue": {
+      "totalMonthlyRevenue": 40000000,
+      "totalMonthlyDeliveryCost": 20000,
+      "streamCount": 1,
+      "lastSyncedAt": "2026-02-01T05:23:23.313Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "fixedCosts": {
+      "total": 2000,
+      "salaries": 0,
+      "rent": 2000,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "cash": {
+      "currentBalance": 1000000,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 39978000,
+      "operatingResult": 39978000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 22000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 39980000,
+      "grossMarginPercent": 99.95,
+      "netMarginPercent": 99.95
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 40978000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacb2"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 80956000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacb3"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 120934000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacb4"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 160912000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacb5"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 200890000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacb6"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 240868000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacb7"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 280846000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacb8"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 320824000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacb9"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 360802000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacba"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 400780000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacbb"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 440758000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacbc"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 40000000,
+        "costs": 22000,
+        "cashBalance": 480736000,
+        "netSurplus": 39978000,
+        "_id": "697ee34bc6a42dfc0c4aacbd"
+      }
+    ],
+    "createdAt": "2026-01-24T11:29:20.413Z",
+    "updatedAt": "2026-02-01T05:23:23.316Z",
+    "__v": 26
+  },
+  {
+    "_id": "697feb1826fa2e02ebd39b09",
+    "user": "697fe8b826fa2e02ebd39724",
+    "workspace": "697fe8b826fa2e02ebd39726",
+    "revenue": {
+      "totalMonthlyRevenue": 33000,
+      "totalMonthlyDeliveryCost": 1750,
+      "streamCount": 2,
+      "lastSyncedAt": "2026-02-08T05:19:56.665Z"
+    },
+    "workRelatedCosts": {
+      "total": 30500,
+      "contractors": 500,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 1000,
+      "salaries": 0,
+      "rent": 1000,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 30000,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": -250,
+      "operatingResult": -250,
+      "cashRunwayMonths": 120,
+      "breakEvenRevenue": 33250,
+      "monthlyBurnRate": 250,
+      "grossProfit": 750,
+      "grossMarginPercent": 2.27,
+      "netMarginPercent": -0.76
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 29750,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501fad"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 29500,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501fae"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 29250,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501faf"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 29000,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501fb0"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 28750,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501fb1"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 28500,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501fb2"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 28250,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501fb3"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 28000,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501fb4"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 27750,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501fb5"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 27500,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501fb6"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 27250,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501fb7"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 33000,
+        "costs": 33250,
+        "cashBalance": 27000,
+        "netSurplus": -250,
+        "_id": "69881cfcaf8b081f26501fb8"
+      }
+    ],
+    "createdAt": "2026-02-02T00:08:56.816Z",
+    "updatedAt": "2026-02-08T05:19:56.687Z",
+    "__v": 75
+  },
+  {
+    "_id": "6980df9513e8ea5bed8680af",
+    "user": "6980dd3c13e8ea5bed867eb7",
+    "workspace": "6980dd3c13e8ea5bed867eb9",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-02T17:32:06.146Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680b5"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680b6"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680b7"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680b8"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680b9"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680ba"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680bb"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680bc"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680bd"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680be"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680bf"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980df9613e8ea5bed8680c0"
+      }
+    ],
+    "createdAt": "2026-02-02T17:32:06.189Z",
+    "updatedAt": "2026-02-02T17:32:06.189Z",
+    "__v": 0
+  },
+  {
+    "_id": "6980e63813e8ea5bed86880f",
+    "user": "6980dfba13e8ea5bed8680d3",
+    "workspace": "6980dfba13e8ea5bed8680d5",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-02T18:00:24.824Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed868813"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed868814"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed868815"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed868816"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed868817"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed868818"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed868819"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed86881a"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed86881b"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed86881c"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed86881d"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "6980e63813e8ea5bed86881e"
+      }
+    ],
+    "createdAt": "2026-02-02T18:00:24.825Z",
+    "updatedAt": "2026-02-02T18:00:24.825Z",
+    "__v": 0
+  },
+  {
+    "_id": "698251bf5b0a7f86ca0d1c0f",
+    "user": "6982510c5b0a7f86ca0d1b52",
+    "workspace": "6982510c5b0a7f86ca0d1b54",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-03T19:51:27.718Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c14"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c15"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c16"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c17"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c18"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c19"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c1a"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c1b"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c1c"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c1d"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c1e"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698251bf5b0a7f86ca0d1c1f"
+      }
+    ],
+    "createdAt": "2026-02-03T19:51:27.719Z",
+    "updatedAt": "2026-02-03T19:51:27.719Z",
+    "__v": 0
+  },
+  {
+    "_id": "6984ea8564d313349e939690",
+    "user": "6984405a899642c866c794ce",
+    "workspace": "6984405b899642c866c794d0",
+    "revenue": {
+      "totalMonthlyRevenue": 90000,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 2,
+      "lastSyncedAt": "2026-03-06T00:29:11.218Z"
+    },
+    "workRelatedCosts": {
+      "total": 4000,
+      "contractors": 3000,
+      "materials": 1000,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": [
+        {
+          "id": "cost-1770749087227-4hjgy9zr9",
+          "category": "contractors",
+          "amount": 3000,
+          "description": "",
+          "_id": "698cc24b47b02e4a961a0617"
+        },
+        {
+          "id": "cost-1770749087227-i24re8pkw",
+          "category": "materials",
+          "amount": 1000,
+          "description": "",
+          "_id": "698cc24b47b02e4a961a0618"
+        }
+      ]
+    },
+    "fixedCosts": {
+      "total": 6000,
+      "salaries": 3000,
+      "rent": 0,
+      "software": 3000,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": [
+        {
+          "id": "cost-1770749087227-lany0h37g",
+          "category": "salaries",
+          "amount": 3000,
+          "description": "",
+          "_id": "698cc24c47b02e4a961a063b"
+        },
+        {
+          "id": "cost-1770749087227-p0ab9m6e4",
+          "category": "software",
+          "amount": 3000,
+          "description": "",
+          "_id": "698cc24c47b02e4a961a063c"
+        }
+      ]
+    },
+    "cash": {
+      "currentBalance": 10000,
+      "expectedFunding": 2000,
+      "fundingDate": null,
+      "fundingType": "investment"
+    },
+    "metrics": {
+      "monthlyNetSurplus": 80000,
+      "operatingResult": 80000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 10000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 86000,
+      "grossMarginPercent": 95.56,
+      "netMarginPercent": 88.89
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 90000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21cd"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 170000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21ce"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 250000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21cf"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 330000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21d0"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 410000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21d1"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 490000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21d2"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 570000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21d3"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 650000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21d4"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 730000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21d5"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 810000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21d6"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 890000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21d7"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 90000,
+        "costs": 10000,
+        "cashBalance": 970000,
+        "netSurplus": 80000,
+        "_id": "69aa1fd72fc861794d5c21d8"
+      }
+    ],
+    "createdAt": "2026-02-05T19:07:49.909Z",
+    "updatedAt": "2026-03-06T00:29:11.220Z",
+    "__v": 44
+  },
+  {
+    "_id": "698b6a7e47b02e4a96198ef6",
+    "user": "6972612ecd7477a69d51333a",
+    "workspace": "6972612ecd7477a69d51333c",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-10T17:27:26.275Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198ef9"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198efa"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198efb"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198efc"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198efd"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198efe"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198eff"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198f00"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198f01"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198f02"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198f03"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698b6a7e47b02e4a96198f04"
+      }
+    ],
+    "createdAt": "2026-02-10T17:27:26.277Z",
+    "updatedAt": "2026-02-10T17:27:26.277Z",
+    "__v": 0
+  },
+  {
+    "_id": "698cb5a547b02e4a9619fefd",
+    "user": "698cb22d47b02e4a9619fa7b",
+    "workspace": "698cb22e47b02e4a9619fa7d",
+    "revenue": {
+      "totalMonthlyRevenue": 15280,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 3,
+      "lastSyncedAt": "2026-03-03T00:15:37.515Z"
+    },
+    "workRelatedCosts": {
+      "total": 7750,
+      "contractors": 7500,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 250,
+      "otherTitle": "Technology hosting",
+      "items": [
+        {
+          "id": "cost-1771111494493-vziqcfv2n",
+          "category": "contractors",
+          "amount": 7500,
+          "description": "Workshop facilitators",
+          "_id": "69a623892fc861794d5b0549"
+        },
+        {
+          "id": "cost-1771111603329-k56ta35la",
+          "category": "other",
+          "amount": 250,
+          "description": "Technology hosting",
+          "_id": "69a623892fc861794d5b054a"
+        }
+      ]
+    },
+    "fixedCosts": {
+      "total": 13250,
+      "salaries": 10000,
+      "rent": 0,
+      "software": 750,
+      "insurance": 0,
+      "utilities": 500,
+      "marketing": 1000,
+      "other": 1000,
+      "otherTitle": "Legal, accounting",
+      "items": [
+        {
+          "id": "cost-1771111676101-vijmjzkam",
+          "category": "salaries",
+          "amount": 10000,
+          "description": "Executive team,  1.25 FTE",
+          "_id": "69a6238a2fc861794d5b0571"
+        },
+        {
+          "id": "cost-1771111781070-26fcsc8al",
+          "category": "software",
+          "amount": 750,
+          "description": "On going software development",
+          "_id": "69a6238a2fc861794d5b0572"
+        },
+        {
+          "id": "cost-1771111878628-8d84h3gby",
+          "category": "utilities",
+          "amount": 500,
+          "description": "Phones, internet etc",
+          "_id": "69a6238a2fc861794d5b0573"
+        },
+        {
+          "id": "cost-1771111939240-4zb3wmn1f",
+          "category": "marketing",
+          "amount": 1000,
+          "description": "Various",
+          "_id": "69a6238a2fc861794d5b0574"
+        },
+        {
+          "id": "cost-1771112008834-69s0h7spj",
+          "category": "other",
+          "amount": 500,
+          "description": "Legal, accounting",
+          "_id": "69a6238a2fc861794d5b0575"
+        },
+        {
+          "id": "cost-1771112053010-llfcgpxj1",
+          "category": "other",
+          "amount": 500,
+          "description": "Msc.",
+          "_id": "69a6238a2fc861794d5b0576"
+        }
+      ]
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 15000,
+      "fundingDate": "2026-03-12T00:00:00.000Z",
+      "fundingType": "investment"
+    },
+    "metrics": {
+      "monthlyNetSurplus": -5720,
+      "operatingResult": -5720,
+      "cashRunwayMonths": 2,
+      "breakEvenRevenue": 21000,
+      "monthlyBurnRate": 5720,
+      "grossProfit": 7530,
+      "grossMarginPercent": 49.28,
+      "netMarginPercent": -37.43
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": 9280,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d90"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": 3560,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d91"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": -2160,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d92"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": -7880,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d93"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": -13600,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d94"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": -19320,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d95"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": -25040,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d96"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": -30760,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d97"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": -36480,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d98"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": -42200,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d99"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": -47920,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d9a"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 15280,
+        "costs": 21000,
+        "cashBalance": -53640,
+        "netSurplus": -5720,
+        "_id": "69a628292fc861794d5b0d9b"
+      }
+    ],
+    "createdAt": "2026-02-11T17:00:21.838Z",
+    "updatedAt": "2026-03-03T00:15:37.604Z",
+    "__v": 19
+  },
+  {
+    "_id": "698d6653113b3cb0eb697bcb",
+    "user": "698d6649113b3cb0eb697b7a",
+    "workspace": "698d664f113b3cb0eb697b92",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-12T05:34:12.146Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bd0"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bd1"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bd2"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bd3"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bd4"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bd5"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bd6"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bd7"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bd8"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bd9"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bda"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698d6654113b3cb0eb697bdb"
+      }
+    ],
+    "createdAt": "2026-02-12T05:34:12.148Z",
+    "updatedAt": "2026-02-12T05:34:12.148Z",
+    "__v": 0
+  },
+  {
+    "_id": "698e6ec24455c1177406b464",
+    "user": "698e6d104455c1177406b39c",
+    "workspace": "698e6d114455c1177406b39e",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-13T00:22:26.305Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b469"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b46a"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b46b"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b46c"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b46d"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b46e"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b46f"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b470"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b471"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b472"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b473"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "698e6ec24455c1177406b474"
+      }
+    ],
+    "createdAt": "2026-02-13T00:22:26.306Z",
+    "updatedAt": "2026-02-13T00:22:26.306Z",
+    "__v": 0
+  },
+  {
+    "_id": "69902433fd5d96441e942787",
+    "user": "698b76c547b02e4a961996d9",
+    "workspace": "698b76c547b02e4a961996db",
+    "revenue": {
+      "totalMonthlyRevenue": 135380,
+      "totalMonthlyDeliveryCost": 17500,
+      "streamCount": 5,
+      "lastSyncedAt": "2026-03-08T16:48:02.034Z"
+    },
+    "workRelatedCosts": {
+      "items": [
+        {
+          "id": "696eb5a21d5e",
+          "category": "contractors",
+          "amount": 8000,
+          "description": "Freelance developers",
+          "_id": "69902433fd5d96441e942788"
+        },
+        {
+          "id": "e01ffc686c3f",
+          "category": "contractors",
+          "amount": 5000,
+          "description": "Design contractors",
+          "_id": "69902433fd5d96441e942789"
+        },
+        {
+          "id": "d3c35f779ab6",
+          "category": "commissions",
+          "amount": 4500,
+          "description": "Sales commissions",
+          "_id": "69902433fd5d96441e94278a"
+        },
+        {
+          "id": "9eab4c22e319",
+          "category": "materials",
+          "amount": 1200,
+          "description": "Workshop materials",
+          "_id": "69902433fd5d96441e94278b"
+        },
+        {
+          "id": "951749c0286e",
+          "category": "other",
+          "amount": 800,
+          "description": "Client gifts",
+          "_id": "69902433fd5d96441e94278c"
+        }
+      ],
+      "total": 19500,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "fixedCosts": {
+      "items": [
+        {
+          "id": "7bd3637b7a34",
+          "category": "salaries",
+          "amount": 45000,
+          "description": "Full-time team salaries",
+          "_id": "69902433fd5d96441e94278d"
+        },
+        {
+          "id": "9117f3a819ab",
+          "category": "rent",
+          "amount": 4500,
+          "description": "Office space",
+          "_id": "69902433fd5d96441e94278e"
+        },
+        {
+          "id": "56eba479b216",
+          "category": "software",
+          "amount": 3200,
+          "description": "SaaS subscriptions",
+          "_id": "69902433fd5d96441e94278f"
+        },
+        {
+          "id": "eae9ce5ab68b",
+          "category": "marketing",
+          "amount": 8000,
+          "description": "Marketing spend",
+          "_id": "69902433fd5d96441e942790"
+        },
+        {
+          "id": "af5cf6e09e6e",
+          "category": "insurance",
+          "amount": 1500,
+          "description": "Business insurance",
+          "_id": "69902433fd5d96441e942791"
+        },
+        {
+          "id": "cd40e3077cd8",
+          "category": "utilities",
+          "amount": 600,
+          "description": "Internet and utilities",
+          "_id": "69902433fd5d96441e942792"
+        },
+        {
+          "id": "6bc93ea77b1f",
+          "category": "other",
+          "amount": 2000,
+          "description": "Professional services",
+          "_id": "69902433fd5d96441e942793"
+        }
+      ],
+      "total": 64800,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": ""
+    },
+    "cash": {
+      "currentBalance": 285000,
+      "expectedFunding": 500000,
+      "fundingDate": "2026-06-01T00:00:00.000Z",
+      "fundingType": "investment"
+    },
+    "metrics": {
+      "monthlyNetSurplus": 33580,
+      "operatingResult": 33580,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 101800,
+      "monthlyBurnRate": 0,
+      "grossProfit": 98380,
+      "grossMarginPercent": 72.67,
+      "netMarginPercent": 24.8
+    },
+    "lastConfirmedAt": "2026-02-14T07:28:51.155Z",
+    "lastConfirmedBy": "698b76c547b02e4a961996d9",
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 318580,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc891"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 352160,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc892"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 385740,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc893"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 919320,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc894"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 952900,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc895"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 986480,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc896"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 1020060,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc897"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 1053640,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc898"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 1087220,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc899"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 1120800,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc89a"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 1154380,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc89b"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 135380,
+        "costs": 101800,
+        "cashBalance": 1187960,
+        "netSurplus": 33580,
+        "_id": "69ada8427f9b151bffbdc89c"
+      }
+    ],
+    "createdAt": "2026-02-14T07:28:51.159Z",
+    "updatedAt": "2026-03-08T16:48:02.039Z",
+    "__v": 12
+  },
+  {
+    "_id": "69946db986420be3cb4c7ebe",
+    "user": "69946cae86420be3cb4c7e05",
+    "workspace": "69946cae86420be3cb4c7e07",
+    "revenue": {
+      "totalMonthlyRevenue": 200000,
+      "totalMonthlyDeliveryCost": 6000,
+      "streamCount": 2,
+      "lastSyncedAt": "2026-02-17T13:45:18.017Z"
+    },
+    "workRelatedCosts": {
+      "total": 2000,
+      "contractors": 2000,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": [
+        {
+          "id": "cost-1771335579136-t9edu541s",
+          "category": "contractors",
+          "amount": 2000,
+          "description": "Developer",
+          "_id": "69946fa786420be3cb4c8220"
+        }
+      ]
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 60000000,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 192000,
+      "operatingResult": 192000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 8000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 192000,
+      "grossMarginPercent": 96,
+      "netMarginPercent": 96
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 60192000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c86fc"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 60384000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c86fd"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 60576000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c86fe"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 60768000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c86ff"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 60960000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c8700"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 61152000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c8701"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 61344000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c8702"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 61536000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c8703"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 61728000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c8704"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 61920000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c8705"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 62112000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c8706"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 200000,
+        "costs": 8000,
+        "cashBalance": 62304000,
+        "netSurplus": 192000,
+        "_id": "699470ee86420be3cb4c8707"
+      }
+    ],
+    "createdAt": "2026-02-17T13:31:37.796Z",
+    "updatedAt": "2026-02-17T13:45:18.019Z",
+    "__v": 6
+  },
+  {
+    "_id": "699734d8bd773746b09adf2b",
+    "user": "6997323bbd773746b09ad748",
+    "workspace": "6997323bbd773746b09ad74a",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-19T16:05:44.456Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf33"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf34"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf35"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf36"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf37"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf38"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf39"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf3a"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf3b"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf3c"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf3d"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699734d8bd773746b09adf3e"
+      }
+    ],
+    "createdAt": "2026-02-19T16:05:44.457Z",
+    "updatedAt": "2026-02-19T16:05:44.457Z",
+    "__v": 0
+  },
+  {
+    "_id": "69974210d931fe23ade6bcfb",
+    "user": "69973fffd931fe23ade6b499",
+    "workspace": "69973fffd931fe23ade6b49b",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-19T17:02:08.720Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd04"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd05"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd06"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd07"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd08"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd09"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd0a"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd0b"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd0c"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd0d"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd0e"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69974210d931fe23ade6bd0f"
+      }
+    ],
+    "createdAt": "2026-02-19T17:02:08.721Z",
+    "updatedAt": "2026-02-19T17:02:08.721Z",
+    "__v": 0
+  },
+  {
+    "_id": "69976b29d931fe23ade6ed8a",
+    "user": "69975f34d931fe23ade6d26c",
+    "workspace": "69975f34d931fe23ade6d26e",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-19T20:03:08.227Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5a0"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5a1"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5a2"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5a3"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5a4"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5a5"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5a6"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5a7"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5a8"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5a9"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5aa"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69976c7cd931fe23ade6f5ab"
+      }
+    ],
+    "createdAt": "2026-02-19T19:57:30.164Z",
+    "updatedAt": "2026-02-19T20:03:08.229Z",
+    "__v": 1
+  },
+  {
+    "_id": "69977009d931fe23ade6fb2e",
+    "user": "69960978bd773746b09a8d10",
+    "workspace": "69960978bd773746b09a8d12",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-19T20:18:17.547Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb36"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb37"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb38"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb39"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb3a"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb3b"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb3c"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb3d"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb3e"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb3f"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb40"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69977009d931fe23ade6fb41"
+      }
+    ],
+    "createdAt": "2026-02-19T20:18:17.548Z",
+    "updatedAt": "2026-02-19T20:18:17.548Z",
+    "__v": 0
+  },
+  {
+    "_id": "699770b6d931fe23ade6ff10",
+    "user": "699661b1bd773746b09aa468",
+    "workspace": "699661b1bd773746b09aa46a",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-19T20:21:11.131Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff1a"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff1b"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff1c"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff1d"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff1e"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff1f"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff20"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff21"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff22"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff23"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff24"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699770b7d931fe23ade6ff25"
+      }
+    ],
+    "createdAt": "2026-02-19T20:21:11.132Z",
+    "updatedAt": "2026-02-19T20:21:11.132Z",
+    "__v": 0
+  },
+  {
+    "_id": "699a3df0d931fe23ade7b5d1",
+    "user": "6949d99d8d013b0739c9fb2b",
+    "workspace": "695933985c7dd36581e83ef9",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-02-21T23:21:20.646Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Feb 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5d8"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5d9"
+      },
+      {
+        "month": 3,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5da"
+      },
+      {
+        "month": 4,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5db"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5dc"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5dd"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5de"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5df"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5e0"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5e1"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5e2"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "699a3df0d931fe23ade7b5e3"
+      }
+    ],
+    "createdAt": "2026-02-21T23:21:20.648Z",
+    "updatedAt": "2026-02-21T23:21:20.648Z",
+    "__v": 0
+  },
+  {
+    "_id": "69a21b222fc861794d59e602",
+    "user": "69a21a702fc861794d59e530",
+    "workspace": "69a21a702fc861794d59e532",
+    "revenue": {
+      "totalMonthlyRevenue": 7292580,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 1,
+      "lastSyncedAt": "2026-03-02T13:05:12.857Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 7292580,
+      "operatingResult": 7292580,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 7292580,
+      "grossMarginPercent": 100,
+      "netMarginPercent": 100
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 7292580,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8d1"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 14585160,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8d2"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 21877740,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8d3"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 29170320,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8d4"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 36462900,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8d5"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 43755480,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8d6"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 51048060,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8d7"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 58340640,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8d8"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 65633220,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8d9"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 72925800,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8da"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 80218380,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8db"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 7292580,
+        "costs": 0,
+        "cashBalance": 87510960,
+        "netSurplus": 7292580,
+        "_id": "69a58b0f2fc861794d5ad8dc"
+      }
+    ],
+    "createdAt": "2026-02-27T22:30:58.379Z",
+    "updatedAt": "2026-03-02T13:05:12.859Z",
+    "__v": 4
+  },
+  {
+    "_id": "69a4beed2fc861794d5a9b19",
+    "user": "69a4bdb62fc861794d5a9a43",
+    "workspace": "69a4bdb62fc861794d5a9a45",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-03-01T22:34:21.502Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b1c"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b1d"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b1e"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b1f"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b20"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b21"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b22"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b23"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b24"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b25"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b26"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69a4beed2fc861794d5a9b27"
+      }
+    ],
+    "createdAt": "2026-03-01T22:34:21.503Z",
+    "updatedAt": "2026-03-01T22:34:21.503Z",
+    "__v": 0
+  },
+  {
+    "_id": "69aaf72ccc74eb9d6c0c04e8",
+    "user": "6996d3c3bd773746b09abea5",
+    "workspace": "6996d3c3bd773746b09abea7",
+    "revenue": {
+      "totalMonthlyRevenue": 30000,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 3,
+      "lastSyncedAt": "2026-03-13T12:16:52.622Z"
+    },
+    "workRelatedCosts": {
+      "total": 5000,
+      "contractors": 5000,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": [
+        {
+          "id": "cost-1773068063174-ts6j4ey4j",
+          "category": "contractors",
+          "amount": 5000,
+          "description": "",
+          "_id": "69aedf24dcc1cfc9e5f77126"
+        }
+      ]
+    },
+    "fixedCosts": {
+      "total": 10000,
+      "salaries": 10000,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": [
+        {
+          "id": "cost-1773068050295-ovpjug6jb",
+          "category": "salaries",
+          "amount": 10000,
+          "description": "",
+          "_id": "69aedf25dcc1cfc9e5f77146"
+        }
+      ]
+    },
+    "cash": {
+      "currentBalance": 10000,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 15000,
+      "operatingResult": 15000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 15000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 25000,
+      "grossMarginPercent": 83.33,
+      "netMarginPercent": 50
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 25000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e206a"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 40000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e206b"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 55000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e206c"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 70000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e206d"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 85000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e206e"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 100000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e206f"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 115000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e2070"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 130000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e2071"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 145000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e2072"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 160000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e2073"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 175000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e2074"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 30000,
+        "costs": 15000,
+        "cashBalance": 190000,
+        "netSurplus": 15000,
+        "_id": "69b40034b178b63f742e2075"
+      }
+    ],
+    "createdAt": "2026-03-06T15:47:56.396Z",
+    "updatedAt": "2026-03-13T12:16:52.625Z",
+    "__v": 16
+  },
+  {
+    "_id": "69ae09dc2373623bddf32962",
+    "user": "69ae09082373623bddf32898",
+    "workspace": "69ae09082373623bddf3289a",
+    "revenue": {
+      "totalMonthlyRevenue": 25000000,
+      "totalMonthlyDeliveryCost": 500000,
+      "streamCount": 1,
+      "lastSyncedAt": "2026-03-09T01:30:08.286Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 5000000,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 24500000,
+      "operatingResult": 24500000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 500000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 24500000,
+      "grossMarginPercent": 98,
+      "netMarginPercent": 98
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 29500000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d50"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 54000000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d51"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 78500000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d52"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 103000000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d53"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 127500000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d54"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 152000000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d55"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 176500000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d56"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 201000000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d57"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 225500000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d58"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 250000000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d59"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 274500000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d5a"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 25000000,
+        "costs": 500000,
+        "cashBalance": 299000000,
+        "netSurplus": 24500000,
+        "_id": "69ae22a0c947ceeb0d977d5b"
+      }
+    ],
+    "createdAt": "2026-03-08T23:44:28.614Z",
+    "updatedAt": "2026-03-09T01:30:08.289Z",
+    "__v": 10
+  },
+  {
+    "_id": "69aed04cbdf8124005efd4eb",
+    "user": "69aecec2bdf8124005efd425",
+    "workspace": "69aecec2bdf8124005efd427",
+    "revenue": {
+      "totalMonthlyRevenue": 65000000,
+      "totalMonthlyDeliveryCost": 150000,
+      "streamCount": 2,
+      "lastSyncedAt": "2026-03-09T14:10:27.863Z"
+    },
+    "workRelatedCosts": {
+      "total": 5000,
+      "contractors": 5000,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": [
+        {
+          "id": "cost-1773065431868-c69vekzbl",
+          "category": "contractors",
+          "amount": 5000,
+          "description": "A",
+          "_id": "69aed4de28163a6c9cc607c1"
+        }
+      ]
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 1000000,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 64845000,
+      "operatingResult": 64845000,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 155000,
+      "monthlyBurnRate": 0,
+      "grossProfit": 64845000,
+      "grossMarginPercent": 99.76,
+      "netMarginPercent": 99.76
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 65845000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc60812"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 130690000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc60813"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 195535000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc60814"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 260380000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc60815"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 325225000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc60816"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 390070000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc60817"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 454915000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc60818"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 519760000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc60819"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 584605000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc6081a"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 649450000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc6081b"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 714295000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc6081c"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 65000000,
+        "costs": 155000,
+        "cashBalance": 779140000,
+        "netSurplus": 64845000,
+        "_id": "69aed4e628163a6c9cc6081d"
+      }
+    ],
+    "createdAt": "2026-03-09T13:51:09.091Z",
+    "updatedAt": "2026-03-09T14:10:46.147Z",
+    "__v": 4
+  },
+  {
+    "_id": "69af158a2fc861794d5d730f",
+    "user": "694793f4d884ac6068070395",
+    "workspace": "695933955c7dd36581e83eec",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-03-09T18:47:09.236Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73d1"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73d2"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73d3"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73d4"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73d5"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73d6"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73d7"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73d8"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73d9"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73da"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73db"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af15ad2fc861794d5d73dc"
+      }
+    ],
+    "createdAt": "2026-03-09T18:46:34.297Z",
+    "updatedAt": "2026-03-09T18:47:09.238Z",
+    "__v": 1
+  },
+  {
+    "_id": "69af716e1649d6ebac6dd2d4",
+    "user": "69af70a71649d6ebac6dce42",
+    "workspace": "69af70a71649d6ebac6dce44",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-03-10T01:18:39.040Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2d8"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2d9"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2da"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2db"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2dc"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2dd"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2de"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2df"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2e0"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2e1"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2e2"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69af716f1649d6ebac6dd2e3"
+      }
+    ],
+    "createdAt": "2026-03-10T01:18:39.040Z",
+    "updatedAt": "2026-03-10T01:18:39.040Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b41382e7309f98a47591c9",
+    "user": "69b4123de7309f98a47590f4",
+    "workspace": "69b4123de7309f98a47590f6",
+    "revenue": {
+      "totalMonthlyRevenue": 0,
+      "totalMonthlyDeliveryCost": 0,
+      "streamCount": 0,
+      "lastSyncedAt": "2026-03-13T13:39:14.160Z"
+    },
+    "workRelatedCosts": {
+      "total": 0,
+      "contractors": 0,
+      "materials": 0,
+      "commissions": 0,
+      "shipping": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "fixedCosts": {
+      "total": 0,
+      "salaries": 0,
+      "rent": 0,
+      "software": 0,
+      "insurance": 0,
+      "utilities": 0,
+      "marketing": 0,
+      "other": 0,
+      "otherTitle": "",
+      "items": []
+    },
+    "cash": {
+      "currentBalance": 0,
+      "expectedFunding": 0,
+      "fundingDate": null,
+      "fundingType": null
+    },
+    "metrics": {
+      "monthlyNetSurplus": 0,
+      "operatingResult": 0,
+      "cashRunwayMonths": 999,
+      "breakEvenRevenue": 0,
+      "monthlyBurnRate": 0,
+      "grossProfit": 0,
+      "grossMarginPercent": 0,
+      "netMarginPercent": 0
+    },
+    "lastConfirmedAt": null,
+    "forecast": [
+      {
+        "month": 1,
+        "monthLabel": "Mar 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591cd"
+      },
+      {
+        "month": 2,
+        "monthLabel": "Apr 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591ce"
+      },
+      {
+        "month": 3,
+        "monthLabel": "May 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591cf"
+      },
+      {
+        "month": 4,
+        "monthLabel": "Jun 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591d0"
+      },
+      {
+        "month": 5,
+        "monthLabel": "Jul 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591d1"
+      },
+      {
+        "month": 6,
+        "monthLabel": "Aug 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591d2"
+      },
+      {
+        "month": 7,
+        "monthLabel": "Sep 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591d3"
+      },
+      {
+        "month": 8,
+        "monthLabel": "Oct 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591d4"
+      },
+      {
+        "month": 9,
+        "monthLabel": "Nov 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591d5"
+      },
+      {
+        "month": 10,
+        "monthLabel": "Dec 2026",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591d6"
+      },
+      {
+        "month": 11,
+        "monthLabel": "Jan 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591d7"
+      },
+      {
+        "month": 12,
+        "monthLabel": "Feb 2027",
+        "revenue": 0,
+        "costs": 0,
+        "cashBalance": 0,
+        "netSurplus": 0,
+        "_id": "69b41382e7309f98a47591d8"
+      }
+    ],
+    "createdAt": "2026-03-13T13:39:14.161Z",
+    "updatedAt": "2026-03-13T13:39:14.161Z",
+    "__v": 0
+  }
+]

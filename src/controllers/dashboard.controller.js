@@ -1493,6 +1493,23 @@ exports.createDepartment = async (req, res, next) => {
   }
 };
 
+// DELETE /api/dashboard/departments/:id
+exports.deleteDepartment = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ message: 'Department id is required' });
+    const dept = await Department.findOne({ _id: id, ...wsFilter }).lean().exec();
+    if (!dept) return res.status(404).json({ message: 'Department not found' });
+    await Department.deleteOne({ _id: id, ...wsFilter }).exec();
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // PATCH /api/dashboard/action-assignments/status
 // DEPRECATED: Use DepartmentProject CRUD API instead
 exports.updateActionAssignmentStatus = async (req, res, next) => {
