@@ -3936,8 +3936,8 @@ exports.getSettings = async (req, res, next) => {
       jobTitle: (user?.jobTitle && user.jobTitle.trim()) || '',
       phone: user?.phone || '',
     };
-    // Source of truth: TeamMember collection with Department names
-    const membersRaw = await TeamMember.find(wsFilter).lean().exec();
+    // Source of truth: TeamMember collection with Department names (exclude Inactive/deleted)
+    const membersRaw = await TeamMember.find({ ...wsFilter, status: { $ne: 'Inactive' } }).lean().exec();
     const departmentsRaw = await Department.find(wsFilter).lean().exec();
     const deptByName = new Map((departmentsRaw||[]).map(d => [String(d.name||'').trim().toLowerCase(), d]));
     // Deduplicate by email (preferred) or name; prefer Active and populated fields

@@ -133,7 +133,7 @@ exports.create = async (req, res, next) => {
       const notes = typeof kr === 'object' && kr.notes ? String(kr.notes).trim() : undefined;
       let ownerIdKr = (typeof kr === 'object' && kr.ownerId) ? String(kr.ownerId).trim() : undefined;
       let ownerNameKr = (typeof kr === 'object' && kr.ownerName) ? String(kr.ownerName).trim() : undefined;
-      const metric = String(kr.metric || '').trim().toLowerCase();
+      const metric = String(kr.metric || '').trim();
       const unit = kr.unit ? String(kr.unit).trim() : undefined;
       const direction = (kr.direction === 'decrease') ? 'decrease' : 'increase';
       const baseline = Number(kr.baseline ?? 0);
@@ -158,7 +158,7 @@ exports.create = async (req, res, next) => {
       if (type === 'department') {
         // Departments must not duplicate canonical metrics
         if (metric && isCanonicalMetricKey(metric)) {
-          throw Object.assign(new Error('Department KR must not duplicate canonical core metrics'), { statusCode: 400 });
+          throw Object.assign(new Error('This metric is reserved for Core OKRs. Please use a custom metric for department key results.'), { statusCode: 400 });
         }
         if (!['driver', 'enablement', 'operational'].includes(String(linkTag || ''))) {
           throw Object.assign(new Error('Department KR must have linkTag: driver | enablement | operational'), { statusCode: 400 });
@@ -304,7 +304,7 @@ exports.update = async (req, res, next) => {
         const notes = typeof kr === 'object' && kr.notes ? String(kr.notes).trim() : undefined;
         const ownerIdKr = (typeof kr === 'object' && kr.ownerId) ? String(kr.ownerId).trim() : undefined;
         const ownerNameKr = (typeof kr === 'object' && kr.ownerName) ? String(kr.ownerName).trim() : undefined;
-        const metric = String(kr.metric || '').trim().toLowerCase();
+        const metric = String(kr.metric || '').trim();
         const unit = kr.unit ? String(kr.unit).trim() : undefined;
         const direction = (kr.direction === 'decrease') ? 'decrease' : 'increase';
         const baseline = Number(kr.baseline ?? 0);
@@ -328,7 +328,7 @@ exports.update = async (req, res, next) => {
 
         if (okr.okrType === 'department') {
           if (metric && isCanonicalMetricKey(metric)) {
-            throw Object.assign(new Error('Department KR must not duplicate canonical core metrics'), { statusCode: 400 });
+            throw Object.assign(new Error('This metric is reserved for Core OKRs. Please use a custom metric for department key results.'), { statusCode: 400 });
           }
           if (!['driver', 'enablement', 'operational'].includes(String(linkTag || ''))) {
             throw Object.assign(new Error('Department KR must have linkTag: driver | enablement | operational'), { statusCode: 400 });
@@ -510,7 +510,7 @@ exports.updateKrMetrics = async (req, res, next) => {
 
     // Update metric fields only; no manual progress/status
     const { metric, current, baseline, target, unit, direction, startAt, endAt, notes, ownerId, ownerName } = req.body;
-    if (typeof metric !== 'undefined') kr.metric = String(metric || '').trim().toLowerCase() || kr.metric;
+    if (typeof metric !== 'undefined') kr.metric = String(metric || '').trim() || kr.metric;
     if (typeof current !== 'undefined') kr.current = Number(current);
     if (typeof baseline !== 'undefined') kr.baseline = Number(baseline);
     if (typeof target !== 'undefined') kr.target = Number(target);

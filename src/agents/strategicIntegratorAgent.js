@@ -58,20 +58,20 @@ function assessPriorityAlignment(guidanceData, context) {
   if (hasOverdue && overdueCount > 3) {
     return {
       state: 'misaligned',
-      context: `${overdueCount} overdue items indicate priority drift from strategic intent`,
+      context: `${overdueCount} overdue items out of ${totalItems} total — priority drift is significant. ${dueInHorizon} items due in the current horizon.`,
     };
   }
 
   if (hasOverdue || overloadRatio > 0.5) {
     return {
       state: 'partial',
-      context: 'Some priorities may not align with current capacity or strategic focus',
+      context: `${overdueCount} overdue item${overdueCount !== 1 ? 's' : ''} detected. ${dueInHorizon} of ${totalItems} items are due in the current horizon — capacity may be stretched.`,
     };
   }
 
   return {
     state: 'aligned',
-    context: 'Current priorities reflect strategic intent',
+    context: `${totalItems} active item${totalItems !== 1 ? 's' : ''} tracked, ${overdueCount} overdue, ${dueInHorizon} due in current horizon. Priorities are on track with strategic intent.`,
   };
 }
 
@@ -90,23 +90,26 @@ function assessFinancialFeasibility(financialData) {
   const runway = financialData.metrics?.runway;
   const netMargin = financialData.metrics?.netMargin || 0;
 
+  const runwayStr = runway !== null && runway !== undefined ? `${runway} month${runway !== 1 ? 's' : ''} runway` : null;
+  const marginStr = `${netMargin >= 0 ? '+' : ''}${netMargin.toFixed(1)}% net margin`;
+
   if (status === 'critical' || (runway !== null && runway < 3)) {
     return {
       state: 'unsustainable',
-      context: 'Current financial position cannot support strategic ambitions',
+      context: `Financial position is critical. ${runwayStr ? `Only ${runwayStr} remaining. ` : ''}${marginStr}. Immediate action needed to sustain current strategy.`,
     };
   }
 
   if (status === 'watch' || netMargin < 0 || (runway !== null && runway < 6)) {
     return {
       state: 'constrained',
-      context: 'Financial constraints may limit strategic options',
+      context: `Financial headroom is limited. ${runwayStr ? `${runwayStr} remaining. ` : ''}${marginStr}. Some strategic options may not be affordable at current burn rate.`,
     };
   }
 
   return {
     state: 'feasible',
-    context: 'Financial capacity supports current strategy',
+    context: `Financials are healthy. ${runwayStr ? `${runwayStr} remaining. ` : ''}${marginStr}. Current strategy is financially supported.`,
   };
 }
 
@@ -130,39 +133,40 @@ function assessExecutionReality(progressData, context) {
 
   // Check execution health state if available
   const healthState = progressData.executionHealth?.state;
+  const pct = Math.round(overallProgress);
+  const deliverableStr = totalDeliverables > 0 ? `${activeDeliverables} of ${totalDeliverables} deliverables active. ` : '';
+
   if (healthState === 'compromised') {
     return {
       state: 'breaking',
-      context: 'Execution capacity is insufficient for current commitments',
+      context: `Execution health is compromised. ${deliverableStr}${overdueCount} overdue, ${pct}% completion rate. Team capacity cannot sustain current commitments.`,
     };
   }
 
-  // If completion rate is high and no overdue items, execution is good
   if (overallProgress >= 70 && overdueCount === 0) {
     return {
       state: 'executable',
-      context: 'Execution capacity matches current ambition',
+      context: `Execution is on track. ${deliverableStr}${pct}% completion rate with no overdue items. Team is delivering against commitments.`,
     };
   }
 
-  // Check for significant issues
   if (overdueCount > 5 || (activeDeliverables > 0 && overallProgress < 20)) {
     return {
       state: 'breaking',
-      context: 'Execution capacity is insufficient for current commitments',
+      context: `Execution is breaking down. ${deliverableStr}${overdueCount} overdue items, only ${pct}% completed. Significant re-prioritisation needed.`,
     };
   }
 
   if (overdueCount > 0 || overallProgress < 40) {
     return {
       state: 'strained',
-      context: 'Execution is under pressure in multiple areas',
+      context: `Execution is under strain. ${deliverableStr}${overdueCount} overdue item${overdueCount !== 1 ? 's' : ''}, ${pct}% completion rate. Bottlenecks may be forming.`,
     };
   }
 
   return {
     state: 'executable',
-    context: 'Execution capacity matches current ambition',
+    context: `Execution is healthy. ${deliverableStr}${pct}% completion rate, ${overdueCount} overdue. On track to meet current commitments.`,
   };
 }
 

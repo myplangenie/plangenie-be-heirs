@@ -45,8 +45,13 @@ const OrgPositionSchema = new mongoose.Schema({
     lowercase: true,
     default: '',
   },
-  // Department this position belongs to
+  // Department this position belongs to (normalized key)
   department: {
+    type: String,
+    trim: true,
+  },
+  // Human-readable department label (e.g. "Random Department 1")
+  departmentLabel: {
     type: String,
     trim: true,
   },

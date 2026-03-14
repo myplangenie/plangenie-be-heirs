@@ -71,6 +71,7 @@ exports.create = async (req, res, next) => {
       name,
       email,
       department,
+      departmentLabel,
       parentId,
     } = req.body;
 
@@ -81,6 +82,7 @@ exports.create = async (req, res, next) => {
     const order = await OrgPosition.getNextOrder(wsFilter.workspace);
     const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
     const normalizedDept = department ? normalizeDepartmentKey(department) : '';
+    const deptLabel = departmentLabel?.trim() || department?.trim() || undefined;
 
     const positionData = addWorkspaceToDoc({
       user: userId,
@@ -89,6 +91,7 @@ exports.create = async (req, res, next) => {
       name: name?.trim() || undefined,
       email: email?.trim()?.toLowerCase() || '',
       department: normalizedDept || undefined,
+      departmentLabel: deptLabel,
       parentId: parentId || null,
       order,
     }, req);
@@ -150,6 +153,7 @@ exports.update = async (req, res, next) => {
       name,
       email,
       department,
+      departmentLabel,
       parentId,
       order,
     } = req.body;
@@ -162,6 +166,10 @@ exports.update = async (req, res, next) => {
     if (department !== undefined) {
       const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
       pos.department = department ? normalizeDepartmentKey(department) : undefined;
+      pos.departmentLabel = departmentLabel?.trim() || department?.trim() || undefined;
+    }
+    if (departmentLabel !== undefined && department === undefined) {
+      pos.departmentLabel = departmentLabel?.trim() || undefined;
     }
     if (parentId !== undefined) pos.parentId = parentId || null;
     if (order !== undefined) pos.order = order;
@@ -221,12 +229,9 @@ exports.delete = async (req, res, next) => {
 
     await position.softDelete();
 
-    // Mark linked TeamMember as Inactive (soft)
+    // Hard delete linked TeamMember
     try {
-      await TeamMember.findOneAndUpdate(
-        { user: req.user?.id, workspace: wsFilter.workspace, mid: String(position._id) },
-        { $set: { status: 'Inactive' } }
-      ).lean();
+      await TeamMember.deleteOne({ user: req.user?.id, workspace: wsFilter.workspace, mid: String(position._id) });
     } catch (_) {}
 
     return res.json({ message: 'Position deleted', id });
