@@ -41,6 +41,8 @@ const UserSchema = new mongoose.Schema(
     },
     // Marker to identify users who are collaborators (invited to view others' dashboards)
     isCollaborator: { type: Boolean, default: false },
+    // The owner whose workspace this collaborator was invited to view
+    collabOwnerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
     // Admin controls and activity tracking
     isAdmin: { type: Boolean, default: false },

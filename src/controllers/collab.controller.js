@@ -397,11 +397,11 @@ exports.accept = async (req, res) => {
     collab.acceptToken = null;
     collab.tokenExpires = null;
     await collab.save();
-    // Mark the accepting user as a collaborator
+    // Mark the accepting user as a collaborator and store owner reference
     try {
       const viewerId2 = req.user?.id;
       if (viewerId2 && String(viewerId2) !== String(collab.owner)) {
-        await User.findByIdAndUpdate(viewerId2, { isCollaborator: true }).exec();
+        await User.findByIdAndUpdate(viewerId2, { isCollaborator: true, collabOwnerId: collab.owner }).exec();
       }
     } catch {}
 
@@ -434,7 +434,7 @@ exports.acceptLogged = async (req, res) => {
     collab.tokenExpires = null;
     await collab.save();
     // Mark viewer as collaborator
-    try { await User.findByIdAndUpdate(viewerId, { isCollaborator: true }).exec(); } catch {}
+    try { await User.findByIdAndUpdate(viewerId, { isCollaborator: true, collabOwnerId: collab.owner }).exec(); } catch {}
     // Mark related notification as read
     await Notification.updateMany({ user: viewerId, nid: `collab-${String(collab._id)}` }, { $set: { read: true } }).exec();
     return res.json({ ok: true, collaboration: { id: String(collab._id), owner: String(collab.owner), status: collab.status } });

@@ -149,6 +149,7 @@ exports.register = async (req, res) => {
       isVerified: true,
       onboardingDone: true,
       isCollaborator: true,
+      collabOwnerId: collab.owner,
     });
     try {
       // Link collaboration to this user and accept
@@ -334,18 +335,29 @@ exports.login = async (req, res) => {
     : '/workspace-select';
   // If user is a viewer/collaborator for any accepted collaboration, include default owner to view-as
   let viewAsOwnerId = undefined;
-  try {
-    const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: user._id }, { collaborator: user._id } ] })
-      .select('owner')
-      .limit(5)
-      .lean()
-      .exec();
-    if (rows && rows.length) {
-      const ids = Array.from(new Set(rows.map((r) => String(r.owner))));
-      const owners = await User.find({ _id: { $in: ids } }).select('_id').lean().exec();
-      if (owners && owners.length) viewAsOwnerId = String(owners[0]._id);
-    }
-  } catch {}
+  if (user.isCollaborator) {
+    try {
+      if (user.collabOwnerId) {
+        viewAsOwnerId = String(user.collabOwnerId);
+      } else {
+        // Fallback for users created before collabOwnerId was added
+        const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: user._id }, { collaborator: user._id } ] })
+          .select('owner')
+          .limit(5)
+          .lean()
+          .exec();
+        if (rows && rows.length) {
+          const ids = Array.from(new Set(rows.map((r) => String(r.owner))));
+          const owners = await User.find({ _id: { $in: ids } }).select('_id').lean().exec();
+          if (owners && owners.length) {
+            viewAsOwnerId = String(owners[0]._id);
+            // Backfill collabOwnerId so future requests skip this lookup
+            await User.findByIdAndUpdate(user._id, { collabOwnerId: owners[0]._id }).exec();
+          }
+        }
+      }
+    } catch {}
+  }
   // Resolve plan: collaborators inherit the plan of the owner they're viewing
   let planSlug = effectivePlan(user);
   if (user.isCollaborator && viewAsOwnerId) {
@@ -383,18 +395,30 @@ exports.me = async (req, res) => {
     : '/workspace-select';
   // Provide default owner to view-as for collaborators
   let viewAsOwnerId = undefined;
-  try {
-    const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: user._id }, { collaborator: user._id } ] })
-      .select('owner')
-      .limit(5)
-      .lean()
-      .exec();
-    if (rows && rows.length) {
-      const ids = Array.from(new Set(rows.map((r) => String(r.owner))));
-      const owners = await User.find({ _id: { $in: ids } }).select('_id').lean().exec();
-      if (owners && owners.length) viewAsOwnerId = String(owners[0]._id);
-    }
-  } catch {}
+  if (user.isCollaborator) {
+    try {
+      // Primary: use collabOwnerId stored directly on the user (set at signup)
+      if (user.collabOwnerId) {
+        viewAsOwnerId = String(user.collabOwnerId);
+      } else {
+        // Fallback for users created before collabOwnerId was added
+        const rows = await Collaboration.find({ status: 'accepted', $or: [ { viewer: user._id }, { collaborator: user._id } ] })
+          .select('owner')
+          .limit(5)
+          .lean()
+          .exec();
+        if (rows && rows.length) {
+          const ids = Array.from(new Set(rows.map((r) => String(r.owner))));
+          const owners = await User.find({ _id: { $in: ids } }).select('_id').lean().exec();
+          if (owners && owners.length) {
+            viewAsOwnerId = String(owners[0]._id);
+            // Backfill collabOwnerId so future requests skip this lookup
+            await User.findByIdAndUpdate(user._id, { collabOwnerId: owners[0]._id }).exec();
+          }
+        }
+      }
+    } catch {}
+  }
   // Resolve plan: collaborators inherit the plan of the owner they're viewing
   let planSlug = effectivePlan(user);
   if (user.isCollaborator && viewAsOwnerId) {
