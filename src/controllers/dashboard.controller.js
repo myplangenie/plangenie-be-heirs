@@ -1493,6 +1493,28 @@ exports.createDepartment = async (req, res, next) => {
   }
 };
 
+// PATCH /api/dashboard/departments/:id
+exports.renameDepartment = async (req, res, next) => {
+  try {
+    const userId = req.user?.id;
+    const wsFilter = getWorkspaceFilter(req);
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const { id } = req.params;
+    const { name } = req.body || {};
+    if (!id) return res.status(400).json({ message: 'Department id is required' });
+    if (typeof name !== 'string' || !name.trim()) return res.status(400).json({ message: 'Name is required' });
+    const doc = await Department.findOneAndUpdate(
+      { _id: id, ...wsFilter },
+      { $set: { name: name.trim() } },
+      { new: true }
+    ).lean().exec();
+    if (!doc) return res.status(404).json({ message: 'Department not found' });
+    return res.status(200).json({ department: doc });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // DELETE /api/dashboard/departments/:id
 exports.deleteDepartment = async (req, res, next) => {
   try {

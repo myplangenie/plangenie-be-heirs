@@ -58,6 +58,7 @@ router.get('/departments/export/pdf', requireViewer, requireDepartmentsPdfExport
 router.get('/departments/export/docx', requireViewer, requireDepartmentsDocxExport, ctrl.exportDepartmentsDocx);
 router.post('/departments', requireContributor, requireFeature('departmentPlans'), ctrl.createDepartment);
 router.patch('/departments', requireContributor, requireFeature('departmentPlans'), ctrl.updateDepartment);
+router.patch('/departments/:id', requireContributor, requireFeature('departmentPlans'), ctrl.renameDepartment);
 router.delete('/departments/:id', requireAdmin, requireFeature('departmentPlans'), ctrl.deleteDepartment);
 router.patch('/action-assignments/status', requireContributor, requireFeature('departmentPlans'), ctrl.updateActionAssignmentStatus);
 router.patch('/action-assignments/item', requireContributor, requireFeature('departmentPlans'), ctrl.updateActionAssignmentItem);
