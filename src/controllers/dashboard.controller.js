@@ -1500,12 +1500,14 @@ exports.renameDepartment = async (req, res, next) => {
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { id } = req.params;
-    const { name } = req.body || {};
+    const { name, owner } = req.body || {};
     if (!id) return res.status(400).json({ message: 'Department id is required' });
     if (typeof name !== 'string' || !name.trim()) return res.status(400).json({ message: 'Name is required' });
+    const patch = { name: name.trim() };
+    if (typeof owner === 'string') patch.owner = owner.trim();
     const doc = await Department.findOneAndUpdate(
       { _id: id, ...wsFilter },
-      { $set: { name: name.trim() } },
+      { $set: patch },
       { new: true }
     ).lean().exec();
     if (!doc) return res.status(404).json({ message: 'Department not found' });
