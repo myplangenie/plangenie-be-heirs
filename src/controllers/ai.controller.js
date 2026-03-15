@@ -1,7 +1,6 @@
 const Onboarding = require('../models/Onboarding');
 const Workspace = require('../models/Workspace');
 const User = require('../models/User');
-const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
 const CoreProject = require('../models/CoreProject');
 const Competitor = require('../models/Competitor');
@@ -251,11 +250,10 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     const crudFilter = { user: userId, isDeleted: { $ne: true } };
     if (workspaceId) crudFilter.workspace = workspaceId;
 
-    const [ob, user, departments, teamMembers, coreProjects, competitors, swotEntries, products, orgPositions, wsFields, strategyDocuments] = await Promise.all([
+    const [ob, user, departments, coreProjects, competitors, swotEntries, products, orgPositions, wsFields, strategyDocuments] = await Promise.all([
       userId ? Onboarding.findOne(wsFilter) : null,
       userId ? User.findById(userId) : null,
       userId ? Department.find(wsFilter).select('name status owner dueDate').limit(50).lean().exec() : [],
-      userId ? TeamMember.find({ ...wsFilter, status: 'Active' }).select('name role department email status').limit(200).lean().exec() : [],
       // New individual CRUD models
       userId ? CoreProject.find(crudFilter).sort({ order: 1 }).lean() : [],
       userId ? Competitor.find(crudFilter).sort({ order: 1 }).lean() : [],
@@ -417,7 +415,7 @@ async function buildCoreProjectContextForUser(userId, workspaceId = null) {
     // Team members (active)
     let teamText = '';
     try {
-      const lines = (teamMembers || []).slice(0, 12).map((t) => {
+      const lines = (orgPositions || []).filter((p) => p?.status !== 'Inactive').slice(0, 12).map((t) => {
         const name = String(t?.name || '').trim();
         const role = String(t?.role || '').trim();
         const dept = String(t?.department || '').trim();

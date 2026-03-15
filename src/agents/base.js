@@ -11,7 +11,6 @@ const crypto = require('crypto');
 const AgentCache = require('../models/AgentCache');
 const Onboarding = require('../models/Onboarding');
 const User = require('../models/User');
-const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
 const RevenueStream = require('../models/RevenueStream');
 const FinancialBaseline = require('../models/FinancialBaseline');
@@ -157,7 +156,6 @@ async function buildAgentContext(userId, workspaceId = null) {
     ob,
     user,
     departments,
-    teamMembers,
     revenueStreams,
     financialBaseline,
     coreProjects,
@@ -173,7 +171,6 @@ async function buildAgentContext(userId, workspaceId = null) {
     Onboarding.findOne(obFilter).lean(),
     User.findById(userId).lean(),
     Department.find(deptFilter).select('name status owner dueDate progress').limit(50).lean(),
-    TeamMember.find(tmFilter).select('name role department').limit(100).lean(),
     RevenueStream.find(streamFilter).lean(),
     FinancialBaseline.findOne(baselineFilter).lean(),
     // New individual CRUD models
@@ -263,18 +260,13 @@ async function buildAgentContext(userId, workspaceId = null) {
     });
   });
 
-  // Fallback: if no TeamMember docs, derive from OrgPosition (active positions)
-  let teamMembersOut = teamMembers;
-  try {
-    if ((!teamMembersOut || teamMembersOut.length === 0) && Array.isArray(orgPositions) && orgPositions.length > 0) {
-      const active = orgPositions.filter((p) => String(p?.status || 'Active').trim() === 'Active' || p?.status == null);
-      teamMembersOut = active.map((p) => ({
-        name: String(p?.name || '').trim(),
-        role: String(p?.position || p?.role || '').trim(),
-        department: String(p?.department || '').trim(),
-      }));
-    }
-  } catch {}
+  const teamMembersOut = (orgPositions || [])
+    .filter((p) => p?.status !== 'Inactive')
+    .map((p) => ({
+      name: String(p?.name || '').trim(),
+      role: String(p?.position || p?.role || '').trim(),
+      department: String(p?.department || '').trim(),
+    }));
 
   return {
     // User profile

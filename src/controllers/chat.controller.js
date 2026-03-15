@@ -1,6 +1,5 @@
 const Onboarding = require('../models/Onboarding');
 const RevenueStream = require('../models/RevenueStream');
-const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
 const User = require('../models/User');
 const CoreProject = require('../models/CoreProject');
@@ -920,16 +919,14 @@ exports.respond = async (req, res) => {
         const crudFilter = { user: userId, isDeleted: { $ne: true } };
         if (workspaceId) crudFilter.workspace = workspaceId;
 
-        let [me, teamMembersCount, teamMembers, departments, coreProjects, deptProjects, products, orgPositions, competitors, swotEntries, collaborations] = await Promise.all([
+        let [me, orgPositions, departments, coreProjects, deptProjects, products, competitors, swotEntries, collaborations] = await Promise.all([
           User.findById(userId).lean().exec(),
-          TeamMember.countDocuments({ ...wsFilter, status: 'Active' }).exec(),
-          TeamMember.find({ ...wsFilter, status: 'Active' }).select('name email role department status').limit(200).lean().exec(),
+          OrgPosition.find({ ...crudFilter, isDeleted: false }).sort({ order: 1 }).lean().exec(),
           Department.find(wsFilter).select('name status owner dueDate').limit(50).lean().exec(),
           // New CRUD models
           CoreProject.find(crudFilter).sort({ order: 1 }).lean(),
           DepartmentProject.find(crudFilter).sort({ order: 1 }).lean(),
           Product.find(crudFilter).sort({ order: 1 }).lean(),
-          OrgPosition.find(crudFilter).sort({ order: 1 }).lean(),
           Competitor.find(crudFilter).sort({ order: 1 }).lean(),
           SwotEntry.find(crudFilter).sort({ order: 1 }).lean(),
           // Collaborators (people invited to the workspace)
@@ -947,21 +944,16 @@ exports.respond = async (req, res) => {
 
         // Read from Workspace.fields instead of Onboarding.answers
         const a = await getWorkspaceFields(workspaceId);
-        // Prefer orgPositions from new OrgPosition model, fallback to workspace fields
-        try {
-          const org = orgPositions && orgPositions.length > 0 ? orgPositions : (Array.isArray(a.orgPositions) ? a.orgPositions : []);
-          if (org.length) {
-            const active = org.filter((p) => String(p?.status || 'Active').trim() === 'Active');
-            teamMembers = active.map((p) => ({
-              name: String(p?.name || '').trim(),
-              email: String(p?.email || '').trim(),
-              role: String(p?.position || p?.role || '').trim(),
-              department: String(p?.department || '').trim(),
-              status: 'Active',
-            }));
-            teamMembersCount = teamMembers.length;
-          }
-        } catch {}
+        const teamMembers = (orgPositions || [])
+          .filter((p) => p?.status !== 'Inactive')
+          .map((p) => ({
+            name: String(p?.name || '').trim(),
+            email: String(p?.email || '').trim(),
+            role: String(p?.position || p?.role || '').trim(),
+            department: String(p?.department || '').trim(),
+            status: p?.status || 'Active',
+          }));
+        const teamMembersCount = teamMembers.length;
         // Load departments from Department collection (id-only linking)
         try {
           if (!Array.isArray(departments) || departments.length === 0) {

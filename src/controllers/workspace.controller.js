@@ -5,7 +5,7 @@ const Subscription = require('../models/Subscription');
 const PriorityCache = require('../models/PriorityCache');
 const AgentCache = require('../models/AgentCache');
 const Department = require('../models/Department');
-const TeamMember = require('../models/TeamMember');
+const OrgPosition = require('../models/OrgPosition');
 const Notification = require('../models/Notification');
 const Assumption = require('../models/Assumption');
 const Scenario = require('../models/Scenario');
@@ -224,7 +224,7 @@ exports.delete = async (req, res, next) => {
       PriorityCache.deleteMany({ user: userId, workspace: workspaceId }),
       AgentCache.deleteMany({ user: userId, workspace: workspaceId }),
       Department.deleteMany({ user: userId, workspace: workspaceId }),
-      TeamMember.deleteMany({ user: userId, workspace: workspaceId }),
+      OrgPosition.deleteMany({ user: userId, workspace: workspaceId }),
       Notification.deleteMany({ user: userId, workspace: workspaceId }),
       Assumption.deleteMany({ user: userId, workspace: workspaceId }),
       Scenario.deleteMany({ workspace: workspaceId }),

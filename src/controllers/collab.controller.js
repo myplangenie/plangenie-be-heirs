@@ -3,7 +3,7 @@ const Collaboration = require('../models/Collaboration');
 const User = require('../models/User');
 const Onboarding = require('../models/Onboarding');
 const Notification = require('../models/Notification');
-const TeamMember = require('../models/TeamMember');
+const OrgPosition = require('../models/OrgPosition');
 const Department = require('../models/Department');
 const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
 const crypto = require('crypto');
@@ -113,11 +113,11 @@ exports.invite = async (req, res) => {
       }
     }
 
-    // If no departments provided, try to derive from an existing TeamMember record
+    // If no departments provided, try to derive from an existing OrgPosition record
     if (departments.length === 0) {
       try {
-        const tm = await TeamMember.findOne({ user: userId, email: emailRaw }).lean().exec();
-        const depLabel = (tm && tm.department) ? String(tm.department).trim() : '';
+        const tm = await OrgPosition.findOne({ user: userId, email: emailRaw, isDeleted: false }).lean().exec();
+        const depLabel = (tm && tm.departmentLabel) ? String(tm.departmentLabel).trim() : (tm && tm.department) ? String(tm.department).trim() : '';
         const key = depLabel ? normalizeDepartmentKey(depLabel) : '';
         if (key && VALID_DEPARTMENTS.includes(key)) {
           departments = [key];

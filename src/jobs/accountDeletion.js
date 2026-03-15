@@ -28,7 +28,7 @@ async function deleteUserAndData(userId) {
     'Dashboard',
     'Financials',
     'FinancialSnapshot',
-    'TeamMember',
+    'OrgPosition',
     'Department',
     'AgentCache',
     'PriorityCache',

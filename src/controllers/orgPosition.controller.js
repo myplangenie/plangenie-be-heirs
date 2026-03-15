@@ -1,5 +1,4 @@
 const OrgPosition = require('../models/OrgPosition');
-const TeamMember = require('../models/TeamMember');
 const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
 const { getWorkspaceFilter, addWorkspaceToDoc } = require('../utils/workspaceQuery');
 
@@ -98,31 +97,6 @@ exports.create = async (req, res, next) => {
 
     const newPosition = await OrgPosition.create(positionData);
 
-    // Upsert TeamMember linked to this OrgPosition (mid = OrgPosition._id)
-    try {
-      const deptNameRaw = department || '';
-      const deptName = (deptNameRaw || '').trim();
-      const mid = String(newPosition._id);
-      await TeamMember.findOneAndUpdate(
-        { user: userId, workspace: wsFilter.workspace, mid },
-        {
-          $set: {
-            name: newPosition.name || '',
-            email: (newPosition.email || ''),
-            position: newPosition.position || '',
-            department: deptName || '',
-            status: 'Active',
-          },
-          $setOnInsert: {
-            role: 'Viewer',
-          },
-        },
-        { upsert: true, new: true }
-      ).lean();
-    } catch (_) {
-      // Non-fatal sync failure should not block org position creation
-    }
-
     return res.status(201).json({ position: newPosition, message: 'Position created' });
   } catch (err) {
     next(err);
@@ -176,27 +150,6 @@ exports.update = async (req, res, next) => {
 
     await pos.save();
 
-    // Sync TeamMember on update only (no Department auto-create)
-    try {
-      const mid = String(pos._id);
-      await TeamMember.findOneAndUpdate(
-        { user: req.user?.id, workspace: wsFilter.workspace, mid },
-        {
-          $set: {
-            name: pos.name || '',
-            email: (pos.email || ''),
-            position: pos.position || '',
-            department: (pos.department || ''),
-            status: 'Active',
-          },
-          $setOnInsert: { role: 'Viewer' },
-        },
-        { upsert: true, new: true }
-      ).lean();
-    } catch (_) {
-      // Non-fatal
-    }
-
     return res.json({ position: pos, message: 'Position updated' });
   } catch (err) {
     next(err);
@@ -229,11 +182,6 @@ exports.delete = async (req, res, next) => {
 
     await position.softDelete();
 
-    // Hard delete linked TeamMember
-    try {
-      await TeamMember.deleteOne({ user: req.user?.id, workspace: wsFilter.workspace, mid: String(position._id) });
-    } catch (_) {}
-
     return res.json({ message: 'Position deleted', id });
   } catch (err) {
     next(err);
@@ -259,13 +207,6 @@ exports.restore = async (req, res, next) => {
     }
 
     await position.restore();
-    // Mark linked TeamMember Active again
-    try {
-      await TeamMember.findOneAndUpdate(
-        { user: req.user?.id, workspace: wsFilter.workspace, mid: String(position._id) },
-        { $set: { status: 'Active' } }
-      ).lean();
-    } catch (_) {}
 
     return res.json({ position, message: 'Position restored' });
   } catch (err) {

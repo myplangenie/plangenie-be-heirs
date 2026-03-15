@@ -16,7 +16,6 @@ const Plan = require('../models/Plan');
 const PlanSection = require('../models/PlanSection');
 const RevenueStream = require('../models/RevenueStream');
 const FinancialBaseline = require('../models/FinancialBaseline');
-const TeamMember = require('../models/TeamMember');
 const CoreProject = require('../models/CoreProject');
 const DepartmentProject = require('../models/DepartmentProject');
 const financialSnapshotService = require('../services/financialSnapshotService');
@@ -671,20 +670,30 @@ exports.generateInsights = async (req, res, next) => {
 };
 
 // POST /api/dashboard/settings/members
-// Create a new member inside Org Chart answers
+// Create a new member via OrgPosition
 exports.createMember = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const { name, email, position, department, status } = req.body || {};
+    const { name, email, position, department, departmentLabel, status } = req.body || {};
     const nm = String(name || '').trim();
     if (!nm) return res.status(400).json({ message: 'Name is required' });
-    const mid = (nodeCrypto.randomUUID && nodeCrypto.randomUUID()) || (`m_${Date.now()}_${Math.random().toString(16).slice(2)}`);
-    const deptName = typeof department === 'string' ? department.trim() : '';
-    // Do not auto-create Department here. Departments are created when projects are created in Strategy Blueprint.
-    const doc = await TeamMember.create({ user: userId, workspace: workspaceId, mid, name: nm, email: String(email||''), role: String(position||''), department: deptName, status: String(status||'Active') });
-    const member = { mid: doc.mid, name: doc.name, email: doc.email, position: doc.role, department: doc.department, status: doc.status };
+    const deptKey = department ? normalizeDepartmentKey(String(department).trim()) : '';
+    const deptLabel = (departmentLabel || department || '').trim();
+    const order = await OrgPosition.getNextOrder(workspaceId);
+    const doc = await OrgPosition.create({
+      user: userId,
+      workspace: workspaceId,
+      position: String(position || '').trim() || nm,
+      name: nm,
+      email: String(email || '').toLowerCase(),
+      department: deptKey,
+      departmentLabel: deptLabel || undefined,
+      status: String(status || 'Active'),
+      order,
+    });
+    const member = { mid: String(doc._id), name: doc.name, email: doc.email, position: doc.position, department: doc.department, departmentLabel: doc.departmentLabel, status: doc.status };
     return res.status(201).json({ member });
   } catch (err) {
     next(err);
@@ -1329,10 +1338,10 @@ exports.getDepartments = async (req, res, next) => {
       const status = statusFromProgress(progress);
       return { key: r.key, name: r.name, owner, dueDate, progress, status };
     });
-    // PURE Department docs (IDs) — comment out above legacy approach
+    // PURE Department docs (IDs)
     try {
       const rows = await Department.find(wsFilter).lean().exec();
-      const projs = await DepartmentProject.find({ ...wsFilter, isDeleted: false }).select('departmentId deliverables dueWhen progress status').lean();
+      const projs = await DepartmentProject.find({ ...wsFilter, isDeleted: false }).select('departmentId deliverables dueWhen progress status firstName lastName ownerId').lean();
       const byId = new Map();
       for (const p of projs) {
         const id = String(p.departmentId || '');
@@ -1347,12 +1356,21 @@ exports.getDepartments = async (req, res, next) => {
       };
       const stat = (p) => (p>=80?'on-track':(p>=50?'in-progress':'at-risk'));
       const fallbackOwner = (user?.fullName || '').trim() || '-';
+      // Derive owner from project owners under the department
+      const ownerFromProjects = (arr) => {
+        for (const p of arr) {
+          const name = `${p.firstName || ''} ${p.lastName || ''}`.trim();
+          if (name) return name;
+        }
+        return null;
+      };
       const out = rows.map((d)=>{
         const id = String(d._id);
         const arr = byId.get(id)||[];
         let progress = 0; if (arr.length) { const sum=arr.reduce((acc,it)=>acc+pctFromProj(it),0); progress=Math.round(sum/arr.length); }
         let dueDate='-'; const dates=arr.map(p=>String(p?.dueWhen||'')).filter(Boolean).sort(); if(dates.length) dueDate=dates[dates.length-1];
-        return { _id: d._id, name: d.name||'', owner: (d.owner&&String(d.owner).trim())?d.owner:fallbackOwner, dueDate, progress, status: stat(progress) };
+        const owner = (d.owner && String(d.owner).trim()) ? d.owner : (ownerFromProjects(arr) || fallbackOwner);
+        return { _id: d._id, name: d.name||'', owner, dueDate, progress, status: stat(progress) };
       });
       return res.json({ departments: out });
     } catch {}
@@ -1382,43 +1400,18 @@ exports.updateDepartment = async (req, res, next) => {
       { $set: { name, user: userId, ...patch } },
       { new: true, upsert: true }
     ).lean().exec();
-    // Compute owner consistent with GET (department head or fallback to current user)
-    const [ob, user] = await Promise.all([
-      Onboarding.findOne(wsFilter).lean().exec(),
-      User.findById(userId).lean().exec(),
-    ]);
-    const a = ob?.answers || {};
-    const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
+    const user = await User.findById(userId).lean().exec();
     const canon = (s) => String(s || '').trim().toLowerCase();
-    const headFor = (deptName) => {
-      const candidates = org.filter((p) => canon(p.department) === canon(deptName));
-      if (!candidates.length) return null;
-      const byId = new Map((org || []).map((p) => [String(p.id || ''), p]));
-      const isTopOfDept = (p) => {
-        const parentId = p.parentId == null ? null : String(p.parentId);
-        if (!parentId) return true;
-        const parent = byId.get(parentId);
-        if (!parent) return true;
-        return canon(parent.department) !== canon(deptName);
-      };
-      const top = candidates.filter(isTopOfDept);
-      const pool = top.length ? top : candidates;
-      const score = (title = '') => {
-        const t = String(title).toLowerCase();
-        if (/\bchief\b|\bvp\b|vice president/.test(t)) return 5;
-        if (/head of|\bhead\b/.test(t)) return 4;
-        if (/director/.test(t)) return 3;
-        if (/lead/.test(t)) return 2;
-        if (/manager/.test(t)) return 1;
-        return 0;
-      };
-      const sorted = pool.slice().sort((a,b)=> score(b.position)-score(a.position));
-      const pick = sorted[0] || pool[0];
-      const n = `${pick?.name || ''}`.trim();
-      return n || null;
-    };
     const fallbackOwner = (user?.fullName || '').trim() || '-';
-    const ownerName = (doc.owner && String(doc.owner).trim()) ? doc.owner : (headFor(name) || fallbackOwner);
+    // Derive owner from project owners under this department, consistent with GET
+    const deptDoc = await Department.findOne({ ...wsFilter, name }).lean().exec();
+    const deptProjs = deptDoc ? await DepartmentProject.find({ ...wsFilter, departmentId: deptDoc._id, isDeleted: false }).select('firstName lastName').lean() : [];
+    const ownerFromProjects = deptProjs.reduce((found, p) => {
+      if (found) return found;
+      const n = `${p.firstName || ''} ${p.lastName || ''}`.trim();
+      return n || null;
+    }, null);
+    const ownerName = (doc.owner && String(doc.owner).trim()) ? doc.owner : (ownerFromProjects || fallbackOwner);
     // Derive progress from DepartmentProject model only - no legacy fallback
     const assignments = await DepartmentProject.findGroupedByDepartment(wsFilter.workspace);
     const deptKey = Object.keys(assignments || {}).find((k) => canon(({ marketing: 'Marketing', sales: 'Sales', operations:'Operations and Service Delivery', financeAdmin:'Finance and Admin', peopleHR:'People and Human Resources', partnerships:'Partnerships and Alliances', technology:'Technology and Infrastructure', communityImpact:'ESG and Sustainability' }[k] || titleize(k))) === canon(name));
@@ -2720,7 +2713,6 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
       if (p >= 50) return 'in-progress';
       return 'at-risk';
     };
-    const org = Array.isArray(a.orgPositions) ? a.orgPositions : [];
     const canon = (s) => String(s || '').trim().toLowerCase();
     const deptMap = new Map();
     const sections = Array.isArray(a.actionSections) && a.actionSections.length
@@ -2743,32 +2735,6 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
         deptMap.set(canon(name), { key: k, name, dueDate });
       }
     }
-    const headFor = (deptName) => {
-      const candidates = org.filter((p) => canon(p.department) === canon(deptName));
-      if (!candidates.length) return null;
-      const byId = new Map((org || []).map((p) => [String(p.id || ''), p]));
-      const isTopOfDept = (p) => {
-        const parentId = p.parentId == null ? null : String(p.parentId);
-        if (!parentId) return true;
-        const parent = byId.get(parentId);
-        if (!parent) return true;
-        return canon(parent.department) !== canon(deptName);
-      };
-      const top = candidates.filter(isTopOfDept);
-      const pool = top.length ? top : candidates;
-      const score = (title = '') => {
-        const t = String(title).toLowerCase();
-        if (/\bchief\b|\bvp\b|vice president/.test(t)) return 5;
-        if (/head of|\bhead\b/.test(t)) return 4;
-        if (/director/.test(t)) return 3;
-        if (/lead/.test(t)) return 2;
-        if (/manager/.test(t)) return 1;
-        return 0;
-      };
-      const sorted = pool.slice().sort((a,b)=> score(b.position)-score(a.position));
-      const pick = sorted[0] || pool[0];
-      return `${pick?.name || ''}`.trim() || null;
-    };
     const fallbackOwner = (user?.fullName || '').trim() || '-';
     const stored = await Department.find(wsFilter).lean().exec();
     const byName = new Map((stored || []).map((d) => [d.name, d]));
@@ -2784,7 +2750,9 @@ exports.exportDepartmentsPdf = async (req, res, next) => {
           progress = Math.round(sum / total);
         }
       }
-      const owner = (s?.owner && String(s.owner).trim()) ? s.owner : (headFor(r.name) || fallbackOwner);
+      const projList = deptKey && Array.isArray(assignments[deptKey]) ? assignments[deptKey] : [];
+      const ownerFromProjects = projList.map((u) => `${u.firstName || ''} ${u.lastName || ''}`.trim()).filter(Boolean)[0] || null;
+      const owner = (s?.owner && String(s.owner).trim()) ? s.owner : (ownerFromProjects || fallbackOwner);
       const dueDate = r.dueDate || '-';
       const status = statusFromProgress(progress);
       return { key: r.key, name: r.name, owner, dueDate, progress, status };
@@ -3977,8 +3945,8 @@ exports.getSettings = async (req, res, next) => {
       jobTitle: (user?.jobTitle && user.jobTitle.trim()) || '',
       phone: user?.phone || '',
     };
-    // Source of truth: TeamMember collection with Department names (exclude Inactive/deleted)
-    const membersRaw = await TeamMember.find({ ...wsFilter, status: { $ne: 'Inactive' } }).lean().exec();
+    // Source of truth: OrgPosition collection (exclude Inactive/deleted)
+    const membersRaw = await OrgPosition.find({ ...wsFilter, isDeleted: false, status: { $ne: 'Inactive' } }).lean().exec();
     const departmentsRaw = await Department.find(wsFilter).lean().exec();
     const deptByName = new Map((departmentsRaw||[]).map(d => [String(d.name||'').trim().toLowerCase(), d]));
     // Deduplicate by email (preferred) or name; prefer Active and populated fields
@@ -3999,21 +3967,23 @@ exports.getSettings = async (req, res, next) => {
     // Build a map by key
     const byKey = new Map();
     for (const m of membersRaw) {
-      const key = (m.email && m.email.trim().toLowerCase()) || (m.name && m.name.trim().toLowerCase()) || String(m.mid);
+      const key = (m.email && m.email.trim().toLowerCase()) || (m.name && m.name.trim().toLowerCase()) || String(m._id);
       const existing = byKey.get(key);
       byKey.set(key, pickBetter(existing, m));
     }
 
-    const deduped = Array.from(byKey.values());
+    const deduped = Array.from(byKey.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     const members = deduped.map((m) => {
-      const deptName = String(m.department || '').trim();
-      const d = deptByName.get(deptName.toLowerCase());
+      const deptKey = String(m.department || '').trim();
+      const deptLabel = String(m.departmentLabel || '').trim();
+      const d = deptByName.get(deptLabel.toLowerCase()) || deptByName.get(deptKey.toLowerCase());
       return {
-        mid: m.mid,
+        mid: String(m._id),
         name: m.name || '',
         email: m.email || '',
         position: m.position || '',
-        department: d ? d.name : deptName,
+        department: d ? d.name : (deptLabel || deptKey),
+        departmentLabel: deptLabel || deptKey,
         status: m.status || 'Active',
       };
     });
@@ -4079,7 +4049,7 @@ exports.updateProfile = async (req, res, next) => {
 };
 
 // PATCH /api/dashboard/settings/members/:mid
-// Update fields for a TeamMember (no workspace.fields fallback)
+// Update fields for an OrgPosition (mid = OrgPosition._id)
 exports.updateMember = async (req, res, next) => {
   try {
     const userId = req.user?.id;
@@ -4089,20 +4059,22 @@ exports.updateMember = async (req, res, next) => {
     const patch = req.body || {};
     const patchDB = {};
     if (typeof patch.name === 'string') patchDB.name = patch.name;
-    if (typeof patch.email === 'string') patchDB.email = patch.email;
-    if (typeof patch.position === 'string') patchDB.role = patch.position;
-    if (typeof patch.department === 'string') patchDB.department = patch.department;
+    if (typeof patch.email === 'string') patchDB.email = patch.email.toLowerCase();
+    if (typeof patch.position === 'string') patchDB.position = patch.position;
     if (typeof patch.status === 'string') patchDB.status = patch.status;
-    if (typeof patch.department === 'string' && patch.department.trim()) {
-      await Department.findOneAndUpdate(
-        { workspace: workspaceId, name: patch.department.trim() },
-        { $setOnInsert: { user: userId, workspace: workspaceId, name: patch.department.trim() } },
-        { upsert: true }
-      ).lean().exec();
-      try { await ensureActionSections(workspaceId, [patch.department.trim()]); } catch {}
+    if (typeof patch.department === 'string') {
+      patchDB.department = normalizeDepartmentKey(patch.department.trim());
+      patchDB.departmentLabel = (patch.departmentLabel || patch.department).trim();
     }
-    const m = await TeamMember.findOneAndUpdate({ user: userId, workspace: workspaceId, mid }, { $set: patchDB }, { new: true }).lean();
-    const member = m ? { mid: m.mid, name: m.name, email: m.email, position: m.role, department: m.department, status: m.status } : null;
+    if (typeof patch.departmentLabel === 'string' && patch.department === undefined) {
+      patchDB.departmentLabel = patch.departmentLabel.trim();
+    }
+    const m = await OrgPosition.findOneAndUpdate(
+      { _id: mid, user: userId, workspace: workspaceId, isDeleted: false },
+      { $set: patchDB },
+      { new: true }
+    ).lean();
+    const member = m ? { mid: String(m._id), name: m.name, email: m.email, position: m.position, department: m.department, departmentLabel: m.departmentLabel, status: m.status } : null;
     return res.json({ member });
   } catch (err) {
     next(err);
@@ -4110,15 +4082,18 @@ exports.updateMember = async (req, res, next) => {
 };
 
 // DELETE /api/dashboard/settings/members/:mid
-// Remove member from TeamMember collection
+// Soft delete OrgPosition (mid = OrgPosition._id)
 exports.deleteMember = async (req, res, next) => {
   try {
     const userId = req.user?.id;
     const workspaceId = getWorkspaceId(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
     const { mid } = req.params;
-    const result = await TeamMember.deleteOne({ user: userId, workspace: workspaceId, mid }).exec();
-    return res.json({ ok: true, removed: result.deletedCount > 0 });
+    const result = await OrgPosition.findOneAndUpdate(
+      { _id: mid, user: userId, workspace: workspaceId },
+      { $set: { isDeleted: true, deletedAt: new Date() } }
+    ).lean();
+    return res.json({ ok: true, removed: !!result });
   } catch (err) {
     next(err);
   }
@@ -4131,15 +4106,15 @@ exports.purgeSampleMembers = async (req, res, next) => {
     const userId = req.user?.id;
     const wsFilter = getWorkspaceFilter(req);
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    // Delete known seeded entries by email or name match
-    const result = await TeamMember.deleteMany({
+    // Soft delete known seeded entries by email or name match
+    const result = await OrgPosition.updateMany({
       user: userId,
       $or: [
         { email: 'sarah@plangenie.com' },
         { name: { $regex: /^sarah\s+johnson$/i } },
       ],
-    }).exec();
-    return res.json({ ok: true, removed: result.deletedCount || 0 });
+    }, { $set: { isDeleted: true, deletedAt: new Date() } }).exec();
+    return res.json({ ok: true, removed: result.modifiedCount || 0 });
   } catch (err) {
     next(err);
   }

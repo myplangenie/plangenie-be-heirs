@@ -65,6 +65,18 @@ const OrgPositionSchema = new mongoose.Schema({
   legacyParentId: {
     type: String,
   },
+  // Access role for workspace permissions (replaces TeamMember.role)
+  accessRole: {
+    type: String,
+    enum: ['Admin', 'Editor', 'Viewer'],
+    default: 'Viewer',
+  },
+  // Active/Inactive status (replaces TeamMember.status)
+  status: {
+    type: String,
+    enum: ['Active', 'Inactive'],
+    default: 'Active',
+  },
   order: {
     type: Number,
     default: 0,

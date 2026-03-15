@@ -1,9 +1,51 @@
 const DepartmentProject = require('../models/DepartmentProject');
 const CoreProject = require('../models/CoreProject');
 const User = require('../models/User');
+const OrgPosition = require('../models/OrgPosition');
 const { getWorkspaceFilter, addWorkspaceToDoc, getWorkspaceId } = require('../utils/workspaceQuery');
 const { hasFeature } = require('../config/entitlements');
+const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
 const cache = require('../services/cache');
+
+// Resolve the best owner name for a department from OrgPosition.
+// Matches on department key or departmentLabel, ranks by title seniority.
+// Falls back to account owner fullName.
+async function resolveOwnerForDepartment(workspaceId, userId, deptKeyOrName, fallbackName) {
+  try {
+    const canon = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const target = canon(deptKeyOrName);
+    const positions = await OrgPosition.find({ workspace: workspaceId, isDeleted: false, status: { $ne: 'Inactive' } })
+      .select('name position department departmentLabel parentId').lean();
+    const candidates = positions.filter((p) =>
+      canon(p.department) === target || canon(p.departmentLabel) === target
+    );
+    if (!candidates.length) return fallbackName || null;
+    const byId = new Map(positions.map((p) => [String(p._id), p]));
+    const isTopOfDept = (p) => {
+      const parentId = p.parentId ? String(p.parentId) : null;
+      if (!parentId) return true;
+      const parent = byId.get(parentId);
+      if (!parent) return true;
+      return canon(parent.department) !== target && canon(parent.departmentLabel) !== target;
+    };
+    const top = candidates.filter(isTopOfDept);
+    const pool = top.length ? top : candidates;
+    const score = (title = '') => {
+      const t = String(title).toLowerCase();
+      if (/\bchief\b|\bvp\b|vice president/.test(t)) return 5;
+      if (/head of|\bhead\b/.test(t)) return 4;
+      if (/director/.test(t)) return 3;
+      if (/lead/.test(t)) return 2;
+      if (/manager/.test(t)) return 1;
+      return 0;
+    };
+    const sorted = pool.slice().sort((a, b) => score(b.position) - score(a.position));
+    const pick = sorted[0] || pool[0];
+    return String(pick?.name || '').trim() || fallbackName || null;
+  } catch {
+    return fallbackName || null;
+  }
+}
 
 // Helper to load full user for entitlement checks
 async function loadUser(userId) {
@@ -191,9 +233,9 @@ exports.create = async (req, res, next) => {
       const krExists = (okr.keyResults || []).some((kr) => String(kr._id) === String(linkedDeptKrId));
       if (!krExists) return res.status(400).json({ message: 'linkedDeptKrId must reference a Key Result within the linked Department OKR' });
     }
-    const { normalizeDepartmentKey } = require('../utils/departmentNormalize');
     let resolvedDeptId = departmentId || null;
     let normDeptKey = null;
+    let resolvedDeptName = null;
     // If departmentName provided, find-or-create Department and resolve both id and key
     if (departmentName && String(departmentName).trim()) {
       const Department = require('../models/Department');
@@ -206,7 +248,24 @@ exports.create = async (req, res, next) => {
       }
       resolvedDeptId = dept._id;
       normDeptKey = normalizeDepartmentKey(name);
+      resolvedDeptName = name;
       try { const { ensureActionSections } = require('../services/workspaceFieldService'); await ensureActionSections(wsFilter.workspace, [name]); } catch {}
+    }
+
+    // Auto-assign owner from OrgPosition if not provided
+    let resolvedOwnerId = ownerId || undefined;
+    let resolvedOwnerName = (firstName || lastName)
+      ? `${firstName?.trim() || ''} ${lastName?.trim() || ''}`.trim()
+      : undefined;
+    if (!resolvedOwnerId && !resolvedOwnerName) {
+      const deptLookup = normDeptKey || resolvedDeptName || null;
+      const workspaceId = getWorkspaceId(req);
+      const fallback = (user?.fullName || '').trim() || undefined;
+      if (deptLookup) {
+        resolvedOwnerName = await resolveOwnerForDepartment(workspaceId, userId, deptLookup, fallback) || undefined;
+      } else {
+        resolvedOwnerName = fallback;
+      }
     }
 
     const projectData = addWorkspaceToDoc({
@@ -220,9 +279,9 @@ exports.create = async (req, res, next) => {
       dueWhen: dueWhen?.trim() || undefined,
       cost: cost?.trim() || undefined,
       priority: priority || undefined,
-      firstName: firstName?.trim() || undefined,
-      lastName: lastName?.trim() || undefined,
-      ownerId: ownerId || undefined,
+      firstName: resolvedOwnerName ? resolvedOwnerName.split(' ')[0] : (firstName?.trim() || undefined),
+      lastName: resolvedOwnerName ? resolvedOwnerName.split(' ').slice(1).join(' ') || undefined : (lastName?.trim() || undefined),
+      ownerId: resolvedOwnerId,
       linkedCoreProject: linkedCoreProject || undefined,
       linkedGoal: typeof linkedGoal === 'number' ? linkedGoal : undefined,
       linkedDeptOKR: linkedDeptOKR || undefined,

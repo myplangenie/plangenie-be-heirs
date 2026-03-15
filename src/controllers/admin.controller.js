@@ -7,7 +7,6 @@ const Onboarding = require('../models/Onboarding');
 const Workspace = require('../models/Workspace');
 const RevenueStream = require('../models/RevenueStream');
 const FinancialBaseline = require('../models/FinancialBaseline');
-const TeamMember = require('../models/TeamMember');
 const Department = require('../models/Department');
 const Product = require('../models/Product');
 const VisionGoal = require('../models/VisionGoal');
@@ -143,7 +142,6 @@ exports.getUserFullData = async (req, res) => {
     onboardings,
     revenueStreams,
     financialBaselines,
-    teamMembers,
     departments,
     collaborationsAsOwner,
     collaborationsAsViewer,
@@ -160,7 +158,6 @@ exports.getUserFullData = async (req, res) => {
     Onboarding.find({ user: id }).lean().exec(),
     RevenueStream.find({ user: id }).lean().exec(),
     FinancialBaseline.find({ user: id }).lean().exec(),
-    TeamMember.find({ user: id }).lean().exec(),
     Department.find({ user: id }).lean().exec(),
     Collaboration.find({ owner: id }).populate('viewer', 'email fullName').lean().exec(),
     Collaboration.find({ viewer: id }).populate('owner', 'email fullName').lean().exec(),
@@ -284,12 +281,12 @@ exports.getUserFullData = async (req, res) => {
       createdAt: fb.createdAt,
       updatedAt: fb.updatedAt,
     })),
-    teamMembers: teamMembers.map(tm => ({
+    teamMembers: orgPositions.map(tm => ({
       _id: String(tm._id),
       name: tm.name,
       email: tm.email,
-      role: tm.role,
-      department: tm.department,
+      role: tm.position,
+      department: tm.departmentLabel || tm.department,
       status: tm.status,
       workspaceId: tm.workspace ? String(tm.workspace) : null,
     })),
@@ -413,7 +410,7 @@ exports.getUserFullData = async (req, res) => {
     summary: {
       workspaceCount: workspaces.length,
       revenueStreamCount: revenueStreams.length,
-      teamMemberCount: teamMembers.length,
+      teamMemberCount: orgPositions.length,
       departmentCount: departments.length,
       collaboratorCount: collaborationsAsOwner.length,
       viewingCount: collaborationsAsViewer.length,
@@ -466,7 +463,7 @@ exports.deleteUser = async (req, res) => {
         'Dashboard',
         'Financials',
         'FinancialSnapshot',
-        'TeamMember',
+        'OrgPosition',
         'Department',
         'AgentCache',
         'PriorityCache',
@@ -543,7 +540,7 @@ exports.bulkDeleteUsers = async (req, res) => {
     'Dashboard',
     'Financials',
     'FinancialSnapshot',
-    'TeamMember',
+    'OrgPosition',
     'Department',
     'AgentCache',
     'PriorityCache',
